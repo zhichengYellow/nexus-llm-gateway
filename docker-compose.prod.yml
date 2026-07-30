@@ -1,0 +1,78 @@
+# 生产环境：网关 + Postgres + Redis 全部容器化
+# 使用: docker compose -f docker-compose.prod.yml up -d
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: nexus-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nexus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexus}
+      POSTGRES_DB: ${POSTGRES_DB:-nexus}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexus} -d ${POSTGRES_DB:-nexus}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexus-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    restart: always
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - nexus-net
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nexus-gateway
+    restart: always
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD:-nexus}@postgres:5432/${POSTGRES_DB:-nexus}
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "${PORT:-8787}:8787"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nexus-net
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: nexus-dashboard
+    restart: always
+    environment:
+      NEXT_PUBLIC_API_URL: http://gateway:8787
+    ports:
+      - "${DASHBOARD_PORT:-3000}:3000"
+    depends_on:
+      - gateway
+    networks:
+      - nexus-net
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  nexus-net:
+    driver: bridge

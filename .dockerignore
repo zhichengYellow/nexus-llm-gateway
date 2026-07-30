@@ -1,0 +1,11 @@
+node_modules
+dist
+.docker-data
+.git
+.env
+.env.local
+*.log
+.DS_Store
+.vscode
+.idea
+drizzle/*.json
