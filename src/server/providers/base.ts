@@ -57,16 +57,19 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
 
   async chat(req: ChatCompletionRequest, upstreamModel: string): Promise<ChatCompletionResponse> {
     const body = this.buildChatBody(req, upstreamModel, false);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
     const res = await fetch(this.chatUrl, {
       method: "POST",
       headers: this.headers,
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     if (!res.ok) {
       const text = await res.text();
-      // 脱敏：移除上游 API 返回的 API Key（如有泄露）
-      const safeText = text.replace(/sk-[a-zA-Z0-9_-]{20,}/g, "sk-***");
-      throw new ProviderError(`upstream ${this.type} chat error: ${safeText}`, res.status, this.type);
+      const safeText = text.replace(/sk-[a-zA-Z0-9_-]{20,}/g, "sk-***").slice(0, 200);
+      throw new ProviderError(`upstream ${this.type} error: ${safeText}`, res.status, this.type);
     }
     const data = (await res.json()) as ChatCompletionResponse & { model: string };
     return {
@@ -93,7 +96,7 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
     });
     if (!res.ok || !res.body) {
       const text = res.body ? await res.text() : "no body";
-      const safeText = text.replace(/sk-[a-zA-Z0-9_-]{20,}/g, "sk-***");
+      const safeText = text.replace(/sk-[a-zA-Z0-9_-]{20,}/g, "sk-***").slice(0, 200);
       throw new ProviderError(`upstream ${this.type} stream error: ${safeText}`, res.status, this.type);
     }
 
@@ -144,7 +147,7 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
     });
     if (!res.ok) {
       const text = await res.text();
-      const safeText = text.replace(/sk-[a-zA-Z0-9_-]{20,}/g, "sk-***");
+      const safeText = text.replace(/sk-[a-zA-Z0-9_-]{20,}/g, "sk-***").slice(0, 200);
       throw new ProviderError(`upstream ${this.type} embed error: ${safeText}`, res.status, this.type);
     }
     const data = (await res.json()) as EmbeddingResponse;

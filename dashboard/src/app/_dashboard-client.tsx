@@ -101,8 +101,9 @@ export default function Dashboard({ client, onLogout }: Props) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <span className="text-gray-800 font-semibold">Nexus Gateway</span>
+            <span className="text-gray-800 font-semibold">管理端</span>
           </div>
+          <div className="flex items-center gap-2">
           <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
             {(["overview", "keys", "tenants", "routes"] as const).map((tab) => (
               <button
@@ -117,6 +118,10 @@ export default function Dashboard({ client, onLogout }: Props) {
                 {tabLabels[tab]}
               </button>
             ))}
+          </div>
+          {onLogout && (
+            <button onClick={onLogout} className="text-xs text-gray-400 hover:text-red-500 ml-2">退出</button>
+          )}
           </div>
         </div>
       </header>
