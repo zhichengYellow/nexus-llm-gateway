@@ -41,24 +41,55 @@ type ChatEnv = AuthEnv & LoggingEnv;
 
 export const chatRoute = new Hono<ChatEnv>();
 
-/** 标准化消息 content：把数组格式（multimodal）转为字符串 */
 function normalizeContent(content: unknown): string {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
-    return content
-      .map((part: any) => (typeof part.text === "string" ? part.text : JSON.stringify(part)))
-      .join("\n");
+    return content.map((part: any) => (typeof part.text === "string" ? part.text : JSON.stringify(part))).join("\n");
   }
   return String(content ?? "");
 }
 
+async function cacheToSSE(c: Context<ChatEnv>, response: any, _requestId: string) {
+  c.header("Content-Type", "text/event-stream");
+  c.header("Cache-Control", "no-cache");
+  c.header("Connection", "keep-alive");
+
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+  const content = response.choices?.[0]?.message?.content ?? "";
+
+  (async () => {
+    const chunks = content.match(/.{1,20}/g) || [content];
+    for (const chunk of chunks) {
+      const sse = {
+        id: response.id,
+        object: "chat.completion.chunk",
+        created: Math.floor(Date.now() / 1000),
+        model: response.model,
+        choices: [{ index: 0, delta: { content: chunk }, finish_reason: null }],
+      };
+      await writer.write(encoder.encode(`data: ${JSON.stringify(sse)}\n\n`));
+    }
+    const final = {
+      id: response.id,
+      object: "chat.completion.chunk",
+      created: Math.floor(Date.now() / 1000),
+      model: response.model,
+      choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+      usage: response.usage,
+    };
+    await writer.write(encoder.encode(`data: ${JSON.stringify(final)}\n\n`));
+    await writer.write(encoder.encode("data: [DONE]\n\n"));
+    await writer.close();
+  })();
+
+  return c.body(readable);
+}
+
 chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   const raw = c.req.valid("json") as z.infer<typeof chatSchema> & { [k: string]: unknown };
-  // 标准化所有消息的 content
-  const req = {
-    ...raw,
-    messages: raw.messages.map((m) => ({ ...m, content: normalizeContent(m.content) })),
-  };
+  const req = { ...raw, messages: raw.messages.map((m) => ({ ...m, content: normalizeContent(m.content) })) };
   const requestId = c.get("requestId");
   const tenant = c.get("tenant");
   const apiKey = c.get("apiKey");
@@ -75,30 +106,21 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   const stream = req.stream ?? false;
   const start = Date.now();
 
-  // ===== 限流检查（非 master key）=====
   if (!c.get("isMaster") && apiKey) {
     const rl = await checkRateLimit(apiKey.id, 60);
     c.header("X-RateLimit-Remaining", String(rl.remaining));
     if (!rl.allowed) {
-      return c.json(
-        { error: { message: `rate limit exceeded, retry in ${rl.resetIn}s`, type: "rate_limit_error" } },
-        429,
-      );
+      return c.json({ error: { message: `rate limit exceeded, retry in ${rl.resetIn}s`, type: "rate_limit_error" } }, 429);
     }
   }
 
-  // ===== 配额检查（非 master key）=====
   if (!c.get("isMaster") && tenant) {
     const quota = await checkQuota(tenant.id);
     if (!quota.allowed) {
-      return c.json(
-        { error: { message: `monthly token quota exceeded (${quota.used}/${quota.quota})`, type: "quota_error" } },
-        429,
-      );
+      return c.json({ error: { message: `monthly token quota exceeded (${quota.used}/${quota.quota})`, type: "quota_error" } }, 429);
     }
   }
 
-  // 故障转移：主 + fallbacks
   const chain = [
     { provider: resolved.provider, providerType: resolved.providerType, upstreamModel: resolved.upstreamModel },
     ...resolved.fallbacks.map((f) => ({
@@ -108,7 +130,7 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
     })),
   ];
 
-  // ===== 缓存查询（提前到分流之前，流式也检查）=====
+  // Cache lookup before stream split
   const cache = getSemanticCache();
   const tenantId = tenant?.id ?? null;
   const cacheResult = await cache.lookup(req, req.model, tenantId);
@@ -116,27 +138,15 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
     const latencyMs = Date.now() - start;
     const res = cacheResult.response;
     res.nexus.requestId = requestId;
-
-    recordUsage({
-      requestId,
-      tenantId,
-      apiKeyId: apiKey?.id ?? null,
-      provider: "cache",
-      model: req.model,
-      usage: res.usage,
-      latencyMs,
-      cached: true,
-      stream: false,
-      status: 200,
-    });
-    logger.info({ requestId, model: req.model, latencyMs }, "served from cache (stream→nonstream)");
+    recordUsage({ requestId, tenantId, apiKeyId: apiKey?.id ?? null, provider: "cache", model: req.model, usage: res.usage, latencyMs, cached: true, stream: false, status: 200 });
+    logger.info({ requestId, model: req.model, latencyMs }, "served from cache");
+    if (stream) return cacheToSSE(c, res, requestId);
     return c.json(res);
   }
 
-  // 缓存未命中，流式请求也走非流式（以存入缓存）
+  // Always use non-stream handler (writes cache, returns JSON or SSE)
   if (stream) {
-    const nonStreamReq = { ...req, stream: false };
-    return handleNonStream(c, nonStreamReq, chain, { requestId, tenant, apiKey, start });
+    return handleStream(c, req, chain, { requestId, tenant, apiKey, start });
   }
   return handleNonStream(c, req, chain, { requestId, tenant, apiKey, start });
 });
@@ -156,8 +166,6 @@ async function handleNonStream(
 ) {
   const cache = getSemanticCache();
   const tenantId = ctx.tenant?.id ?? null;
-
-  // ===== 未命中，调用 LLM =====
   let lastErr: unknown;
   for (let i = 0; i < chain.length; i++) {
     const node = chain[i];
@@ -166,38 +174,16 @@ async function handleNonStream(
       const res = await node.provider.chat(req, node.upstreamModel);
       const latencyMs = Date.now() - ctx.start;
       res.nexus.requestId = ctx.requestId;
-
-      recordUsage({
-        requestId: ctx.requestId,
-        tenantId,
-        apiKeyId: ctx.apiKey?.id ?? null,
-        provider: node.providerType,
-        model: req.model,
-        upstreamModel: node.upstreamModel,
-        usage: res.usage,
-        latencyMs,
-        cached: false,
-        stream: false,
-        status: 200,
-      });
-
-      // 异步写入语义缓存
-      cache.store(req, req.model, res, tenantId).catch(() => undefined);
-
+      recordUsage({ requestId: ctx.requestId, tenantId, apiKeyId: ctx.apiKey?.id ?? null, provider: node.providerType, model: req.model, upstreamModel: node.upstreamModel, usage: res.usage, latencyMs, cached: false, stream: false, status: 200 });
+      await cache.store(req, req.model, res, tenantId).catch(() => undefined);
       return c.json(res);
     } catch (e) {
       lastErr = e;
-      logger.warn(
-        { err: (e as Error).message, provider: node.providerType, model: node.upstreamModel, attempt: i + 1 },
-        "provider failed, trying fallback",
-      );
+      logger.warn({ err: (e as Error).message, provider: node.providerType, model: node.upstreamModel, attempt: i + 1 }, "provider failed, trying fallback");
     }
   }
   const status: ContentfulStatusCode = lastErr instanceof ProviderError ? (lastErr.status as ContentfulStatusCode) : 502;
-  return c.json(
-    { error: { message: `all providers failed: ${(lastErr as Error)?.message ?? "unknown"}`, type: "upstream_error" } },
-    status,
-  );
+  return c.json({ error: { message: `all providers failed: ${(lastErr as Error)?.message ?? "unknown"}`, type: "upstream_error" } }, status);
 }
 
 async function handleStream(
@@ -206,17 +192,13 @@ async function handleStream(
   chain: Array<{ provider: any; providerType: string; upstreamModel: string }>,
   ctx: Ctx,
 ) {
-  // 流式故障转移：首个 provider 失败立即切下一个；一旦开始输出则不再转移
   for (let i = 0; i < chain.length; i++) {
     const node = chain[i];
     if (!node?.provider) continue;
     try {
       const iterable = node.provider.chatStream(req, node.upstreamModel);
-      // 试探第一个 chunk（建立连接）
       const iter = iterable[Symbol.asyncIterator]();
       const first = await iter.next();
-
-      // 成功建立流，开始 SSE 输出
       c.header("Content-Type", "text/event-stream");
       c.header("Cache-Control", "no-cache");
       c.header("Connection", "keep-alive");
@@ -225,14 +207,15 @@ async function handleStream(
       const { readable, writable } = new TransformStream();
       const writer = writable.getWriter();
       const encoder = new TextEncoder();
-
       let totalUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
       let firstSent = false;
+      let collectedContent = "";
 
       const send = async (chunk: any) => {
         if (chunk.usage) totalUsage = chunk.usage;
+        const delta = chunk.choices?.[0]?.delta?.content || "";
+        collectedContent += delta;
         if (!firstSent) {
-          // 先发第一个 chunk
           await writer.write(encoder.encode(`data: ${JSON.stringify(first.value)}\n\n`));
           firstSent = true;
           if (!first.done) {
@@ -245,9 +228,7 @@ async function handleStream(
 
       (async () => {
         try {
-          if (!first.done) {
-            await send(first.value);
-          }
+          if (!first.done) await send(first.value);
           while (true) {
             const { done, value } = await iter.next();
             if (done) break;
@@ -255,40 +236,35 @@ async function handleStream(
           }
           await writer.write(encoder.encode("data: [DONE]\n\n"));
           const latencyMs = Date.now() - ctx.start;
-          recordUsage({
-            requestId: ctx.requestId,
-            tenantId: ctx.tenant?.id ?? null,
-            apiKeyId: ctx.apiKey?.id ?? null,
-            provider: node.providerType,
+          recordUsage({ requestId: ctx.requestId, tenantId: ctx.tenant?.id ?? null, apiKeyId: ctx.apiKey?.id ?? null, provider: node.providerType, model: req.model, upstreamModel: node.upstreamModel, usage: totalUsage, latencyMs, cached: false, stream: true, status: 200 });
+
+          // Write cache
+          const cache = getSemanticCache();
+          const tenantId = ctx.tenant?.id ?? null;
+          const fullResponse = {
+            id: ctx.requestId,
+            object: "chat.completion" as const,
+            created: Math.floor(Date.now() / 1000),
             model: req.model,
-            upstreamModel: node.upstreamModel,
+            choices: [{ index: 0, message: { role: "assistant" as const, content: collectedContent }, finish_reason: "stop" }],
             usage: totalUsage,
-            latencyMs,
-            cached: false,
-            stream: true,
-            status: 200,
-          });
+            nexus: { provider: node.providerType, upstreamModel: node.upstreamModel },
+          };
+          await cache.store(req, req.model, fullResponse, tenantId).catch(() => {});
         } catch (e) {
           logger.error({ err: (e as Error).message, requestId: ctx.requestId }, "stream error");
         } finally {
           await writer.close();
         }
       })();
-
       return c.body(readable);
     } catch (e) {
-      logger.warn(
-        { err: (e as Error).message, provider: node.providerType, model: node.upstreamModel, attempt: i + 1 },
-        "stream provider failed, trying fallback",
-      );
+      logger.warn({ err: (e as Error).message, provider: node.providerType, model: node.upstreamModel, attempt: i + 1 }, "stream provider failed, trying fallback");
       lastStreamErr = e;
     }
   }
   const status: ContentfulStatusCode = lastStreamErr instanceof ProviderError ? (lastStreamErr.status as ContentfulStatusCode) : 502;
-  return c.json(
-    { error: { message: `all stream providers failed: ${(lastStreamErr as Error)?.message ?? "unknown"}`, type: "upstream_error" } },
-    status,
-  );
+  return c.json({ error: { message: `all stream providers failed: ${(lastStreamErr as Error)?.message ?? "unknown"}`, type: "upstream_error" } }, status);
 }
 
 let lastStreamErr: unknown;
