@@ -2,35 +2,56 @@
 
 import { useState } from "react";
 import { ApiClient } from "@/lib/api";
-import Dashboard from "./_dashboard-client";
+import ManagerDashboard from "./_dashboard-client";
+import UserDashboard from "./_user-dashboard";
 
 export default function Home() {
-  const [masterKey, setMasterKey] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [client, setClient] = useState<ApiClient | null>(null);
+  const [role, setRole] = useState<"manager" | "user" | null>(null);
 
   const handleLogin = async () => {
-    if (!masterKey.trim()) {
-      setError("请输入 Master Key");
+    if (!apiKey.trim()) {
+      setError("请输入 API Key");
       return;
     }
     setLoading(true);
     setError("");
 
     try {
-      const c = new ApiClient(masterKey.trim());
-      await c.get("/health");
-      setClient(c);
+      const c = new ApiClient(apiKey.trim());
+      // 先尝试 master key（管理端）
+      try {
+        await c.getTenants();
+        setClient(c);
+        setRole("manager");
+        return;
+      } catch {
+        // 不是 master key，尝试 user 端
+      }
+      // 尝试 user 端
+      try {
+        await c.get("/user/overview");
+        setClient(c);
+        setRole("user");
+        return;
+      } catch {
+        setError("API Key 无效，请检查后重试");
+      }
     } catch (e) {
-      setError((e as Error).message || "认证失败，请检查 Master Key 和网关是否启动");
+      setError((e as Error).message || "认证失败");
     } finally {
       setLoading(false);
     }
   };
 
-  if (client) {
-    return <Dashboard client={client} />;
+  if (client && role === "manager") {
+    return <ManagerDashboard client={client} />;
+  }
+  if (client && role === "user") {
+    return <UserDashboard client={client} />;
   }
 
   return (
@@ -43,20 +64,20 @@ export default function Home() {
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-gray-800">Nexus LLM Gateway</h1>
-          <p className="text-gray-500 mt-2">AI 统一网关管理看板</p>
+          <p className="text-gray-500 mt-2">AI 统一网关管理平台</p>
         </div>
 
         <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Master Key</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
               <input
                 type="password"
-                value={masterKey}
-                onChange={(e) => setMasterKey(e.target.value)}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50"
-                placeholder="sk-nexus-master-change-me"
+                placeholder="输入 Master Key 或 API Key"
               />
             </div>
             {error && (
@@ -70,11 +91,19 @@ export default function Home() {
               {loading ? "验证中..." : "进入看板"}
             </button>
           </div>
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            <div className="flex gap-4 text-xs text-gray-400">
+              <div>
+                <div className="font-medium text-gray-600">管理员</div>
+                <div>Master Key → 管理端</div>
+              </div>
+              <div>
+                <div className="font-medium text-gray-600">用户</div>
+                <div>API Key → 用户端</div>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <p className="text-center text-gray-400 text-xs mt-6">
-          需要网关的 Master Key 才能登录
-        </p>
       </div>
     </div>
   );

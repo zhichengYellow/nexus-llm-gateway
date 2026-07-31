@@ -14,6 +14,7 @@ import { embeddingsRoute } from "./routes/embeddings.js";
 import { modelsRoute } from "./routes/models.js";
 import { healthRoute } from "./routes/health.js";
 import { adminRoute } from "./routes/admin.js";
+import { userRoute } from "./routes/user.js";
 
 type AppEnv = AuthEnv & LoggingEnv;
 
@@ -43,8 +44,11 @@ api.route("/v1/chat/completions", chatRoute);
 api.route("/v1/embeddings", embeddingsRoute);
 api.route("/v1/models", modelsRoute);
 
-// 管理路由
+// 管理路由（master key）
 api.route("/admin", adminRoute);
+
+// 用户路由（API Key）
+api.route("/user", userRoute);
 
 app.route("/", api);
 
@@ -60,6 +64,7 @@ serve(
     logger.info(`🚀 Nexus LLM Gateway listening on http://localhost:${info.port}`);
     logger.info(`   OpenAI 兼容: POST /v1/chat/completions, /v1/embeddings, GET /v1/models`);
     logger.info(`   管理 API:    /admin/* (需 master key)`);
+    logger.info(`   用户 API:    /user/* (需 API key)`);
     logger.info(`   健康检查:    /health`);
   },
 );

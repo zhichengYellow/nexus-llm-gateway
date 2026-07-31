@@ -48,8 +48,8 @@ export function loadConfig(): GatewayConfig {
         baseUrl: process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com",
         apiKey: process.env.DEEPSEEK_API_KEY,
         models: {
-          "deepseek-chat": "deepseek-chat",
-          "deepseek-reasoner": "deepseek-reasoner",
+          "deepseek-v4-flash": "deepseek-chat",
+          "deepseek-v4-pro": "deepseek-reasoner",
         },
       },
       ollama: {
