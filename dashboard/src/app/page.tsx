@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ApiClient } from "@/lib/api";
 import ManagerDashboard from "./_dashboard-client";
 import UserDashboard from "./_user-dashboard";
@@ -12,6 +12,35 @@ export default function Home() {
   const [client, setClient] = useState<ApiClient | null>(null);
   const [role, setRole] = useState<"manager" | "user" | null>(null);
 
+  // 从 localStorage 恢复登录状态
+  useEffect(() => {
+    const savedKey = localStorage.getItem("nexus_api_key");
+    if (savedKey) {
+      setApiKey(savedKey);
+      autoLogin(savedKey);
+    }
+  }, []);
+
+  const autoLogin = async (key: string) => {
+    try {
+      const c = new ApiClient(key);
+      try {
+        await c.getTenants();
+        setClient(c);
+        setRole("manager");
+        localStorage.setItem("nexus_api_key", key);
+        return;
+      } catch {}
+      try {
+        await c.get("/user/overview");
+        setClient(c);
+        setRole("user");
+        localStorage.setItem("nexus_api_key", key);
+        return;
+      } catch {}
+    } catch {}
+  };
+
   const handleLogin = async () => {
     if (!apiKey.trim()) {
       setError("请输入 API Key");
@@ -22,20 +51,18 @@ export default function Home() {
 
     try {
       const c = new ApiClient(apiKey.trim());
-      // 先尝试 master key（管理端）
       try {
         await c.getTenants();
         setClient(c);
         setRole("manager");
+        localStorage.setItem("nexus_api_key", apiKey.trim());
         return;
-      } catch {
-        // 不是 master key，尝试 user 端
-      }
-      // 尝试 user 端
+      } catch {}
       try {
         await c.get("/user/overview");
         setClient(c);
         setRole("user");
+        localStorage.setItem("nexus_api_key", apiKey.trim());
         return;
       } catch {
         setError("API Key 无效，请检查后重试");
@@ -47,11 +74,18 @@ export default function Home() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("nexus_api_key");
+    setClient(null);
+    setRole(null);
+    setApiKey("");
+  };
+
   if (client && role === "manager") {
-    return <ManagerDashboard client={client} />;
+    return <ManagerDashboard client={client} onLogout={handleLogout} />;
   }
   if (client && role === "user") {
-    return <UserDashboard client={client} />;
+    return <UserDashboard client={client} onLogout={handleLogout} />;
   }
 
   return (

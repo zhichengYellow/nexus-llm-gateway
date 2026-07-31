@@ -8,9 +8,10 @@ import {
 
 interface Props {
   client: ApiClient;
+  onLogout?: () => void;
 }
 
-export default function Dashboard({ client }: Props) {
+export default function Dashboard({ client, onLogout }: Props) {
   const [activeTab, setActiveTab] = useState<"overview" | "keys" | "tenants" | "routes">("overview");
   const [summary, setSummary] = useState<any>(null);
   const [timeline, setTimeline] = useState<any>(null);

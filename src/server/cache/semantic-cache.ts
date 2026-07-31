@@ -45,7 +45,7 @@ export class SemanticCache {
 
   async lookup(req: ChatCompletionRequest, model: string, _tenantId: string | null): Promise<CacheLookupResult> {
     try {
-      if (req.stream) return { hit: false };
+      // 流式请求也查缓存——命中后以非流式返回结果（Cline 兼容）
       const last = lastUserMessage(req);
       if (!last || last.length < 2) return { hit: false };
 

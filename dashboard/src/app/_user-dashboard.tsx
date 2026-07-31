@@ -8,9 +8,10 @@ import {
 
 interface Props {
   client: ApiClient;
+  onLogout?: () => void;
 }
 
-export default function UserDashboard({ client }: Props) {
+export default function UserDashboard({ client, onLogout }: Props) {
   const [overview, setOverview] = useState<any>(null);
   const [timeline, setTimeline] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -32,7 +33,11 @@ export default function UserDashboard({ client }: Props) {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(loadData, 10000); // 每 10 秒自动刷新
+    return () => clearInterval(interval);
+  }, []);
 
   if (loading) {
     return (

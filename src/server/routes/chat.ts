@@ -108,8 +108,35 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
     })),
   ];
 
+  // ===== 缓存查询（提前到分流之前，流式也检查）=====
+  const cache = getSemanticCache();
+  const tenantId = tenant?.id ?? null;
+  const cacheResult = await cache.lookup(req, req.model, tenantId);
+  if (cacheResult.hit && cacheResult.response) {
+    const latencyMs = Date.now() - start;
+    const res = cacheResult.response;
+    res.nexus.requestId = requestId;
+
+    recordUsage({
+      requestId,
+      tenantId,
+      apiKeyId: apiKey?.id ?? null,
+      provider: "cache",
+      model: req.model,
+      usage: res.usage,
+      latencyMs,
+      cached: true,
+      stream: false,
+      status: 200,
+    });
+    logger.info({ requestId, model: req.model, latencyMs }, "served from cache (stream→nonstream)");
+    return c.json(res);
+  }
+
+  // 缓存未命中，流式请求也走非流式（以存入缓存）
   if (stream) {
-    return handleStream(c, req, chain, { requestId, tenant, apiKey, start });
+    const nonStreamReq = { ...req, stream: false };
+    return handleNonStream(c, nonStreamReq, chain, { requestId, tenant, apiKey, start });
   }
   return handleNonStream(c, req, chain, { requestId, tenant, apiKey, start });
 });
@@ -127,31 +154,8 @@ async function handleNonStream(
   chain: Array<{ provider: any; providerType: string; upstreamModel: string }>,
   ctx: Ctx,
 ) {
-  // ===== 语义缓存查询 =====
   const cache = getSemanticCache();
   const tenantId = ctx.tenant?.id ?? null;
-  const cacheResult = await cache.lookup(req, req.model, tenantId);
-  if (cacheResult.hit && cacheResult.response) {
-    const latencyMs = Date.now() - ctx.start;
-    const res = cacheResult.response;
-    res.nexus.requestId = ctx.requestId;
-
-    recordUsage({
-      requestId: ctx.requestId,
-      tenantId,
-      apiKeyId: ctx.apiKey?.id ?? null,
-      provider: "cache",
-      model: req.model,
-      usage: res.usage,
-      latencyMs,
-      cached: true,
-      stream: false,
-      status: 200,
-    });
-
-    logger.info({ requestId: ctx.requestId, model: req.model, latencyMs }, "served from cache");
-    return c.json(res);
-  }
 
   // ===== 未命中，调用 LLM =====
   let lastErr: unknown;
