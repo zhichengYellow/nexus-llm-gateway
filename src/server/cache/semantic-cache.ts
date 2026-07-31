@@ -1,8 +1,9 @@
 /**
  * Nexus LLM Gateway - 请求缓存
- * 基于 prompt + model hash 的精确匹配缓存。
- * 
- * 核心逻辑：相同 prompt → 相同 hash → 直接从缓存返回，不调用 LLM
+ * 基于最后一条用户消息 + model 做 hash 的精确匹配缓存。
+ *
+ * 设计：Cline/IDE 会带超长系统 prompt + 对话历史，
+ * 但用户的核心问题通常重复 → 对最后一轮 user 消息做 hash
  */
 import { eq, and, gt } from "drizzle-orm";
 import { db } from "../db/client.js";
@@ -12,14 +13,21 @@ import { logger } from "../../shared/logger.js";
 import { createHash } from "node:crypto";
 import type { ChatCompletionRequest, ChatCompletionResponse } from "../../shared/types.js";
 
-function promptHash(req: ChatCompletionRequest, model: string): string {
-  const parts: string[] = [];
-  for (const msg of req.messages) {
-    if (msg.role === "system" || msg.role === "user") {
-      parts.push(`${msg.role}:${msg.content}`);
+/** 提取最后一条 user 消息 */
+function lastUserMessage(req: ChatCompletionRequest): string {
+  const msgs = req.messages as Array<{ role: string; content: string | any[] }>;
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i]?.role === "user") {
+      const c = msgs[i]?.content;
+      return typeof c === "string" ? c : String(c);
     }
   }
-  const text = `${model}|${parts.join("\n")}|${req.temperature ?? 1}|${req.max_tokens ?? 0}`;
+  return "";
+}
+
+function cacheHash(req: ChatCompletionRequest, model: string): string {
+  const last = lastUserMessage(req);
+  const text = `${model}|${last}|${req.temperature ?? 1}|${req.max_tokens ?? 0}`;
   return createHash("sha256").update(text).digest("hex");
 }
 
@@ -38,10 +46,10 @@ export class SemanticCache {
   async lookup(req: ChatCompletionRequest, model: string, _tenantId: string | null): Promise<CacheLookupResult> {
     try {
       if (req.stream) return { hit: false };
-      const text = req.messages.map(m => (m as any).content).join(" ");
-      if (!text || text.length < 3) return { hit: false };
+      const last = lastUserMessage(req);
+      if (!last || last.length < 2) return { hit: false };
 
-      const hash = promptHash(req, model);
+      const hash = cacheHash(req, model);
       const now = new Date();
 
       const rows = await db
@@ -52,7 +60,7 @@ export class SemanticCache {
 
       const row = rows[0] as any;
       if (row?.response) {
-        logger.info({ model, hash: hash.slice(0, 8) }, "cache HIT");
+        logger.info({ model, hash: hash.slice(0, 8), lastMsg: last.slice(0, 60) }, "cache HIT");
         const r = row.response as ChatCompletionResponse;
         r.nexus = { provider: "cache", cached: true } as any;
         return { hit: true, response: r };
@@ -72,14 +80,13 @@ export class SemanticCache {
   ): Promise<void> {
     try {
       if (req.stream) return;
-      const text = req.messages.map(m => (m as any).content).join(" ");
-      if (!text || text.length < 3) return;
+      const last = lastUserMessage(req);
+      if (!last || last.length < 2) return;
 
-      const hash = promptHash(req, model);
+      const hash = cacheHash(req, model);
       const expiresAt = new Date(Date.now() + this.ttl * 1000);
-      const preview = text.slice(0, 200);
+      const preview = last.slice(0, 200);
 
-      // 先尝试删除旧记录避免冲突
       await db.delete(semanticCache).where(eq(semanticCache.keyHash, hash));
 
       await db.insert(semanticCache).values({
@@ -92,7 +99,7 @@ export class SemanticCache {
         expiresAt,
       } as any);
 
-      logger.info({ model, hash: hash.slice(0, 8) }, "cache stored");
+      logger.info({ model, hash: hash.slice(0, 8), preview }, "cache stored");
     } catch (e) {
       logger.error({ err: (e as Error).message, model }, "cache store failed");
     }
