@@ -35,10 +35,8 @@ async function seed() {
     .returning();
   if (!keyRow) throw new Error("failed to create dev api key");
 
-  logger.info({ apiKeyId: keyRow.id }, "✅ created dev api key (save this key, shown only once)");
-  // 仅打印前缀，防止日志泄露完整 Key
-  const maskedKey = `${rawKey.slice(0, 12)}...${rawKey.slice(-4)}`;
-  logger.info("   使用方式: Authorization: Bearer " + maskedKey);
+  logger.info({ apiKeyId: keyRow.id, key: rawKey }, "✅ created dev api key (save this key, shown only once)");
+  logger.info("   使用方式: Authorization: Bearer " + rawKey);
 
   process.exit(0);
 }
