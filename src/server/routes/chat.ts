@@ -22,7 +22,7 @@ const chatSchema = z.object({
   messages: z.array(
     z.object({
       role: z.enum(["system", "user", "assistant", "tool"]),
-      content: z.string(),
+      content: z.union([z.string(), z.array(z.any())]),
       name: z.string().optional(),
       tool_call_id: z.string().optional(),
     }),
@@ -41,8 +41,24 @@ type ChatEnv = AuthEnv & LoggingEnv;
 
 export const chatRoute = new Hono<ChatEnv>();
 
+/** 标准化消息 content：把数组格式（multimodal）转为字符串 */
+function normalizeContent(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part: any) => (typeof part.text === "string" ? part.text : JSON.stringify(part)))
+      .join("\n");
+  }
+  return String(content ?? "");
+}
+
 chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
-  const req = c.req.valid("json") as z.infer<typeof chatSchema> & { [k: string]: unknown };
+  const raw = c.req.valid("json") as z.infer<typeof chatSchema> & { [k: string]: unknown };
+  // 标准化所有消息的 content
+  const req = {
+    ...raw,
+    messages: raw.messages.map((m) => ({ ...m, content: normalizeContent(m.content) })),
+  };
   const requestId = c.get("requestId");
   const tenant = c.get("tenant");
   const apiKey = c.get("apiKey");
