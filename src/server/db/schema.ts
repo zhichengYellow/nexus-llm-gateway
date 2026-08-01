@@ -95,6 +95,8 @@ export const semanticCache = pgTable(
     model: text("model").notNull(),
     tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
     hits: integer("hits").notNull().default(0),
+    /** 最近一次命中时间（用于 LRU/LFU 淘汰策略） */
+    lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
