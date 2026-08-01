@@ -138,7 +138,8 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
     const latencyMs = Date.now() - start;
     const res = cacheResult.response;
     res.nexus.requestId = requestId;
-    recordUsage({ requestId, tenantId, apiKeyId: apiKey?.id ?? null, provider: "cache", model: req.model, usage: res.usage, latencyMs, cached: true, stream: false, status: 200 });
+    // 缓存命中：没调外部 API，token 记为 0，节省指标在看板单独算
+    recordUsage({ requestId, tenantId, apiKeyId: apiKey?.id ?? null, provider: "cache", model: req.model, usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }, latencyMs, cached: true, stream: false, status: 200 });
     logger.info({ requestId, model: req.model, latencyMs }, "served from cache");
     if (stream) return cacheToSSE(c, res, requestId);
     return c.json(res);

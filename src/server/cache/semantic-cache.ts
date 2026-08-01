@@ -26,8 +26,10 @@ function lastUserMessage(req: ChatCompletionRequest): string {
 }
 
 function cacheHash(req: ChatCompletionRequest, model: string): string {
+  // 仅基于 model + 最后一条 user 消息。不包含 max_tokens/temperature 等生成参数，
+  // 否则相同问题因参数不同而永远不命中。
   const last = lastUserMessage(req);
-  const text = `${model}|${last}|${req.temperature ?? 1}|${req.max_tokens ?? 0}`;
+  const text = `${model}|${last}`;
   return createHash("sha256").update(text).digest("hex");
 }
 
