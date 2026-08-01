@@ -11,6 +11,14 @@ interface Props {
   onLogout?: () => void;
 }
 
+/** 强制转换为北京时间（东八区），不依赖浏览器时区 */
+function formatBeijing(v: string): string {
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return v;
+  const bj = new Date(d.getTime() + 8 * 3600 * 1000);
+  return `${(bj.getUTCHours()).toString().padStart(2, "0")}:${(bj.getUTCMinutes()).toString().padStart(2, "0")}`;
+}
+
 export default function Dashboard({ client, onLogout }: Props) {
   const [activeTab, setActiveTab] = useState<"overview" | "keys" | "tenants" | "routes">("overview");
   const [summary, setSummary] = useState<any>(null);
@@ -151,11 +159,7 @@ export default function Dashboard({ client, onLogout }: Props) {
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={timeline?.timeline || []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="hour" tick={{ fill: "#9ca3af", fontSize: 12 }} tickFormatter={(v) => {
-                    const local = new Date(v);
-                    if (isNaN(local.getTime())) return v;
-                    return `${(local.getHours()).toString().padStart(2, "0")}:${(local.getMinutes()).toString().padStart(2, "0")}`;
-                  }} />
+                  <XAxis dataKey="hour" tick={{ fill: "#9ca3af", fontSize: 12 }} tickFormatter={formatBeijing} />
                   <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} />
                   <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px" }} labelStyle={{ color: "#374151" }} />
                   <Line type="monotone" dataKey="totalRequests" stroke="#6366f1" strokeWidth={2} name="请求数" dot={false} />

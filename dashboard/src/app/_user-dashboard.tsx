@@ -11,6 +11,15 @@ interface Props {
   onLogout?: () => void;
 }
 
+/** 强制转换为北京时间（东八区），不依赖浏览器时区 */
+function formatBeijing(v: string): string {
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return v;
+  // 手动加 8 小时并取 UTC 字段，即为北京时间
+  const bj = new Date(d.getTime() + 8 * 3600 * 1000);
+  return `${(bj.getUTCHours()).toString().padStart(2, "0")}:${(bj.getUTCMinutes()).toString().padStart(2, "0")}`;
+}
+
 export default function UserDashboard({ client, onLogout }: Props) {
   const [overview, setOverview] = useState<any>(null);
   const [timeline, setTimeline] = useState<any>(null);
@@ -117,14 +126,7 @@ export default function UserDashboard({ client, onLogout }: Props) {
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={timeline?.timeline || []}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="hour" tick={{ fill: "#9ca3af", fontSize: 12 }} tickFormatter={(v) => {
-                // 数据库存 UTC，转东八区显示
-                const local = new Date(v);
-                if (isNaN(local.getTime())) return v;
-                const h = (local.getHours()).toString().padStart(2, "0");
-                const m = local.getMinutes().toString().padStart(2, "0");
-                return `${h}:${m}`;
-              }} />
+              <XAxis dataKey="hour" tick={{ fill: "#9ca3af", fontSize: 12 }} tickFormatter={formatBeijing} />
               <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} />
               <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px" }} />
               <Line type="monotone" dataKey="totalRequests" stroke="#6366f1" strokeWidth={2} name="请求数" dot={false} />
