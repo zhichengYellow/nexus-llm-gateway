@@ -161,7 +161,12 @@ export default function Dashboard({ client, onLogout }: Props) {
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="hour" tick={{ fill: "#9ca3af", fontSize: 12 }} tickFormatter={formatBeijing} />
                   <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} />
-                  <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px" }} labelStyle={{ color: "#374151" }} />
+                  <Tooltip
+                    labelFormatter={(v) => `北京时间 ${formatBeijing(v as string)}`}
+                    formatter={(value: any, name: any) => [(value ?? 0).toLocaleString(), name]}
+                    contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", fontSize: 13 }}
+                    labelStyle={{ color: "#374151", fontWeight: 600, marginBottom: 4 }}
+                  />
                   <Line type="monotone" dataKey="totalRequests" stroke="#6366f1" strokeWidth={2} name="请求数" dot={false} />
                   <Line type="monotone" dataKey="totalTokens" stroke="#3b82f6" strokeWidth={2} name="Token" dot={false} />
                   <Line type="monotone" dataKey="cacheHits" stroke="#10b981" strokeWidth={2} name="缓存命中" dot={false} />
@@ -194,16 +199,48 @@ export default function Dashboard({ client, onLogout }: Props) {
 
             <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
               <h3 className="text-gray-800 font-medium mb-4">模型用量详情</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="text-gray-500 border-b border-gray-100"><th className="text-left py-2 px-3">Provider</th><th className="text-left py-2 px-3">模型</th><th className="text-right py-2 px-3">请求数</th><th className="text-right py-2 px-3">Token</th><th className="text-right py-2 px-3">缓存命中</th><th className="text-right py-2 px-3">平均延迟</th></tr></thead>
-                  <tbody>
-                    {(summary?.summary || []).map((row: any, i: number) => (
-                      <tr key={i} className="border-b border-gray-50 hover:bg-gray-50"><td className="py-2 px-3 text-gray-600">{row.provider}</td><td className="py-2 px-3 text-gray-800 font-medium">{row.model}</td><td className="py-2 px-3 text-right text-gray-600">{row.totalRequests}</td><td className="py-2 px-3 text-right text-gray-600">{row.totalTokens?.toLocaleString()}</td><td className="py-2 px-3 text-right text-emerald-600">{row.cacheHits}</td><td className="py-2 px-3 text-right text-gray-600">{row.avgLatencyMs}ms</td></tr>
-                    ))}
-                    {(!summary?.summary || summary.summary.length === 0) && (<tr><td colSpan={6} className="text-center py-8 text-gray-400">暂无数据</td></tr>)}
-                  </tbody>
-                </table>
+              <div className="space-y-4">
+                {(summary?.summary || []).map((row: any, i: number) => {
+                  const maxReq = Math.max(...(summary?.summary || []).map((r: any) => r.totalRequests), 1);
+                  const maxTokens = Math.max(...(summary?.summary || []).map((r: any) => r.totalTokens || 0), 1);
+                  const reqPct = (row.totalRequests / maxReq) * 100;
+                  const tokPct = ((row.totalTokens || 0) / maxTokens) * 100;
+                  const hitRate = row.totalRequests > 0 ? Math.round((row.cacheHits / row.totalRequests) * 100) : 0;
+                  return (
+                    <div key={i} className="rounded-xl border border-gray-100 bg-gray-50/50 p-4 hover:shadow-md transition">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-xs font-medium">{row.provider}</span>
+                          <span className="text-gray-800 font-semibold">{row.model}</span>
+                        </div>
+                        <span className="text-xs text-gray-400">{row.avgLatencyMs}ms</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div>
+                          <div className="flex justify-between text-xs text-gray-500 mb-0.5">
+                            <span>请求数</span><span className="font-medium text-gray-700">{row.totalRequests} 次</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden"><div className="h-full bg-indigo-500 rounded-full" style={{ width: `${reqPct}%` }} /></div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs text-gray-500 mb-0.5">
+                            <span>Token</span><span className="font-medium text-blue-600">{(row.totalTokens || 0).toLocaleString()}</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden"><div className="h-full bg-blue-500 rounded-full" style={{ width: `${tokPct}%` }} /></div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs text-gray-500 mb-0.5">
+                            <span>缓存命中</span><span className="font-medium text-emerald-600">{row.cacheHits} 次 · {hitRate}%</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${hitRate}%` }} /></div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {(!summary?.summary || summary.summary.length === 0) && (
+                  <div className="text-center py-8 text-gray-400">暂无数据</div>
+                )}
               </div>
             </div>
           </div>
