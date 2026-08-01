@@ -97,6 +97,21 @@ adminRoute.patch("/tenants/:id/approve-premium", async (c) => {
   return c.json({ tenant: { id, cachePlan: "premium_approved", approvedBy: "admin" } });
 });
 
+// 取消增强缓存（premium_approved → free，阈值还原默认）
+adminRoute.patch("/tenants/:id/revoke-premium", async (c) => {
+  const id = c.req.param("id");
+  const [tenant] = await db.select({ id: tenants.id }).from(tenants).where(eq(tenants.id, id)).limit(1);
+  if (!tenant) return c.json({ error: { message: "not found" } }, 404);
+  await db.update(tenants).set({
+    cachePlan: "free",
+    cacheThreshold: null,
+    premiumRequestedAt: null,
+    premiumApprovedAt: null,
+    premiumApprovedBy: null,
+  }).where(eq(tenants.id, id));
+  return c.json({ tenant: { id, cachePlan: "free" } });
+});
+
 // 管理员拒绝
 adminRoute.patch("/tenants/:id/reject-premium", async (c) => {
   const id = c.req.param("id");

@@ -443,7 +443,13 @@ export default function Dashboard({ client, onLogout }: Props) {
                         <div className="text-sm text-zinc-200 font-medium">{t.name}</div>
                         <div className="text-xs text-zinc-500">{t.monthlyTokenQuota ? `${t.monthlyTokenQuota.toLocaleString()} tokens/月` : "不限配额"}</div>
                       </div>
-                      {t.cachePlan === "premium_approved" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-violet-500/10 text-violet-400 border border-violet-500/20">🔮 增强缓存</span>}
+                      {t.cachePlan === "premium_approved" && (
+                        <>
+                          <span className="px-2.5 py-0.5 rounded-full text-xs bg-violet-500/10 text-violet-400 border border-violet-500/20">🔮 增强缓存</span>
+                          <button onClick={async () => { if (confirm(`确定取消租户 "${t.name}" 的增强缓存？`)) { await client.revokePremium(t.id); loadData(); } }}
+                            className="text-xs px-2.5 py-1 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition">取消</button>
+                        </>
+                      )}
                       {t.cachePlan === "premium_pending" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20">⏳ 审核中</span>}
                       {t.cachePlan === "premium_rejected" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-rose-500/10 text-rose-400 border border-rose-500/20">❌ 已拒绝</span>}
                       {t.cachePlan === "free" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-zinc-800 text-zinc-500 border border-zinc-700/50">免费</span>}

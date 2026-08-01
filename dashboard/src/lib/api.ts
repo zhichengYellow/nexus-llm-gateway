@@ -130,6 +130,10 @@ export class ApiClient {
     return this.patch<{ tenant: { id: string; cachePlan: string } }>(`/admin/tenants/${tenantId}/approve-premium`);
   }
 
+  async revokePremium(tenantId: string) {
+    return this.patch<{ tenant: { id: string; cachePlan: string } }>(`/admin/tenants/${tenantId}/revoke-premium`);
+  }
+
   async rejectPremium(tenantId: string) {
     return this.patch<{ tenant: { id: string; cachePlan: string } }>(`/admin/tenants/${tenantId}/reject-premium`);
   }
