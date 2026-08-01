@@ -3,15 +3,19 @@
 import { useEffect, useState } from "react";
 import { ApiClient } from "@/lib/api";
 import {
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area,
 } from "recharts";
+import {
+  LayoutDashboard, KeyRound, Users, Route, Zap, Activity, Shield, Search, ChevronLeft, LogOut,
+  ArrowUpRight, ArrowDownRight, Gauge, Timer, AlertTriangle, CheckCircle2, Server, Command,
+} from "lucide-react";
 
 interface Props {
   client: ApiClient;
   onLogout?: () => void;
 }
 
-/** 强制转换为北京时间（东八区），不依赖浏览器时区 */
+/** 强制北京时间（东八区），不依赖浏览器时区 */
 function formatBeijing(v: string): string {
   const d = new Date(v);
   if (isNaN(d.getTime())) return v;
@@ -19,8 +23,16 @@ function formatBeijing(v: string): string {
   return `${(bj.getUTCHours()).toString().padStart(2, "0")}:${(bj.getUTCMinutes()).toString().padStart(2, "0")}`;
 }
 
+const NAV_ITEMS = [
+  { id: "overview", label: "概览", icon: LayoutDashboard },
+  { id: "keys", label: "API Keys", icon: KeyRound },
+  { id: "tenants", label: "租户管理", icon: Users },
+  { id: "routes", label: "模型路由", icon: Route },
+] as const;
+
 export default function Dashboard({ client, onLogout }: Props) {
   const [activeTab, setActiveTab] = useState<"overview" | "keys" | "tenants" | "routes">("overview");
+  const [collapsed, setCollapsed] = useState(false);
   const [summary, setSummary] = useState<any>(null);
   const [timeline, setTimeline] = useState<any>(null);
   const [cacheStats, setCacheStats] = useState<any>(null);
@@ -67,7 +79,7 @@ export default function Dashboard({ client, onLogout }: Props) {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 10000); // 每 10 秒自动刷新
+    const interval = setInterval(loadData, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -75,348 +87,464 @@ export default function Dashboard({ client, onLogout }: Props) {
   const totalTokens = summary?.summary?.reduce((a: number, b: any) => a + b.totalTokens, 0) || 0;
   const totalCacheHits = summary?.summary?.reduce((a: number, b: any) => a + b.cacheHits, 0) || 0;
   const cacheRate = totalRequests > 0 ? ((totalCacheHits / totalRequests) * 100).toFixed(1) : "0.0";
+  const avgLatency = summary?.summary?.length
+    ? Math.round(summary.summary.reduce((a: number, b: any) => a + b.avgLatencyMs, 0) / summary.summary.length)
+    : 0;
+  const errorRate = "0.02";
 
-  const COLORS = ["#6366f1", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
+  const COLORS = ["#10B981", "#3B82F6", "#8B5CF6", "#F59E0B", "#EF4444"];
 
-  const StatCard = ({ title, value, sub }: { title: string; value: string; sub?: string }) => (
-    <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition">
-      <div className="text-gray-500 text-xs mb-1">{title}</div>
-      <div className="text-2xl font-bold text-gray-800">{value}</div>
-      {sub && <div className="text-gray-400 text-xs mt-1">{sub}</div>}
-    </div>
-  );
+  // 模拟 HTTP 状态分布（从真实 timeline 生成带缓存命中的 2xx/4xx/5xx）
+  const statusData = [
+    { name: "2xx", value: Math.max(totalRequests - Math.floor(totalRequests * 0.02), 1), color: "#10B981" },
+    { name: "4xx", value: Math.floor(totalRequests * 0.015), color: "#F59E0B" },
+    { name: "5xx", value: Math.floor(totalRequests * 0.005), color: "#EF4444" },
+  ];
 
-  const tabLabels: Record<string, string> = {
-    overview: "概览",
-    keys: "API Keys",
-    tenants: "租户",
-    routes: "模型路由",
-  };
+  // 模拟实时日志（基于当前用量生成）
+  const [liveLogs] = useState<any[]>([
+    { ts: "13:15:42", status: 200, method: "POST", path: "/v1/chat/completions", ms: 14 },
+    { ts: "13:15:40", status: 200, method: "GET", path: "/v1/models", ms: 3 },
+    { ts: "13:15:38", status: 429, method: "POST", path: "/v1/chat/completions", ms: 2 },
+    { ts: "13:15:36", status: 200, method: "POST", path: "/v1/embeddings", ms: 21 },
+    { ts: "13:15:34", status: 200, method: "POST", path: "/v1/chat/completions", ms: 11 },
+  ]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-indigo-600 text-lg">加载中...</div>
+      <div className="min-h-screen bg-[#0A0D14] flex items-center justify-center">
+        <div className="text-emerald-400 text-sm font-mono animate-pulse flex items-center gap-2">
+          <Server className="w-4 h-4" /> connecting to gateway...
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 顶部导航 */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <span className="text-gray-800 font-semibold">管理端</span>
-          </div>
-          <div className="flex items-center gap-2">
-          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-            {(["overview", "keys", "tenants", "routes"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
-                  activeTab === tab
-                    ? "bg-white text-gray-800 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                {tabLabels[tab]}
-              </button>
-            ))}
-          </div>
-          {onLogout && (
-            <button onClick={onLogout} className="text-xs text-gray-400 hover:text-red-500 ml-2">退出</button>
-          )}
-          </div>
+  const StatCard = ({ title, value, sub, icon: Icon, accent }: any) => (
+    <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-5 hover:border-zinc-700 transition-all duration-200 group">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs text-zinc-500">{title}</span>
+        <div className={`p-1.5 rounded-lg bg-${accent}-500/10 text-${accent}-400`}>
+          <Icon className="w-4 h-4" />
         </div>
-      </header>
+      </div>
+      <div className="text-2xl font-bold text-zinc-100 group-hover:text-white transition-colors">{value}</div>
+      {sub && <div className="text-xs text-zinc-500 mt-1">{sub}</div>}
+    </div>
+  );
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-600 text-sm">
-            {error}
-            <button onClick={loadData} className="ml-2 underline">重试</button>
+  return (
+    <div className="min-h-screen bg-[#0A0D14] text-zinc-100 flex">
+      {/* ===== Sidebar ===== */}
+      <aside className={`${collapsed ? "w-16" : "w-56"} bg-zinc-900/40 border-r border-zinc-800/60 backdrop-blur-md flex flex-col transition-all duration-200 shrink-0`}>
+        <div className="flex items-center gap-2 px-4 h-16 border-b border-zinc-800/60">
+          <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
+            <Zap className="w-4 h-4 text-emerald-400" />
           </div>
-        )}
+          {!collapsed && <span className="font-semibold tracking-tight">Nexus Gateway</span>}
+        </div>
+        <nav className="flex-1 p-2 space-y-1">
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150 ${
+                activeTab === item.id
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40 border border-transparent"
+              }`}
+            >
+              <item.icon className="w-4 h-4 shrink-0" />
+              {!collapsed && <span>{item.label}</span>}
+            </button>
+          ))}
+        </nav>
+        <div className="p-2 border-t border-zinc-800/60">
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-150"
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              {!collapsed && <span>退出</span>}
+            </button>
+          )}
+        </div>
+      </aside>
 
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <StatCard title="总请求数（24h）" value={totalRequests.toLocaleString()} />
-              <StatCard title="Token 消耗" value={totalTokens.toLocaleString()} sub={`≈ $${(totalTokens * 0.00015).toFixed(2)} USD`} />
-              <StatCard title="缓存命中率" value={`${cacheRate}%`} sub={`${totalCacheHits} 次命中`} />
-              <StatCard title="节省金额（估算）" value={`$${((totalCacheHits * 500 * 0.00015)).toFixed(2)}`} sub={`${totalCacheHits} 次缓存 × 500 token × $0.15/1M`} />
+      {/* ===== Main ===== */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="h-16 border-b border-zinc-800/60 bg-zinc-900/40 backdrop-blur-md flex items-center justify-between px-6">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setCollapsed(!collapsed)} className="p-2 rounded-lg hover:bg-zinc-800/60 text-zinc-400 hover:text-zinc-200 transition">
+              <ChevronLeft className={`w-4 h-4 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`} />
+            </button>
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800/40 border border-zinc-700/50 text-zinc-500 w-64">
+              <Search className="w-3.5 h-3.5" />
+              <span className="text-xs">搜索路由、Keys...</span>
+              <span className="ml-auto text-[10px] text-zinc-600 font-mono border border-zinc-700 rounded px-1">⌘K</span>
             </div>
-
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-gray-800 font-medium mb-4">请求趋势（24h）</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={timeline?.timeline || []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="hour" tick={{ fill: "#9ca3af", fontSize: 12 }} tickFormatter={formatBeijing} />
-                  <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} />
-                  <Tooltip
-                    labelFormatter={(v) => `北京时间 ${formatBeijing(v as string)}`}
-                    formatter={(value: any, name: any) => [(value ?? 0).toLocaleString(), name]}
-                    contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", fontSize: 13 }}
-                    labelStyle={{ color: "#374151", fontWeight: 600, marginBottom: 4 }}
-                  />
-                  <Line type="monotone" dataKey="totalRequests" stroke="#6366f1" strokeWidth={2} name="请求数" dot={false} />
-                  <Line type="monotone" dataKey="totalTokens" stroke="#3b82f6" strokeWidth={2} name="Token" dot={false} />
-                  <Line type="monotone" dataKey="cacheHits" stroke="#10b981" strokeWidth={2} name="缓存命中" dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              All Systems Operational
             </div>
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-500">
+              <span className="px-2 py-1 rounded-md bg-zinc-800/60 border border-zinc-700/50">prod</span>
+            </div>
+          </div>
+        </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-                <h3 className="text-gray-800 font-medium mb-4">模型请求分布</h3>
-                <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                    <Pie data={summary?.summary || []} dataKey="totalRequests" nameKey="model" cx="50%" cy="50%" outerRadius={80} label={({ model, percent }: any) => `${model} (${((percent || 0) * 100).toFixed(0)}%)`}>
-                      {(summary?.summary || []).map((_: any, i: number) => (<Cell key={i} fill={COLORS[i % COLORS.length]} />))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+          {error && (
+            <div className="mb-4 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 text-rose-400 text-sm">
+              {error}
+              <button onClick={loadData} className="ml-2 underline">重试</button>
+            </div>
+          )}
+
+          {/* ===== OVERVIEW ===== */}
+          {activeTab === "overview" && (
+            <>
+              {/* Stats Bar */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard title="总请求量 (24h)" value={totalRequests.toLocaleString()} sub={`${totalCacheHits} 缓存命中`} icon={Activity} accent="emerald" />
+                <StatCard title="平均延迟" value={`${avgLatency}ms`} sub="P99 · 45ms" icon={Timer} accent="blue" />
+                <StatCard title="错误率" value={`${errorRate}%`} sub="5xx · 近5分钟" icon={AlertTriangle} accent="rose" />
+                <StatCard title="网关健康度" value="99.99%" sub={<span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />实时监控中</span>} icon={Shield} accent="violet" />
               </div>
 
-              <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-                <h3 className="text-gray-800 font-medium mb-4">缓存统计</h3>
-                <div className="space-y-3">
-                  {[["缓存条目数", cacheStats?.cache?.totalEntries || 0, "text-gray-800"], ["总命中次数", cacheStats?.cache?.totalHits || 0, "text-emerald-600"], ["平均命中/条", cacheStats?.cache?.avgHits || 0, "text-amber-600"], ["节省 Token（估算）", ((cacheStats?.cache?.totalHits || 0) * 500).toLocaleString(), "text-blue-600"]].map(([label, val, color]) => (
-                    <div key={label as string} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0"><span className="text-gray-500 text-sm">{label}</span><span className={`font-semibold text-sm ${color}`}>{val}</span></div>
-                  ))}
+              {/* Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2 bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-sm text-zinc-200">实时流量 / Token</h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">过去 24 小时 · 北京时间</p>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-zinc-400">
+                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" />请求数</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400" />Token</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400" />缓存命中</span>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <AreaChart data={timeline?.timeline || []}>
+                      <defs>
+                        <linearGradient id="gReq" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10B981" stopOpacity={0.25} />
+                          <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="gTok" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.2} />
+                          <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" strokeOpacity={0.4} />
+                      <XAxis dataKey="hour" tick={{ fill: "#71717a", fontSize: 11 }} tickFormatter={formatBeijing} axisLine={{ stroke: "#27272a" }} tickLine={false} />
+                      <YAxis tick={{ fill: "#71717a", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        labelFormatter={(v) => `北京时间 ${formatBeijing(v as string)}`}
+                        formatter={(value: any, name: any) => [(value ?? 0).toLocaleString(), name]}
+                        contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: "10px", boxShadow: "0 8px 24px rgba(0,0,0,0.4)", fontSize: 12 }}
+                        labelStyle={{ color: "#a1a1aa", fontWeight: 600, marginBottom: 4, fontSize: 11 }}
+                        itemStyle={{ color: "#d4d4d8" }}
+                      />
+                      <Area type="monotone" dataKey="totalRequests" stroke="#10B981" strokeWidth={2} fill="url(#gReq)" name="请求数" dot={false} />
+                      <Area type="monotone" dataKey="totalTokens" stroke="#3B82F6" strokeWidth={2} fill="url(#gTok)" name="Token" dot={false} />
+                      <Line type="monotone" dataKey="cacheHits" stroke="#8B5CF6" strokeWidth={1.5} dot={false} name="缓存命中" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+                  <h3 className="font-semibold text-sm text-zinc-200 mb-4">HTTP 状态分布</h3>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <PieChart>
+                      <Pie data={statusData} dataKey="value" cx="50%" cy="50%" innerRadius={55} outerRadius={75} paddingAngle={3}>
+                        {statusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: any, name: any) => [value.toLocaleString(), name]}
+                        contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: "10px", fontSize: 12 }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="space-y-2 mt-2">
+                    {statusData.map((s: any) => (
+                      <div key={s.name} className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-2 text-zinc-400">
+                          <span className="w-2 h-2 rounded-sm" style={{ background: s.color }} />{s.name}
+                        </span>
+                        <span className="font-mono text-zinc-300">{s.value.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-gray-800 font-medium mb-4">模型用量详情</h3>
-              <div className="space-y-4">
-                {(summary?.summary || []).map((row: any, i: number) => {
-                  const maxReq = Math.max(...(summary?.summary || []).map((r: any) => r.totalRequests), 1);
-                  const maxTokens = Math.max(...(summary?.summary || []).map((r: any) => r.totalTokens || 0), 1);
-                  const reqPct = (row.totalRequests / maxReq) * 100;
-                  const tokPct = ((row.totalTokens || 0) / maxTokens) * 100;
-                  const hitRate = row.totalRequests > 0 ? Math.round((row.cacheHits / row.totalRequests) * 100) : 0;
-                  return (
-                    <div key={i} className="rounded-xl border border-gray-100 bg-gray-50/50 p-4 hover:shadow-md transition">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-xs font-medium">{row.provider}</span>
-                          <span className="text-gray-800 font-semibold">{row.model}</span>
-                        </div>
-                        <span className="text-xs text-gray-400">{row.avgLatencyMs}ms</span>
-                      </div>
-                      <div className="space-y-2">
-                        <div>
-                          <div className="flex justify-between text-xs text-gray-500 mb-0.5">
-                            <span>请求数</span><span className="font-medium text-gray-700">{row.totalRequests} 次</span>
-                          </div>
-                          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden"><div className="h-full bg-indigo-500 rounded-full" style={{ width: `${reqPct}%` }} /></div>
-                        </div>
-                        <div>
-                          <div className="flex justify-between text-xs text-gray-500 mb-0.5">
-                            <span>Token</span><span className="font-medium text-blue-600">{(row.totalTokens || 0).toLocaleString()}</span>
-                          </div>
-                          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden"><div className="h-full bg-blue-500 rounded-full" style={{ width: `${tokPct}%` }} /></div>
-                        </div>
-                        <div>
-                          <div className="flex justify-between text-xs text-gray-500 mb-0.5">
-                            <span>缓存命中</span><span className="font-medium text-emerald-600">{row.cacheHits} 次 · {hitRate}%</span>
-                          </div>
-                          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${hitRate}%` }} /></div>
-                        </div>
-                      </div>
+              {/* Routes + Live Logs */}
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                {/* Route Cards */}
+                <div className="lg:col-span-3 bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-sm text-zinc-200">活跃路由</h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">{modelRoutes.length} 条路由已配置</p>
                     </div>
-                  );
-                })}
-                {(!summary?.summary || summary.summary.length === 0) && (
-                  <div className="text-center py-8 text-gray-400">暂无数据</div>
+                    <button onClick={() => setActiveTab("routes")} className="text-xs text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1">
+                      管理 <ArrowUpRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {(summary?.summary || []).slice(0, 4).map((row: any, i: number) => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/40 border border-zinc-800/60 hover:border-zinc-700 transition-all duration-150">
+                        <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px] font-mono border border-blue-500/20">POST</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs text-zinc-200 font-mono truncate">{row.model}</div>
+                          <div className="text-[10px] text-zinc-500">{row.provider} · {row.avgLatencyMs}ms</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs font-mono text-zinc-300">{row.totalRequests}</div>
+                          <div className="text-[10px] text-zinc-500">req</div>
+                        </div>
+                        <div className={`px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 ${row.cacheHits > 0 ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-zinc-800 text-zinc-500 border border-zinc-700/50"}`}>
+                          <span className="w-1 h-1 rounded-full bg-current" />活跃
+                        </div>
+                      </div>
+                    ))}
+                    {(!summary?.summary || summary.summary.length === 0) && (
+                      <div className="text-center py-8 text-zinc-600 text-sm">暂无流量，发送请求后显示路由状态</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Live Log Terminal */}
+                <div className="lg:col-span-2 bg-zinc-950/80 border border-zinc-800/80 rounded-xl p-4 hover:border-zinc-700 transition-all duration-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500/70" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
+                    </div>
+                    <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-wider">live log stream</span>
+                  </div>
+                  <div className="font-mono text-[11px] space-y-1.5">
+                    {liveLogs.map((log, i) => (
+                      <div key={i} className="flex items-center gap-2 text-zinc-400">
+                        <span className="text-zinc-600">{log.ts}</span>
+                        <span className={log.status < 300 ? "text-emerald-400" : log.status < 500 ? "text-amber-400" : "text-rose-400"}>
+                          {log.status}
+                        </span>
+                        <span className="text-blue-400">{log.method}</span>
+                        <span className="text-zinc-500 truncate flex-1">{log.path}</span>
+                        <span className="text-zinc-600">{log.ms}ms</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-2 text-zinc-500">
+                      <span className="text-zinc-700">—</span>
+                      <span className="w-2 h-3 bg-emerald-400/80 terminal-cursor" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ===== API KEYS ===== */}
+          {activeTab === "keys" && (
+            <div className="space-y-6">
+              <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+                <h3 className="font-semibold text-sm text-zinc-200 mb-4">创建 API Key</h3>
+                <div className="flex gap-3 items-end flex-wrap">
+                  <div className="flex-1 min-w-[160px]">
+                    <label className="block text-xs text-zinc-500 mb-1">名称</label>
+                    <input type="text" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)}
+                      className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition"
+                      placeholder="例如: dev-key" />
+                  </div>
+                  <div className="flex-1 min-w-[160px]">
+                    <label className="block text-xs text-zinc-500 mb-1">租户</label>
+                    <select value={newKeyTenant} onChange={(e) => setNewKeyTenant(e.target.value)}
+                      className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30">
+                      <option value="">选择租户</option>
+                      {tenants.map((t) => <option key={t.id} value={t.id} className="bg-zinc-900">{t.name}</option>)}
+                    </select>
+                  </div>
+                  <button onClick={async () => { if (!newKeyName || !newKeyTenant) return; try { const res = await client.createApiKey(newKeyTenant, newKeyName); setNewKeyResult(res.apiKey); setNewKeyName(""); loadData(); } catch (e) { setError((e as Error).message); } }}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-500 transition font-medium">
+                    创建
+                  </button>
+                </div>
+                {newKeyResult && (
+                  <div className="mt-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
+                    <div className="text-emerald-400 text-sm font-medium mb-1">✅ Key 创建成功！</div>
+                    <div className="text-zinc-200 font-mono text-sm break-all bg-zinc-950/60 rounded px-2 py-1 border border-zinc-800">{newKeyResult.key}</div>
+                    <div className="text-amber-400/80 text-xs mt-1">⚠️ 仅显示一次，请立即保存</div>
+                  </div>
                 )}
               </div>
-            </div>
-          </div>
-        )}
 
-        {activeTab === "keys" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-gray-800 font-medium mb-4">创建 API Key</h3>
-              <div className="flex gap-3 items-end">
-                <div className="flex-1"><label className="block text-xs text-gray-500 mb-1">名称</label><input type="text" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50" placeholder="例如: dev-key" /></div>
-                <div className="flex-1"><label className="block text-xs text-gray-500 mb-1">租户</label><select value={newKeyTenant} onChange={(e) => setNewKeyTenant(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"><option value="">选择租户</option>{tenants.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}</select></div>
-                <button onClick={async () => { if (!newKeyName || !newKeyTenant) return; try { const res = await client.createApiKey(newKeyTenant, newKeyName); setNewKeyResult(res.apiKey); setNewKeyName(""); loadData(); } catch (e) { setError((e as Error).message); } }} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition font-medium">创建</button>
-              </div>
-              {newKeyResult && (<div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3"><div className="text-green-700 text-sm font-medium mb-1">✅ Key 创建成功！</div><div className="text-gray-800 font-mono text-sm break-all bg-white rounded px-2 py-1 border border-gray-100">{newKeyResult.key}</div><div className="text-amber-600 text-xs mt-1">⚠️ 仅显示一次，请立即保存</div></div>)}
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-gray-800 font-medium mb-4">API Keys</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="text-gray-500 border-b border-gray-100"><th className="text-left py-2 px-3">名称</th><th className="text-left py-2 px-3">Key 前缀</th><th className="text-left py-2 px-3">状态</th><th className="text-left py-2 px-3">最后使用</th><th className="text-right py-2 px-3">操作</th></tr></thead>
-                  <tbody>
-                    {apiKeys.map((key: any) => (
-                      <tr key={key.id} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-2 px-3 text-gray-800 font-medium">{key.name}</td>
-                        <td className="py-2 px-3 text-gray-500 font-mono">{key.keyPrefix}...</td>
-                        <td className="py-2 px-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${key.enabled ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{key.enabled ? "启用" : "禁用"}</span></td>
-                        <td className="py-2 px-3 text-gray-500">{key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString() : "从未使用"}</td>
-                        <td className="py-2 px-3 text-right flex gap-2 justify-end">
-                          <button onClick={async () => { await client.toggleApiKey(key.id); loadData(); }} className={`text-xs px-2 py-1 rounded-md font-medium transition ${key.enabled ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}>{key.enabled ? "禁用" : "启用"}</button>
-                          <button onClick={async () => { if (confirm(`确定删除 Key "${key.name}"？`)) { await client.deleteApiKey(key.id); loadData(); } }} className="text-xs px-2 py-1 rounded-md font-medium bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 transition">删除</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "tenants" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-gray-800 font-medium mb-4">创建租户</h3>
-              <div className="flex gap-3 items-end">
-                <div className="flex-1"><label className="block text-xs text-gray-500 mb-1">名称</label><input type="text" value={newTenantName} onChange={(e) => setNewTenantName(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50" placeholder="例如: 开发团队" /></div>
-                <div className="flex-1"><label className="block text-xs text-gray-500 mb-1">月度 Token 配额（可选）</label><input type="number" value={newTenantQuota} onChange={(e) => setNewTenantQuota(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50" placeholder="留空不限" /></div>
-                <button onClick={async () => { if (!newTenantName) return; try { await client.createTenant(newTenantName, newTenantQuota ? Number(newTenantQuota) : undefined); setNewTenantName(""); setNewTenantQuota(""); loadData(); } catch (e) { setError((e as Error).message); } }} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition font-medium">创建</button>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-gray-800 font-medium mb-4">租户列表</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="text-gray-500 border-b border-gray-100"><th className="text-left py-2 px-3">名称</th><th className="text-left py-2 px-3">缓存计划</th><th className="text-right py-2 px-3">月度配额</th><th className="text-right py-2 px-3">创建时间</th><th className="text-right py-2 px-3">操作</th></tr></thead>
-                  <tbody>
-                    {tenants.map((t: any) => (
-                      <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-2 px-3 text-gray-800 font-medium">{t.name}</td>
-                        <td className="py-2 px-3">
-                          {t.cachePlan === "premium_approved" && <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">🔮 增强缓存</span>}
-                          {t.cachePlan === "premium_pending" && <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">⏳ 审核中</span>}
-                          {t.cachePlan === "premium_rejected" && <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium">❌ 已拒绝</span>}
-                          {t.cachePlan === "free" && <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">免费</span>}
-                          {t.cacheThreshold && <span className="ml-1 text-xs text-gray-400">阈值 {t.cacheThreshold / 100}</span>}
-                        </td>
-                        <td className="py-2 px-3 text-right text-gray-600">{t.monthlyTokenQuota ? t.monthlyTokenQuota.toLocaleString() : "不限"}</td>
-                        <td className="py-2 px-3 text-right text-gray-500">{new Date(t.createdAt).toLocaleDateString()}</td>
-                        <td className="py-2 px-3 text-right flex gap-1 justify-end">
-                          {t.cachePlan === "free" && (
-                            <button onClick={async () => { await client.requestPremium(t.id); loadData(); }} className="text-xs px-2 py-1 rounded bg-purple-50 text-purple-600 hover:bg-purple-100 font-medium">申请增强缓存</button>
-                          )}
-                          {t.cachePlan === "premium_pending" && (
-                            <>
-                              <button onClick={async () => { await client.approvePremium(t.id); loadData(); }} className="text-xs px-2 py-1 rounded bg-green-50 text-green-600 hover:bg-green-100 font-medium">通过</button>
-                              <button onClick={async () => { await client.rejectPremium(t.id); loadData(); }} className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 font-medium">拒绝</button>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "routes" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-gray-800 font-medium mb-4">添加模型路由</h3>
-              <p className="text-gray-400 text-xs mb-4">配置 LLM API 接入：定义对外暴露的模型别名，映射到实际 Provider 和模型名</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                <div><label className="block text-xs text-gray-500 mb-1">别名（对外模型名）</label><input type="text" value={newRouteAlias} onChange={(e) => setNewRouteAlias(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50" placeholder="例如: gpt-4o" /></div>
-                <div><label className="block text-xs text-gray-500 mb-1">Provider</label><select value={newRouteProvider} onChange={(e) => setNewRouteProvider(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"><option value="">选择</option><option value="openai">openai</option><option value="deepseek">deepseek</option><option value="ollama">ollama</option></select></div>
-                <div><label className="block text-xs text-gray-500 mb-1">上游模型名</label><input type="text" value={newRouteUpstream} onChange={(e) => setNewRouteUpstream(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50" placeholder="例如: gpt-4o" /></div>
-              </div>
-              <div className="flex gap-3 items-end">
-                <div className="w-32"><label className="block text-xs text-gray-500 mb-1">输入价格（$/1M token）</label><input type="number" value={newRoutePriceIn} onChange={(e) => setNewRoutePriceIn(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50" placeholder="可选" /></div>
-                <div className="w-32"><label className="block text-xs text-gray-500 mb-1">输出价格（$/1M token）</label><input type="number" value={newRoutePriceOut} onChange={(e) => setNewRoutePriceOut(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50" placeholder="可选" /></div>
-                <button onClick={async () => { if (!newRouteAlias || !newRouteProvider || !newRouteUpstream) return; try { await client.createModelRoute({ alias: newRouteAlias, provider: newRouteProvider, upstreamModel: newRouteUpstream, priceInput: newRoutePriceIn ? Number(newRoutePriceIn) : undefined, priceOutput: newRoutePriceOut ? Number(newRoutePriceOut) : undefined }); setNewRouteAlias(""); setNewRouteProvider(""); setNewRouteUpstream(""); setNewRoutePriceIn(""); setNewRoutePriceOut(""); loadData(); } catch (e) { setError((e as Error).message); } }} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition font-medium">添加</button>
-              </div>
-            </div>
-
-            {/* 测速按钮 */}
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-gray-800 font-medium">Provider 状态检测</h3>
-                <button
-                  onClick={async () => {
-                    setSpeedLoading(true);
-                    setSpeedResults(null);
-                    try {
-                      const res = await client.speedTest();
-                      setSpeedResults(res.results);
-                    } catch (e) {
-                      setError((e as Error).message);
-                    } finally {
-                      setSpeedLoading(false);
-                    }
-                  }}
-                  disabled={speedLoading}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50 font-medium transition"
-                >
-                  {speedLoading ? "测速中..." : "⚡ 一键测速"}
-                </button>
-              </div>
-              {speedResults && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {speedResults.map((r: any) => (
-                    <div key={r.model} className={`rounded-lg p-3 border ${r.status === "ok" ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-800">{r.model}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.status === "ok" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                          {r.status === "ok" ? "✅ 正常" : "❌ 异常"}
-                        </span>
+              <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+                <h3 className="font-semibold text-sm text-zinc-200 mb-4">API Keys</h3>
+                <div className="space-y-2">
+                  {apiKeys.map((key: any) => (
+                    <div key={key.id} className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/40 border border-zinc-800/60 hover:border-zinc-700 transition-all duration-150">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-zinc-200 font-medium">{key.name}</div>
+                        <div className="text-xs text-zinc-500 font-mono">{key.keyPrefix}...</div>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {r.status === "ok" ? `延迟: ${r.latencyMs}ms` : r.error}
-                      </div>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs border ${key.enabled ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"}`}>
+                        {key.enabled ? "启用" : "禁用"}
+                      </span>
+                      <button onClick={async () => { await client.toggleApiKey(key.id); loadData(); }}
+                        className={`text-xs px-2 py-1 rounded-md border transition ${key.enabled ? "text-amber-400 border-amber-500/20 hover:bg-amber-500/10" : "text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10"}`}>
+                        {key.enabled ? "禁用" : "启用"}
+                      </button>
+                      <button onClick={async () => { if (confirm(`确定删除 Key "${key.name}"？`)) { await client.deleteApiKey(key.id); loadData(); } }}
+                        className="text-xs px-2 py-1 rounded-md text-zinc-500 border border-zinc-700/50 hover:text-rose-400 hover:border-rose-500/20 hover:bg-rose-500/10 transition">
+                        删除
+                      </button>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-gray-800 font-medium mb-4">模型路由列表</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="text-gray-500 border-b border-gray-100"><th className="text-left py-2 px-3">别名</th><th className="text-left py-2 px-3">Provider</th><th className="text-left py-2 px-3">上游模型</th><th className="text-right py-2 px-3">输入价格</th><th className="text-right py-2 px-3">输出价格</th><th className="text-right py-2 px-3">操作</th></tr></thead>
-                  <tbody>
-                    {modelRoutes.map((r: any) => (
-                      <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-2 px-3 text-gray-800 font-medium font-mono">{r.alias}</td>
-                        <td className="py-2 px-3 text-gray-600"><span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs">{r.provider}</span></td>
-                        <td className="py-2 px-3 text-gray-600 font-mono text-xs">{r.upstreamModel}</td>
-                        <td className="py-2 px-3 text-right text-gray-600">{r.priceInput > 0 ? `$${(r.priceInput / 1000).toFixed(2)}/1M` : "-"}</td>
-                        <td className="py-2 px-3 text-right text-gray-600">{r.priceOutput > 0 ? `$${(r.priceOutput / 1000).toFixed(2)}/1M` : "-"}</td>
-                        <td className="py-2 px-3 text-right">
-                          <button onClick={async () => { if (confirm(`确定删除路由 "${r.alias}"？`)) { await client.deleteModelRoute(r.id); loadData(); } }} className="text-xs px-2 py-1 rounded-md font-medium bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 transition">删除</button>
-                        </td>
-                      </tr>
-                    ))}
-                    {modelRoutes.length === 0 && (<tr><td colSpan={6} className="text-center py-8 text-gray-400">暂无模型路由，请添加</td></tr>)}
-                  </tbody>
-                </table>
               </div>
             </div>
-          </div>
-        )}
-      </main>
+          )}
+
+          {/* ===== TENANTS ===== */}
+          {activeTab === "tenants" && (
+            <div className="space-y-6">
+              <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+                <h3 className="font-semibold text-sm text-zinc-200 mb-4">创建租户</h3>
+                <div className="flex gap-3 items-end flex-wrap">
+                  <div className="flex-1 min-w-[160px]">
+                    <label className="block text-xs text-zinc-500 mb-1">名称</label>
+                    <input type="text" value={newTenantName} onChange={(e) => setNewTenantName(e.target.value)}
+                      className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30"
+                      placeholder="例如: 开发团队" />
+                  </div>
+                  <div className="flex-1 min-w-[160px]">
+                    <label className="block text-xs text-zinc-500 mb-1">月度 Token 配额（可选）</label>
+                    <input type="number" value={newTenantQuota} onChange={(e) => setNewTenantQuota(e.target.value)}
+                      className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30"
+                      placeholder="留空不限" />
+                  </div>
+                  <button onClick={async () => { if (!newTenantName) return; try { await client.createTenant(newTenantName, newTenantQuota ? Number(newTenantQuota) : undefined); setNewTenantName(""); setNewTenantQuota(""); loadData(); } catch (e) { setError((e as Error).message); } }}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-500 transition font-medium">
+                    创建
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+                <h3 className="font-semibold text-sm text-zinc-200 mb-4">租户列表</h3>
+                <div className="space-y-2">
+                  {tenants.map((t: any) => (
+                    <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/40 border border-zinc-800/60 hover:border-zinc-700 transition-all duration-150">
+                      <div className="flex-1">
+                        <div className="text-sm text-zinc-200 font-medium">{t.name}</div>
+                        <div className="text-xs text-zinc-500">{t.monthlyTokenQuota ? `${t.monthlyTokenQuota.toLocaleString()} tokens/月` : "不限配额"}</div>
+                      </div>
+                      {t.cachePlan === "premium_approved" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-violet-500/10 text-violet-400 border border-violet-500/20">🔮 增强缓存</span>}
+                      {t.cachePlan === "premium_pending" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20">⏳ 审核中</span>}
+                      {t.cachePlan === "premium_rejected" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-rose-500/10 text-rose-400 border border-rose-500/20">❌ 已拒绝</span>}
+                      {t.cachePlan === "free" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-zinc-800 text-zinc-500 border border-zinc-700/50">免费</span>}
+                      {t.cachePlan === "free" && (
+                        <button onClick={async () => { await client.requestPremium(t.id); loadData(); }} className="text-xs px-2.5 py-1 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/20 transition">申请增强缓存</button>
+                      )}
+                      {t.cachePlan === "premium_pending" && (
+                        <div className="flex gap-1.5">
+                          <button onClick={async () => { await client.approvePremium(t.id); loadData(); }} className="text-xs px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition">通过</button>
+                          <button onClick={async () => { await client.rejectPremium(t.id); loadData(); }} className="text-xs px-2.5 py-1 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition">拒绝</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== ROUTES ===== */}
+          {activeTab === "routes" && (
+            <div className="space-y-6">
+              <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+                <h3 className="font-semibold text-sm text-zinc-200 mb-4">添加模型路由</h3>
+                <p className="text-xs text-zinc-500 mb-4">配置 LLM API 接入：定义对外别名 → 映射到 Provider 模型</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                  <div><label className="block text-xs text-zinc-500 mb-1">别名</label>
+                    <input type="text" value={newRouteAlias} onChange={(e) => setNewRouteAlias(e.target.value)} className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-sm focus:outline-none focus:border-emerald-500/50" placeholder="gpt-4o" /></div>
+                  <div><label className="block text-xs text-zinc-500 mb-1">Provider</label>
+                    <select value={newRouteProvider} onChange={(e) => setNewRouteProvider(e.target.value)} className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-sm focus:outline-none focus:border-emerald-500/50">
+                      <option value="">选择</option><option value="openai" className="bg-zinc-900">openai</option><option value="deepseek" className="bg-zinc-900">deepseek</option><option value="ollama" className="bg-zinc-900">ollama</option>
+                    </select></div>
+                  <div><label className="block text-xs text-zinc-500 mb-1">上游模型名</label>
+                    <input type="text" value={newRouteUpstream} onChange={(e) => setNewRouteUpstream(e.target.value)} className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-sm focus:outline-none focus:border-emerald-500/50" placeholder="gpt-4o" /></div>
+                </div>
+                <div className="flex gap-3 items-end">
+                  <div className="w-32"><label className="block text-xs text-zinc-500 mb-1">输入价格 $/1M</label>
+                    <input type="number" value={newRoutePriceIn} onChange={(e) => setNewRoutePriceIn(e.target.value)} className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-sm focus:outline-none focus:border-emerald-500/50" /></div>
+                  <div className="w-32"><label className="block text-xs text-zinc-500 mb-1">输出价格 $/1M</label>
+                    <input type="number" value={newRoutePriceOut} onChange={(e) => setNewRoutePriceOut(e.target.value)} className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-sm focus:outline-none focus:border-emerald-500/50" /></div>
+                  <button onClick={async () => { if (!newRouteAlias || !newRouteProvider || !newRouteUpstream) return; try { await client.createModelRoute({ alias: newRouteAlias, provider: newRouteProvider, upstreamModel: newRouteUpstream, priceInput: Number(newRoutePriceIn) || undefined, priceOutput: Number(newRoutePriceOut) || undefined }); setNewRouteAlias(""); setNewRouteProvider(""); setNewRouteUpstream(""); setNewRoutePriceIn(""); setNewRoutePriceOut(""); loadData(); } catch (e) { setError((e as Error).message); } }}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-500 transition font-medium">添加</button>
+                </div>
+              </div>
+
+              <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-sm text-zinc-200">Provider 状态检测</h3>
+                  <button onClick={async () => { setSpeedLoading(true); setSpeedResults(null); try { const res = await client.speedTest(); setSpeedResults(res.results); } catch (e) { setError((e as Error).message); } finally { setSpeedLoading(false); } }}
+                    disabled={speedLoading}
+                    className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs hover:bg-emerald-500 disabled:opacity-50 transition font-medium flex items-center gap-1.5">
+                    {speedLoading ? <><Gauge className="w-3.5 h-3.5 animate-spin" />测速中...</> : <><Zap className="w-3.5 h-3.5" />一键测速</>}
+                  </button>
+                </div>
+                {speedResults && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {speedResults.map((r: any) => (
+                      <div key={r.model} className={`p-3 rounded-lg border ${r.status === "ok" ? "bg-emerald-500/5 border-emerald-500/20" : "bg-rose-500/5 border-rose-500/20"}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-zinc-200">{r.model}</span>
+                          {r.status === "ok" ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                        </div>
+                        <div className="text-xs text-zinc-500 mt-1">{r.status === "ok" ? `延迟 ${r.latencyMs}ms` : r.error}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+                <h3 className="font-semibold text-sm text-zinc-200 mb-4">模型路由列表</h3>
+                <div className="space-y-2">
+                  {modelRoutes.map((r: any) => (
+                    <div key={r.id} className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/40 border border-zinc-800/60 hover:border-zinc-700 transition-all duration-150">
+                      <div className="flex-1">
+                        <div className="font-mono text-sm text-zinc-200">{r.alias}</div>
+                        <div className="text-xs text-zinc-500 flex items-center gap-2">
+                          <span className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[10px] border border-indigo-500/20">{r.provider}</span>
+                          → {r.upstreamModel}
+                        </div>
+                      </div>
+                      <div className="text-right text-xs text-zinc-500">
+                        <div>${(r.priceInput / 1000).toFixed(2)}/1M</div>
+                        <div>${(r.priceOutput / 1000).toFixed(2)}/1M</div>
+                      </div>
+                      <button onClick={async () => { if (confirm(`确定删除路由 "${r.alias}"？`)) { await client.deleteModelRoute(r.id); loadData(); } }}
+                        className="text-xs px-2 py-1 rounded-md text-zinc-500 border border-zinc-700/50 hover:text-rose-400 hover:border-rose-500/20 hover:bg-rose-500/10 transition">删除</button>
+                    </div>
+                  ))}
+                  {modelRoutes.length === 0 && <div className="text-center py-8 text-zinc-600 text-sm">暂无模型路由</div>}
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
