@@ -2,7 +2,6 @@
  * Nexus LLM Gateway - Provider 健康探测
  * 注册(有无Key) → 健康探测 → 可用性状态（UNKNOWN/HEALTHY/DEGRADED/UNREACHABLE）
  */
-import { logger } from "../../shared/logger.js";
 
 export type HealthStatus = "UNKNOWN" | "HEALTHY" | "DEGRADED" | "UNREACHABLE";
 
