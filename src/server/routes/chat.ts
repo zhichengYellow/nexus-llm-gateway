@@ -12,7 +12,7 @@ import { getRegistry } from "../providers/registry.js";
 import { getSemanticCache } from "../cache/semantic-cache.js";
 import { checkRateLimit, checkQuota } from "../quota/rate-limiter.js";
 import { recordUsage } from "../billing/usage.js";
-import { ProviderError } from "../../shared/types.js";
+import { ProviderError, type ChatCompletionResponse } from "../../shared/types.js";
 import { logger } from "../../shared/logger.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
@@ -134,7 +134,7 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   const bypassCache = c.req.header("x-nexus-no-cache") === "1" || c.req.header("x-nexus-no-cache") === "true";
   const cache = getSemanticCache();
   const tenantId = tenant?.id ?? null;
-  const cacheResult = bypassCache ? { hit: false } : await cache.lookup(req, req.model, tenantId);
+  const cacheResult = bypassCache ? { hit: false } : await cache.lookup(req, req.model, resolved.providerType);
   if (cacheResult.hit && cacheResult.response) {
     const latencyMs = Date.now() - start;
     const res = cacheResult.response;
@@ -173,11 +173,13 @@ async function handleNonStream(
     const node = chain[i];
     if (!node?.provider) continue;
     try {
-      const res = await node.provider.chat(req, node.upstreamModel);
+      // ===== SingleFlight：同 provider+model+prompt 的并发缺失只打一次上游 =====
+      const key = `sf:${node.providerType}:${req.model}:${node.upstreamModel}:${String((req.messages as any[]).at(-1)?.content ?? "").slice(0, 100)}`;
+      const res = await cache.deduplicate<ChatCompletionResponse>(key, () => node.provider.chat(req, node.upstreamModel));
       const latencyMs = Date.now() - ctx.start;
       res.nexus.requestId = ctx.requestId;
       recordUsage({ requestId: ctx.requestId, tenantId, apiKeyId: ctx.apiKey?.id ?? null, provider: node.providerType, model: req.model, upstreamModel: node.upstreamModel, usage: res.usage, latencyMs, cached: false, stream: false, status: 200 });
-      await cache.store(req, req.model, res, tenantId).catch(() => undefined);
+      await cache.store(req, req.model, node.providerType, res, tenantId).catch(() => undefined);
       return c.json(res);
     } catch (e) {
       lastErr = e;
@@ -210,26 +212,18 @@ async function handleStream(
       const writer = writable.getWriter();
       const encoder = new TextEncoder();
       let totalUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
-      let firstSent = false;
       let collectedContent = "";
 
       const send = async (chunk: any) => {
         if (chunk.usage) totalUsage = chunk.usage;
         const delta = chunk.choices?.[0]?.delta?.content || "";
         collectedContent += delta;
-        if (!firstSent) {
-          await writer.write(encoder.encode(`data: ${JSON.stringify(first.value)}\n\n`));
-          firstSent = true;
-          if (!first.done) {
-            await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
-          }
-        } else {
-          await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
-        }
+        await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
       };
 
       (async () => {
         try {
+          // 第一个 chunk 只写一次（避免重复）
           if (!first.done) await send(first.value);
           while (true) {
             const { done, value } = await iter.next();
@@ -252,7 +246,7 @@ async function handleStream(
             usage: totalUsage,
             nexus: { provider: node.providerType, upstreamModel: node.upstreamModel },
           };
-          await cache.store(req, req.model, fullResponse, tenantId).catch(() => {});
+          await cache.store(req, req.model, node.providerType, fullResponse, tenantId).catch(() => {});
         } catch (e) {
           logger.error({ err: (e as Error).message, requestId: ctx.requestId }, "stream error");
         } finally {

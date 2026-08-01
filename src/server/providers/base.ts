@@ -89,11 +89,15 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
 
   async *chatStream(req: ChatCompletionRequest, upstreamModel: string): AsyncIterable<ChatCompletionChunk> {
     const body = this.buildChatBody(req, upstreamModel, true);
+    // 流式响应也要有超时，防止上游挂起导致连接永久占用
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
     const res = await fetch(this.chatUrl, {
       method: "POST",
       headers: this.headers,
       body: JSON.stringify(body),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
     if (!res.ok || !res.body) {
       const text = res.body ? await res.text() : "no body";
       const safeText = text.replace(/sk-[a-zA-Z0-9_-]{20,}/g, "sk-***").slice(0, 200);
