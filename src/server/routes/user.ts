@@ -5,7 +5,7 @@
 import { Hono } from "hono";
 import { eq, sql, and, gte } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { usageLogs } from "../db/schema.js";
+import { usageLogs, tenants } from "../db/schema.js";
 import { getSemanticCache } from "../cache/semantic-cache.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
@@ -62,8 +62,15 @@ userRoute.get("/overview", async (c) => {
   const totalCacheHits = dayStats?.cacheHits ?? 0;
   const cacheRate = totalRequests > 0 ? ((totalCacheHits / totalRequests) * 100).toFixed(1) : "0.0";
 
+  // 读取租户缓存计划
+  const [tenantRow] = await db
+    .select({ cachePlan: tenants.cachePlan, cacheThreshold: tenants.cacheThreshold })
+    .from(tenants)
+    .where(eq(tenants.id, tenant.id))
+    .limit(1);
+
   return c.json({
-    tenant: { id: tenant.id, name: tenant.name, monthlyTokenQuota: tenant.monthlyTokenQuota },
+    tenant: { id: tenant.id, name: tenant.name, monthlyTokenQuota: tenant.monthlyTokenQuota, cachePlan: tenantRow?.cachePlan ?? "free" },
     apiKey: apiKey ? { name: apiKey.name, keyPrefix: apiKey.keyPrefix } : null,
     day: {
       totalRequests,
@@ -115,4 +122,22 @@ userRoute.get("/timeline", async (c) => {
   }
 
   return c.json({ window: range, timeline });
+});
+
+// 租户申请增强缓存（仅用户 API key，非 master）
+userRoute.post("/premium/request", async (c) => {
+  const tenant = c.get("tenant")!;
+  const [row] = await db
+    .select({ cachePlan: tenants.cachePlan })
+    .from(tenants)
+    .where(eq(tenants.id, tenant.id))
+    .limit(1);
+  if (row && row.cachePlan === "premium_approved") {
+    return c.json({ tenant: { id: tenant.id, cachePlan: "premium_approved" } });
+  }
+  if (row && row.cachePlan === "premium_pending") {
+    return c.json({ tenant: { id: tenant.id, cachePlan: "premium_pending" } });
+  }
+  await db.update(tenants).set({ cachePlan: "premium_pending", premiumRequestedAt: new Date() }).where(eq(tenants.id, tenant.id));
+  return c.json({ tenant: { id: tenant.id, cachePlan: "premium_pending" } });
 });

@@ -56,6 +56,7 @@ export default function UserDashboard({ client, onLogout }: Props) {
     );
   }
 
+  const cachePlan = overview?.tenant?.cachePlan || "free";
   const day = overview?.day || {};
   const month = overview?.month || {};
   const cache = overview?.cache || {};
@@ -147,6 +148,29 @@ export default function UserDashboard({ client, onLogout }: Props) {
               <Line type="monotone" dataKey="cacheHits" stroke="#10B981" strokeWidth={1.5} dot={false} name="缓存命中" />
             </AreaChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* 缓存计划 / 申请增强缓存 */}
+        <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-sm text-zinc-200">缓存计划</h3>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                {cachePlan === "premium_approved" ? "🔮 已开通增强缓存（更低相似度阈值，更高命中率）"
+                  : cachePlan === "premium_pending" ? "⏳ 申请审核中，请等待管理员审批"
+                  : cachePlan === "premium_rejected" ? "❌ 申请被拒绝"
+                  : "当前为免费缓存（严格匹配）"}
+              </p>
+            </div>
+            {cachePlan === "free" && (
+              <button
+                onClick={async () => { try { await client.post("/user/premium/request", {}); loadData(); } catch (e) { setError((e as Error).message); } }}
+                className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm hover:bg-violet-500 transition font-medium"
+              >
+                申请增强缓存
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Cache + Usage guide */}

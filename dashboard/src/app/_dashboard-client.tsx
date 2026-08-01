@@ -453,9 +453,6 @@ export default function Dashboard({ client, onLogout }: Props) {
                       {t.cachePlan === "premium_pending" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20">⏳ 审核中</span>}
                       {t.cachePlan === "premium_rejected" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-rose-500/10 text-rose-400 border border-rose-500/20">❌ 已拒绝</span>}
                       {t.cachePlan === "free" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-zinc-800 text-zinc-500 border border-zinc-700/50">免费</span>}
-                      {t.cachePlan === "free" && (
-                        <button onClick={async () => { await client.requestPremium(t.id); loadData(); }} className="text-xs px-2.5 py-1 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/20 transition">申请增强缓存</button>
-                      )}
                       {t.cachePlan === "premium_pending" && (
                         <div className="flex gap-1.5">
                           <button onClick={async () => { await client.approvePremium(t.id); loadData(); }} className="text-xs px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition">通过</button>
