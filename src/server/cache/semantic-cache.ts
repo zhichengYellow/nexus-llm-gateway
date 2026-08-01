@@ -92,14 +92,20 @@ export interface CacheLookupResult {
 class SingleFlight {
   private inflight = new Map<string, Promise<any>>();
 
-  async run<T>(key: string, fn: () => Promise<T>): Promise<T> {
-    await Promise.resolve();
+  /**
+   * 同步检查 + 立即存 promise，避免微任务竞态窗口：
+   * 并发请求必须在此同步段内先 get；第一个先 set，后续直接命中。
+   */
+  run<T>(key: string, fn: () => Promise<T>): Promise<T> {
     const existing = this.inflight.get(key);
     if (existing) return existing;
 
-    const promise = Promise.resolve().then(fn).finally(() => {
-      this.inflight.delete(key);
-    });
+    const promise = Promise.resolve()
+      .then(() => fn())
+      .finally(() => {
+        this.inflight.delete(key);
+      });
+    // 同步 set：同一事件循环中的并发请求在此处就能拿到同一个 promise
     this.inflight.set(key, promise);
     return promise;
   }
