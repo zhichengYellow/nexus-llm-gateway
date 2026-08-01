@@ -79,7 +79,7 @@ export class SemanticCache {
     tenantId: string | null,
   ): Promise<void> {
     try {
-      if (req.stream) return;
+      // 注意：流式请求也会写入缓存（handleStream 已收集完整内容）
       const last = lastUserMessage(req);
       if (!last || last.length < 2) return;
 

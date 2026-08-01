@@ -17,8 +17,9 @@ export default function UserDashboard({ client, onLogout }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [firstLoad, setFirstLoad] = useState(true);
+
   const loadData = async () => {
-    setLoading(true);
     try {
       const [ov, tl] = await Promise.all([
         client.get("/user/overview"),
@@ -29,7 +30,7 @@ export default function UserDashboard({ client, onLogout }: Props) {
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setLoading(false);
+      setFirstLoad(false);
     }
   };
 
@@ -39,7 +40,7 @@ export default function UserDashboard({ client, onLogout }: Props) {
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) {
+  if (firstLoad) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-indigo-600 text-lg">加载中...</div>
@@ -116,7 +117,14 @@ export default function UserDashboard({ client, onLogout }: Props) {
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={timeline?.timeline || []}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="hour" tick={{ fill: "#9ca3af", fontSize: 12 }} tickFormatter={(v) => v?.slice(11, 16)} />
+              <XAxis dataKey="hour" tick={{ fill: "#9ca3af", fontSize: 12 }} tickFormatter={(v) => {
+                // 数据库存 UTC，转东八区显示
+                const local = new Date(v);
+                if (isNaN(local.getTime())) return v;
+                const h = (local.getHours()).toString().padStart(2, "0");
+                const m = local.getMinutes().toString().padStart(2, "0");
+                return `${h}:${m}`;
+              }} />
               <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} />
               <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px" }} />
               <Line type="monotone" dataKey="totalRequests" stroke="#6366f1" strokeWidth={2} name="请求数" dot={false} />

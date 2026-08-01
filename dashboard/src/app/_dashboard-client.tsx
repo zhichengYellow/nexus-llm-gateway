@@ -35,7 +35,6 @@ export default function Dashboard({ client, onLogout }: Props) {
   const [speedLoading, setSpeedLoading] = useState(false);
 
   const loadData = async () => {
-    setLoading(true);
     try {
       const [s, t, c, k, tn, mr] = await Promise.all([
         client.getUsageSummary(),
@@ -58,7 +57,11 @@ export default function Dashboard({ client, onLogout }: Props) {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(loadData, 10000); // 每 10 秒自动刷新
+    return () => clearInterval(interval);
+  }, []);
 
   const totalRequests = summary?.summary?.reduce((a: number, b: any) => a + b.totalRequests, 0) || 0;
   const totalTokens = summary?.summary?.reduce((a: number, b: any) => a + b.totalTokens, 0) || 0;
@@ -148,7 +151,11 @@ export default function Dashboard({ client, onLogout }: Props) {
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={timeline?.timeline || []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="hour" tick={{ fill: "#9ca3af", fontSize: 12 }} tickFormatter={(v) => v.slice(11, 16)} />
+                  <XAxis dataKey="hour" tick={{ fill: "#9ca3af", fontSize: 12 }} tickFormatter={(v) => {
+                    const local = new Date(v);
+                    if (isNaN(local.getTime())) return v;
+                    return `${(local.getHours()).toString().padStart(2, "0")}:${(local.getMinutes()).toString().padStart(2, "0")}`;
+                  }} />
                   <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} />
                   <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px" }} labelStyle={{ color: "#374151" }} />
                   <Line type="monotone" dataKey="totalRequests" stroke="#6366f1" strokeWidth={2} name="请求数" dot={false} />
