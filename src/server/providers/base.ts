@@ -18,6 +18,7 @@ import type {
 import { ProviderError } from "../../shared/types.js";
 import { genCompletionId, parseSseLines, safeJsonParse } from "../../shared/utils.js";
 import { logger } from "../../shared/logger.js";
+import { ProxyAgent, fetch as ufetch } from "undici";
 
 interface OpenAiLikeChunk {
   id: string;
@@ -43,6 +44,25 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
     return h;
   }
 
+  /** 若该 provider 配置了代理（如 GEMINI_PROXY=http://127.0.0.1:7897），返回 undici dispatcher */
+  protected get dispatcher(): ProxyAgent | undefined {
+    const proxy = process.env[`${this.type.toUpperCase()}_PROXY`];
+    if (!proxy) return undefined;
+    return new ProxyAgent(proxy);
+  }
+
+  protected get hasProxy(): boolean {
+    return !!this.dispatcher;
+  }
+
+  /** 统一请求：有代理走 undici ufetch（同源 dispatcher），无代理走全局 fetch；返回 any 放宽类型差异 */
+  protected doFetch(url: string, init: RequestInit): Promise<any> {
+    if (this.hasProxy) {
+      return ufetch(url, { ...init, dispatcher: this.dispatcher } as any);
+    }
+    return fetch(url, init);
+  }
+
   protected get chatUrl(): string {
     return `${this.config.baseUrl.replace(/\/$/, "")}/v1/chat/completions`;
   }
@@ -59,7 +79,7 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
     const body = this.buildChatBody(req, upstreamModel, false);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
-    const res = await fetch(this.chatUrl, {
+    const res = await this.doFetch(this.chatUrl, {
       method: "POST",
       headers: this.headers,
       body: JSON.stringify(body),
@@ -92,7 +112,7 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
     // 流式响应也要有超时，防止上游挂起导致连接永久占用
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
-    const res = await fetch(this.chatUrl, {
+    const res = await this.doFetch(this.chatUrl, {
       method: "POST",
       headers: this.headers,
       body: JSON.stringify(body),
@@ -144,7 +164,7 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
 
   async embed(req: EmbeddingRequest, upstreamModel: string): Promise<EmbeddingResponse> {
     const body = { model: upstreamModel, input: req.input };
-    const res = await fetch(this.embedUrl, {
+    const res = await this.doFetch(this.embedUrl, {
       method: "POST",
       headers: this.headers,
       body: JSON.stringify(body),

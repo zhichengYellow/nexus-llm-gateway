@@ -14,6 +14,8 @@ export interface GatewayConfig {
   semanticCacheTtl: number;
   semanticCacheEmbeddingModel: string;
   providers: Record<ProviderType, ProviderConfig>;
+  /** Provider 级代理：如 { gemini: "http://127.0.0.1:7897" }，仅这些 provider 走代理 */
+  providerProxy: Record<string, string>;
 }
 
 function required(key: string, fallback?: string): string {
@@ -107,10 +109,13 @@ export function loadConfig(): GatewayConfig {
         baseUrl: process.env.GEMINI_BASE_URL ?? "https://generativelanguage.googleapis.com/v1beta/openai",
         apiKey: process.env.GEMINI_API_KEY,
         models: {
+          "gemini-flash-lite": "gemini-flash-lite-latest",
           "gemini-2.0-flash": "gemini-2.0-flash",
-          "gemini-1.5-pro": "gemini-1.5-pro",
         },
       },
+    },
+    providerProxy: {
+      gemini: process.env.GEMINI_PROXY ?? "",
     },
   };
 }

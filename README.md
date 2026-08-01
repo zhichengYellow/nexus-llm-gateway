@@ -284,6 +284,52 @@ src/
 └── vitest.config.ts # 单测配置
 ```
 
+## 🌐 Provider 代理配置（国内访问 OpenAI / Gemini 等）
+
+国内网络无法直连 Google Gemini、OpenAI 等海外 API。网关支持**按 Provider 独立配置 HTTP 代理**，仅需要代理的 Provider 走代理，DeepSeek / Ollama 等国内/本地 Provider 保持直连不受影响。
+
+### 配置方法
+
+在 `.env` 中添加：
+
+```bash
+# 格式：<PROVIDER_TYPE>_PROXY=http://127.0.0.1:<代理端口>
+# 仅配置了代理的 Provider 会走代理，其余直连
+GEMINI_PROXY=http://127.0.0.1:7897    # Clash 代理
+# OPENAI_PROXY=http://127.0.0.1:7897  # OpenAI 也走代理
+```
+
+### 支持的代理类型
+
+- **Clash / Clash Verge**：默认端口 7897（mixed）或 7890
+- **V2Ray**：HTTP 代理端口
+- **任何 HTTP/HTTPS 代理**：`http://host:port`
+
+### 工作原理
+
+```
+客户端 → 网关(8787) → [有 PROXY 配置的 Provider] → 代理(7897) → 海外 API
+                     → [无 PROXY 配置的 Provider] → 直连 → 国内 API
+```
+
+网关内部使用 `undici.ProxyAgent`（与 `undici.fetch` 同源），避免 Node 全局 `fetch` 与 `ProxyAgent` 的类型不兼容问题。
+
+### 实测验证
+
+```bash
+# .env 配置 GEMINI_PROXY=http://127.0.0.1:7897 后重启网关
+curl http://localhost:8787/v1/chat/completions \
+  -H "Authorization: Bearer <key>" \
+  -d '{"model":"gemini-flash-lite","messages":[{"role":"user","content":"hi"}]}'
+# → {"provider":"gemini","content":"Hi there!"}
+```
+
+### 注意事项
+
+- **Gemini 模型选择**：`gemini-2.0-flash` 免费层限额为 0（对新用户不开放），建议使用 `gemini-flash-lite`（对应 `gemini-flash-lite-latest`，免费额度宽裕）
+- **共享代理 IP 限流**：如果使用共享机场节点，Google 可能对该 IP 全局限流（429），建议切换到独享/原生节点
+- **OpenAI 同理**：国内直连 `api.openai.com` 超时，配置 `OPENAI_PROXY` 即可通过代理调用
+
 ## 🛡 限流与配额
 
 - **RPM 限流**：Redis 令牌桶，按 API Key 限制每分钟请求数（默认 60），超限返回 `429`
