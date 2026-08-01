@@ -82,13 +82,22 @@ describe("weightedPicker / buildWeightedChain", () => {
     { provider: "qwen" as const, upstreamModel: "qwen-max", weight: 20 },
   ];
 
-  it("按权重分布（openai ~50%）", () => {
+  it("按权重分段：openai 50 / deepseek 30 / qwen 20（确定性验证）", () => {
     const counts: Record<string, number> = { openai: 0, deepseek: 0, qwen: 0 };
-    const n = 2000;
-    for (let i = 0; i < n; i++) { const p = weightedPicker(shards); if (p) counts[p.provider] = (counts[p.provider] ?? 0) + 1; }
-    const rate = (counts["openai"] ?? 0) / n;
-    expect(rate).toBeGreaterThan(0.4);
-    expect(rate).toBeLessThan(0.6);
+    // mock Math.random 遍历 [0,1) 的固定序列，覆盖每个权重边界
+    const randoms = Array.from({ length: 100 }, (_, i) => i / 100 + 0.005);
+    const orig = Math.random;
+    Math.random = () => randoms.shift() ?? 0.5;
+    try {
+      for (let i = 0; i < 100; i++) { const p = weightedPicker(shards); if (p) counts[p.provider] = (counts[p.provider] ?? 0) + 1; }
+    } finally {
+      Math.random = orig;
+    }
+    // 50% 权重 → 约 50 次；30% → 约 30 次；20% → 约 20 次，允许 ±8 缓冲（确定性序列）
+    expect(counts["openai"] ?? 0).toBeGreaterThan(40);
+    expect(counts["openai"] ?? 0).toBeLessThan(60);
+    expect(counts["qwen"] ?? 0).toBeGreaterThan(12);
+    expect(counts["qwen"] ?? 0).toBeLessThan(28);
   });
 
   it("熔断 provider 被跳过", () => {
