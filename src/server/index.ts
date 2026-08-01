@@ -13,6 +13,7 @@ import { chatRoute } from "./routes/chat.js";
 import { embeddingsRoute } from "./routes/embeddings.js";
 import { modelsRoute } from "./routes/models.js";
 import { healthRoute } from "./routes/health.js";
+import { metricsRoute } from "./middleware/metrics.js";
 import { adminRoute } from "./routes/admin.js";
 import { userRoute } from "./routes/user.js";
 
@@ -33,6 +34,7 @@ app.use("*", loggingMiddleware);
 app.use("*", cors());
 
 // 健康检查（无需认证）
+app.route("/metrics", metricsRoute);
 app.route("/health", healthRoute);
 
 // 认证保护的所有 API

@@ -13,6 +13,7 @@ import { getSemanticCache } from "../cache/semantic-cache.js";
 import { checkRateLimit, checkQuota } from "../quota/rate-limiter.js";
 import { getCircuitBreakerRegistry } from "../middleware/circuit-breaker.js";
 import { withRetry } from "../middleware/retry.js";
+import { trackRequest } from "../middleware/metrics.js";
 import { recordUsage } from "../billing/usage.js";
 import { ProviderError, type ChatCompletionResponse } from "../../shared/types.js";
 import { logger } from "../../shared/logger.js";
@@ -190,6 +191,7 @@ async function handleNonStream(
       );
       breaker.recordSuccess();
       const latencyMs = Date.now() - ctx.start;
+      trackRequest(false, latencyMs, 0, res.usage && typeof res.usage === "object" ? res.usage.total_tokens : 0);
       res.nexus.requestId = ctx.requestId;
       recordUsage({ requestId: ctx.requestId, tenantId, apiKeyId: ctx.apiKey?.id ?? null, provider: node.providerType, model: req.model, upstreamModel: node.upstreamModel, usage: res.usage, latencyMs, cached: false, stream: false, status: 200 });
       await cache.store(req, req.model, node.providerType, res, tenantId).catch(() => undefined);
