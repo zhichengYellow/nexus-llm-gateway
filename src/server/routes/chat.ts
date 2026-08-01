@@ -130,10 +130,11 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
     })),
   ];
 
-  // Cache lookup before stream split
+  // Cache lookup before stream split（支持 x-nexus-no-cache 请求头强制跳过缓存，防止缓存毒化持续命中）
+  const bypassCache = c.req.header("x-nexus-no-cache") === "1" || c.req.header("x-nexus-no-cache") === "true";
   const cache = getSemanticCache();
   const tenantId = tenant?.id ?? null;
-  const cacheResult = await cache.lookup(req, req.model, tenantId);
+  const cacheResult = bypassCache ? { hit: false } : await cache.lookup(req, req.model, tenantId);
   if (cacheResult.hit && cacheResult.response) {
     const latencyMs = Date.now() - start;
     const res = cacheResult.response;

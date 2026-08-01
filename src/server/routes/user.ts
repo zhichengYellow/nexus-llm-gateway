@@ -5,7 +5,7 @@
 import { Hono } from "hono";
 import { eq, sql, and, gte } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { usageLogs, tenants } from "../db/schema.js";
+import { usageLogs } from "../db/schema.js";
 import { getSemanticCache } from "../cache/semantic-cache.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";

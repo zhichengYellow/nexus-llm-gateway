@@ -81,11 +81,30 @@ export class SemanticCache {
     tenantId: string | null,
   ): Promise<void> {
     try {
-      // 注意：流式请求也会写入缓存（handleStream 已收集完整内容）
       const last = lastUserMessage(req);
       if (!last || last.length < 2) return;
 
       const hash = cacheHash(req, model);
+
+      // ===== 缓存毒化防护：写入前校验响应合法性 =====
+      // 1. 内容必须非空且非"错误占位"
+      const content = (response as any)?.choices?.[0]?.message?.content ?? "";
+      if (!content || typeof content !== "string" || content.trim().length === 0) {
+        logger.warn({ model, hash: hash.slice(0, 8) }, "skip cache: empty response content");
+        return;
+      }
+      // 2. finish_reason 为 error/异常时不缓存
+      const finish = (response as any)?.choices?.[0]?.finish_reason;
+      if (finish === "error" || finish === "content_filter") {
+        logger.warn({ model, hash: hash.slice(0, 8), finish }, "skip cache: abnormal finish_reason");
+        return;
+      }
+      // 3. 响应带 error 字段 / 异常报错体时不缓存
+      if ((response as any)?.error) {
+        logger.warn({ model, hash: hash.slice(0, 8) }, "skip cache: response contains error");
+        return;
+      }
+
       const expiresAt = new Date(Date.now() + this.ttl * 1000);
       const preview = last.slice(0, 200);
 
