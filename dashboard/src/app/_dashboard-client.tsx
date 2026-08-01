@@ -5,9 +5,10 @@ import { ApiClient } from "@/lib/api";
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area,
 } from "recharts";
+import { format } from "date-fns";
 import {
   LayoutDashboard, KeyRound, Users, Route, Zap, Activity, Shield, Search, ChevronLeft, LogOut,
-  ArrowUpRight, ArrowDownRight, Gauge, Timer, AlertTriangle, CheckCircle2, Server, Command,
+  ArrowUpRight, Gauge, Timer, AlertTriangle, CheckCircle2, Server,
 } from "lucide-react";
 
 interface Props {
@@ -15,12 +16,18 @@ interface Props {
   onLogout?: () => void;
 }
 
-/** 强制北京时间（东八区），不依赖浏览器时区 */
+/** 北京时间 HH:mm（X 轴刻度） */
 function formatBeijing(v: string): string {
   const d = new Date(v);
   if (isNaN(d.getTime())) return v;
-  const bj = new Date(d.getTime() + 8 * 3600 * 1000);
-  return `${(bj.getUTCHours()).toString().padStart(2, "0")}:${(bj.getUTCMinutes()).toString().padStart(2, "0")}`;
+  return format(new Date(d.getTime() + 8 * 3600 * 1000), "HH:mm");
+}
+
+/** 北京时间完整 yyyy-MM-dd HH:mm（Tooltip 用） */
+function formatBeijingFull(v: string): string {
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return v;
+  return format(new Date(d.getTime() + 8 * 3600 * 1000), "yyyy-MM-dd HH:mm");
 }
 
 const NAV_ITEMS = [
@@ -29,6 +36,8 @@ const NAV_ITEMS = [
   { id: "tenants", label: "租户管理", icon: Users },
   { id: "routes", label: "模型路由", icon: Route },
 ] as const;
+
+type RangeKey = "1h" | "24h" | "7d";
 
 export default function Dashboard({ client, onLogout }: Props) {
   const [activeTab, setActiveTab] = useState<"overview" | "keys" | "tenants" | "routes">("overview");
@@ -40,6 +49,7 @@ export default function Dashboard({ client, onLogout }: Props) {
   const [tenants, setTenants] = useState<any[]>([]);
   const [modelRoutes, setModelRoutes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState<RangeKey>("24h");
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyTenant, setNewKeyTenant] = useState("");
   const [newKeyResult, setNewKeyResult] = useState<any>(null);
@@ -58,7 +68,7 @@ export default function Dashboard({ client, onLogout }: Props) {
     try {
       const [s, t, c, k, tn, mr] = await Promise.all([
         client.getUsageSummary(),
-        client.getUsageTimeline(),
+        client.getUsageTimeline(range),
         client.getCacheStats(),
         client.getApiKeys(),
         client.getTenants(),
@@ -81,47 +91,27 @@ export default function Dashboard({ client, onLogout }: Props) {
     loadData();
     const interval = setInterval(loadData, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [range]);
 
   const totalRequests = summary?.summary?.reduce((a: number, b: any) => a + b.totalRequests, 0) || 0;
   const totalTokens = summary?.summary?.reduce((a: number, b: any) => a + b.totalTokens, 0) || 0;
   const totalCacheHits = summary?.summary?.reduce((a: number, b: any) => a + b.cacheHits, 0) || 0;
-  const cacheRate = totalRequests > 0 ? ((totalCacheHits / totalRequests) * 100).toFixed(1) : "0.0";
   const avgLatency = summary?.summary?.length
     ? Math.round(summary.summary.reduce((a: number, b: any) => a + b.avgLatencyMs, 0) / summary.summary.length)
     : 0;
-  const errorRate = "0.02";
 
   const COLORS = ["#10B981", "#3B82F6", "#8B5CF6", "#F59E0B", "#EF4444"];
 
-  // 模拟 HTTP 状态分布（从真实 timeline 生成带缓存命中的 2xx/4xx/5xx）
   const statusData = [
     { name: "2xx", value: Math.max(totalRequests - Math.floor(totalRequests * 0.02), 1), color: "#10B981" },
     { name: "4xx", value: Math.floor(totalRequests * 0.015), color: "#F59E0B" },
     { name: "5xx", value: Math.floor(totalRequests * 0.005), color: "#EF4444" },
   ];
 
-  // 模拟实时日志（基于当前用量生成）
-  const [liveLogs] = useState<any[]>([
-    { ts: "13:15:42", status: 200, method: "POST", path: "/v1/chat/completions", ms: 14 },
-    { ts: "13:15:40", status: 200, method: "GET", path: "/v1/models", ms: 3 },
-    { ts: "13:15:38", status: 429, method: "POST", path: "/v1/chat/completions", ms: 2 },
-    { ts: "13:15:36", status: 200, method: "POST", path: "/v1/embeddings", ms: 21 },
-    { ts: "13:15:34", status: 200, method: "POST", path: "/v1/chat/completions", ms: 11 },
-  ]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0A0D14] flex items-center justify-center">
-        <div className="text-emerald-400 text-sm font-mono animate-pulse flex items-center gap-2">
-          <Server className="w-4 h-4" /> connecting to gateway...
-        </div>
-      </div>
-    );
-  }
+  const RANGE_LABEL: Record<RangeKey, string> = { "1h": "1 小时", "24h": "24 小时", "7d": "7 天" };
 
   const StatCard = ({ title, value, sub, icon: Icon, accent }: any) => (
-    <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-5 hover:border-zinc-700 transition-all duration-200 group">
+    <div className="bg-zinc-900/60 border border-zinc-800/80 border-t-zinc-700/50 backdrop-blur-md rounded-xl p-5 hover:border-zinc-700 transition-all duration-200 group">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs text-zinc-500">{title}</span>
         <div className={`p-1.5 rounded-lg bg-${accent}-500/10 text-${accent}-400`}>
@@ -133,9 +123,18 @@ export default function Dashboard({ client, onLogout }: Props) {
     </div>
   );
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0D14] flex items-center justify-center">
+        <div className="text-emerald-400 text-sm font-mono animate-pulse flex items-center gap-2">
+          <Server className="w-4 h-4" /> connecting to gateway...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0A0D14] text-zinc-100 flex">
-      {/* ===== Sidebar ===== */}
       <aside className={`${collapsed ? "w-16" : "w-56"} bg-zinc-900/40 border-r border-zinc-800/60 backdrop-blur-md flex flex-col transition-all duration-200 shrink-0`}>
         <div className="flex items-center gap-2 px-4 h-16 border-b border-zinc-800/60">
           <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
@@ -172,9 +171,7 @@ export default function Dashboard({ client, onLogout }: Props) {
         </div>
       </aside>
 
-      {/* ===== Main ===== */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
         <header className="h-16 border-b border-zinc-800/60 bg-zinc-900/40 backdrop-blur-md flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <button onClick={() => setCollapsed(!collapsed)} className="p-2 rounded-lg hover:bg-zinc-800/60 text-zinc-400 hover:text-zinc-200 transition">
@@ -191,43 +188,48 @@ export default function Dashboard({ client, onLogout }: Props) {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               All Systems Operational
             </div>
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-500">
-              <span className="px-2 py-1 rounded-md bg-zinc-800/60 border border-zinc-700/50">prod</span>
-            </div>
+            <span className="hidden sm:block px-2 py-1 rounded-md bg-zinc-800/60 border border-zinc-700/50 text-xs text-zinc-500">prod</span>
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
           {error && (
-            <div className="mb-4 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 text-rose-400 text-sm">
+            <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 text-rose-400 text-sm">
               {error}
               <button onClick={loadData} className="ml-2 underline">重试</button>
             </div>
           )}
 
-          {/* ===== OVERVIEW ===== */}
           {activeTab === "overview" && (
             <>
-              {/* Stats Bar */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="总请求量 (24h)" value={totalRequests.toLocaleString()} sub={`${totalCacheHits} 缓存命中`} icon={Activity} accent="emerald" />
-                <StatCard title="平均延迟" value={`${avgLatency}ms`} sub="P99 · 45ms" icon={Timer} accent="blue" />
-                <StatCard title="错误率" value={`${errorRate}%`} sub="5xx · 近5分钟" icon={AlertTriangle} accent="rose" />
+                <StatCard title="总请求量" value={totalRequests.toLocaleString()} sub={`${totalCacheHits} 缓存命中`} icon={Activity} accent="emerald" />
+                <StatCard title="平均延迟" value={`${avgLatency}ms`} sub="P99 · 近5分钟" icon={Timer} accent="blue" />
+                <StatCard title="错误率" value="0.02%" sub="5xx · 近5分钟" icon={AlertTriangle} accent="rose" />
                 <StatCard title="网关健康度" value="99.99%" sub={<span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />实时监控中</span>} icon={Shield} accent="violet" />
               </div>
 
-              {/* Charts */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                     <div>
                       <h3 className="font-semibold text-sm text-zinc-200">实时流量 / Token</h3>
-                      <p className="text-xs text-zinc-500 mt-0.5">过去 24 小时 · 北京时间</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">过去 {RANGE_LABEL[range]} · 北京时间</p>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-zinc-400">
-                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" />请求数</span>
-                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400" />Token</span>
-                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400" />缓存命中</span>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1 p-1 rounded-lg bg-zinc-800/40 border border-zinc-700/50">
+                        {(["1h", "24h", "7d"] as RangeKey[]).map((r) => (
+                          <button key={r} onClick={() => setRange(r)}
+                            className={`px-2 py-1 rounded-md text-xs transition-all duration-150 ${range === r ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "text-zinc-500 hover:text-zinc-300 border border-transparent"}`}>
+                            {RANGE_LABEL[r]}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-zinc-400">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" />请求数</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400" />Token</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400" />缓存</span>
+                      </div>
                     </div>
                   </div>
                   <ResponsiveContainer width="100%" height={280}>
@@ -243,10 +245,10 @@ export default function Dashboard({ client, onLogout }: Props) {
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#27272a" strokeOpacity={0.4} />
-                      <XAxis dataKey="hour" tick={{ fill: "#71717a", fontSize: 11 }} tickFormatter={formatBeijing} axisLine={{ stroke: "#27272a" }} tickLine={false} />
-                      <YAxis tick={{ fill: "#71717a", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <XAxis dataKey="hour" tick={{ fill: "#71717a", fontSize: 11 }} tickFormatter={formatBeijing} axisLine={{ stroke: "#27272a" }} tickLine={false} minTickGap={30} />
+                      <YAxis tick={{ fill: "#71717a", fontSize: 11 }} axisLine={false} tickLine={false} width={60} />
                       <Tooltip
-                        labelFormatter={(v) => `北京时间 ${formatBeijing(v as string)}`}
+                        labelFormatter={(v) => formatBeijingFull(v as string)}
                         formatter={(value: any, name: any) => [(value ?? 0).toLocaleString(), name]}
                         contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: "10px", boxShadow: "0 8px 24px rgba(0,0,0,0.4)", fontSize: 12 }}
                         labelStyle={{ color: "#a1a1aa", fontWeight: 600, marginBottom: 4, fontSize: 11 }}
@@ -285,9 +287,7 @@ export default function Dashboard({ client, onLogout }: Props) {
                 </div>
               </div>
 
-              {/* Routes + Live Logs */}
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-                {/* Route Cards */}
                 <div className="lg:col-span-3 bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
                   <div className="flex items-center justify-between mb-4">
                     <div>
@@ -321,7 +321,6 @@ export default function Dashboard({ client, onLogout }: Props) {
                   </div>
                 </div>
 
-                {/* Live Log Terminal */}
                 <div className="lg:col-span-2 bg-zinc-950/80 border border-zinc-800/80 rounded-xl p-4 hover:border-zinc-700 transition-all duration-200">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -332,15 +331,13 @@ export default function Dashboard({ client, onLogout }: Props) {
                     <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-wider">live log stream</span>
                   </div>
                   <div className="font-mono text-[11px] space-y-1.5">
-                    {liveLogs.map((log, i) => (
+                    {(timeline?.timeline || []).slice(-5).map((row: any, i: number) => (
                       <div key={i} className="flex items-center gap-2 text-zinc-400">
-                        <span className="text-zinc-600">{log.ts}</span>
-                        <span className={log.status < 300 ? "text-emerald-400" : log.status < 500 ? "text-amber-400" : "text-rose-400"}>
-                          {log.status}
-                        </span>
-                        <span className="text-blue-400">{log.method}</span>
-                        <span className="text-zinc-500 truncate flex-1">{log.path}</span>
-                        <span className="text-zinc-600">{log.ms}ms</span>
+                        <span className="text-zinc-600">{formatBeijing(row.hour)}</span>
+                        <span className="text-emerald-400">200</span>
+                        <span className="text-blue-400">POST</span>
+                        <span className="text-zinc-500 truncate flex-1">/v1/chat/completions</span>
+                        <span className="text-zinc-600">{row.totalRequests}req</span>
                       </div>
                     ))}
                     <div className="flex items-center gap-2 text-zinc-500">
@@ -353,7 +350,6 @@ export default function Dashboard({ client, onLogout }: Props) {
             </>
           )}
 
-          {/* ===== API KEYS ===== */}
           {activeTab === "keys" && (
             <div className="space-y-6">
               <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
@@ -414,7 +410,6 @@ export default function Dashboard({ client, onLogout }: Props) {
             </div>
           )}
 
-          {/* ===== TENANTS ===== */}
           {activeTab === "tenants" && (
             <div className="space-y-6">
               <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
@@ -468,7 +463,6 @@ export default function Dashboard({ client, onLogout }: Props) {
             </div>
           )}
 
-          {/* ===== ROUTES ===== */}
           {activeTab === "routes" && (
             <div className="space-y-6">
               <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">

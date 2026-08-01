@@ -80,10 +80,12 @@ userRoute.get("/overview", async (c) => {
   });
 });
 
-// 用户用量时间线
+// 用户用量时间线（补齐零值，支持 range）
 userRoute.get("/timeline", async (c) => {
   const tenant = c.get("tenant")!;
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const range = (c.req.query("range") as string) || "24h";
+  const hoursInRange = range === "1h" ? 1 : range === "7d" ? 24 * 7 : 24;
+  const since = new Date(Date.now() - hoursInRange * 3600 * 1000);
   const rows = await db
     .select({
       hour: sql<string>`date_trunc('hour', ${usageLogs.createdAt})::text`,
@@ -96,5 +98,18 @@ userRoute.get("/timeline", async (c) => {
     .groupBy(sql`date_trunc('hour', ${usageLogs.createdAt})`)
     .orderBy(sql`date_trunc('hour', ${usageLogs.createdAt})`);
 
-  return c.json({ timeline: rows });
+  const points = new Map<string, any>();
+  for (const r of rows) {
+    const hour = new Date(r.hour as string).toISOString();
+    points.set(hour, { hour, totalRequests: r.totalRequests, totalTokens: r.totalTokens, cacheHits: r.cacheHits });
+  }
+  const timeline: any[] = [];
+  for (let i = 0; i <= hoursInRange; i++) {
+    const t = new Date(since.getTime() + i * 3600 * 1000);
+    const key = t.toISOString();
+    const existing = points.get(key);
+    timeline.push(existing ?? { hour: key, totalRequests: 0, totalTokens: 0, cacheHits: 0 });
+  }
+
+  return c.json({ window: range, timeline });
 });

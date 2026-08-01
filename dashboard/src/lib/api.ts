@@ -81,7 +81,7 @@ export class ApiClient {
     }>("/admin/usage/summary");
   }
 
-  async getUsageTimeline() {
+  async getUsageTimeline(range: "1h" | "24h" | "7d" = "24h") {
     return this.get<{
       window: string;
       since: string;
@@ -91,7 +91,7 @@ export class ApiClient {
         totalTokens: number;
         cacheHits: number;
       }>;
-    }>("/admin/usage/timeline");
+    }>(`/admin/usage/timeline?range=${range}`);
   }
 
   // ===== 缓存 =====
