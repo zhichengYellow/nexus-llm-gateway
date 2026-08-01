@@ -85,8 +85,8 @@ describe("weightedPicker / buildWeightedChain", () => {
   it("按权重分布（openai ~50%）", () => {
     const counts: Record<string, number> = { openai: 0, deepseek: 0, qwen: 0 };
     const n = 2000;
-    for (let i = 0; i < n; i++) { const p = weightedPicker(shards); if (p) counts[p.provider]++; }
-    const rate = counts.openai / n;
+    for (let i = 0; i < n; i++) { const p = weightedPicker(shards); if (p) counts[p.provider] = (counts[p.provider] ?? 0) + 1; }
+    const rate = (counts["openai"] ?? 0) / n;
     expect(rate).toBeGreaterThan(0.4);
     expect(rate).toBeLessThan(0.6);
   });
@@ -109,7 +109,7 @@ describe("weightedPicker / buildWeightedChain", () => {
   it("buildWeightedChain 返回 picked + 权重降序 fallbacks", () => {
     const chain = buildWeightedChain(shards);
     expect(chain.length).toBe(3);
-    expect(chain[1].provider).toBe("openai");
-    expect(chain[2].provider).toBe("deepseek");
+    expect(chain[1]!.provider).toBe("openai");
+    expect(chain[2]!.provider).toBe("deepseek");
   });
 });

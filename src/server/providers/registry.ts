@@ -38,7 +38,17 @@ export class ProviderRegistry {
     }
   }
 
+  /** 该 provider 是否需要 API Key（ollama 本地无需；其余云服务必须） */
+  private static requiresKey(type: ProviderType): boolean {
+    return type !== "ollama";
+  }
+
   private registerProvider(type: ProviderType, cfg: ProviderConfig) {
+    // ===== v2: 官方 API 有限的场景 —— 无 key 的云 provider 自动禁用 =====
+    if (ProviderRegistry.requiresKey(type) && !cfg.apiKey) {
+      logger.warn({ providerType: type }, "provider skipped: missing API key (仅注册已配置的官方 API)");
+      return;
+    }
     let provider: ChatProvider & EmbeddingProvider;
     // 新增 OpenAI 兼容供应商（qwen/moonshot/zhipu/gemini）复用 OpenAiLikeProvider 基类
     switch (type) {
