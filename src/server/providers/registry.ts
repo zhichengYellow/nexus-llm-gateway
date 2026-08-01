@@ -40,11 +40,16 @@ export class ProviderRegistry {
 
   private registerProvider(type: ProviderType, cfg: ProviderConfig) {
     let provider: ChatProvider & EmbeddingProvider;
+    // 新增 OpenAI 兼容供应商（qwen/moonshot/zhipu/gemini）复用 OpenAiLikeProvider 基类
     switch (type) {
       case "deepseek":
         provider = new DeepSeekProvider(cfg) as ChatProvider & EmbeddingProvider;
         break;
       case "openai":
+      case "qwen":
+      case "moonshot":
+      case "zhipu":
+      case "gemini":
         provider = new OpenAiProvider(cfg) as ChatProvider & EmbeddingProvider;
         break;
       case "ollama":

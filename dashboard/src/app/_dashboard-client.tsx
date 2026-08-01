@@ -473,7 +473,10 @@ export default function Dashboard({ client, onLogout }: Props) {
                     <input type="text" value={newRouteAlias} onChange={(e) => setNewRouteAlias(e.target.value)} className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-sm focus:outline-none focus:border-emerald-500/50" placeholder="gpt-4o" /></div>
                   <div><label className="block text-xs text-zinc-500 mb-1">Provider</label>
                     <select value={newRouteProvider} onChange={(e) => setNewRouteProvider(e.target.value)} className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-sm focus:outline-none focus:border-emerald-500/50">
-                      <option value="">选择</option><option value="openai" className="bg-zinc-900">openai</option><option value="deepseek" className="bg-zinc-900">deepseek</option><option value="ollama" className="bg-zinc-900">ollama</option>
+                      <option value="">选择</option>
+                      {["openai", "deepseek", "ollama", "qwen", "moonshot", "zhipu", "gemini"].map((p) => (
+                        <option key={p} value={p} className="bg-zinc-900">{p}</option>
+                      ))}
                     </select></div>
                   <div><label className="block text-xs text-zinc-500 mb-1">上游模型名</label>
                     <input type="text" value={newRouteUpstream} onChange={(e) => setNewRouteUpstream(e.target.value)} className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-sm focus:outline-none focus:border-emerald-500/50" placeholder="gpt-4o" /></div>

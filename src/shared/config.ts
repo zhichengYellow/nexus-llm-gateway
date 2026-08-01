@@ -72,6 +72,45 @@ export function loadConfig(): GatewayConfig {
           "text-embedding-3-large": "text-embedding-3-large",
         },
       },
+      qwen: {
+        type: "qwen",
+        baseUrl: process.env.QWEN_BASE_URL ?? "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        apiKey: process.env.QWEN_API_KEY,
+        models: {
+          "qwen-max": "qwen-max",
+          "qwen-plus": "qwen-plus",
+          "qwen-turbo": "qwen-turbo",
+        },
+      },
+      moonshot: {
+        type: "moonshot",
+        baseUrl: process.env.MOONSHOT_BASE_URL ?? "https://api.moonshot.cn/v1",
+        apiKey: process.env.MOONSHOT_API_KEY,
+        models: {
+          "kimi-k2": "kimi-k2",
+          "moonshot-v1-8k": "moonshot-v1-8k",
+          "moonshot-v1-32k": "moonshot-v1-32k",
+        },
+      },
+      zhipu: {
+        type: "zhipu",
+        baseUrl: process.env.ZHIPU_BASE_URL ?? "https://open.bigmodel.cn/api/paas/v4",
+        apiKey: process.env.ZHIPU_API_KEY,
+        models: {
+          "glm-4-plus": "glm-4-plus",
+          "glm-4-flash": "glm-4-flash",
+          "glm-4": "glm-4",
+        },
+      },
+      gemini: {
+        type: "gemini",
+        baseUrl: process.env.GEMINI_BASE_URL ?? "https://generativelanguage.googleapis.com/v1beta/openai",
+        apiKey: process.env.GEMINI_API_KEY,
+        models: {
+          "gemini-2.0-flash": "gemini-2.0-flash",
+          "gemini-1.5-pro": "gemini-1.5-pro",
+        },
+      },
     },
   };
 }

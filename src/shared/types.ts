@@ -123,7 +123,16 @@ export interface ModelListResponse {
 
 // ===== Provider 抽象 =====
 
-export type ProviderType = "deepseek" | "ollama" | "openai";
+// 目前支持：deepseek / ollama / openai / 以及 4 个 OpenAI 兼容供应商
+// qwen=通义千问 moonshot=Kimi zhipu=智谱GLM gemini=Google(经 OpenAI 兼容端点)
+export type ProviderType =
+  | "deepseek"
+  | "ollama"
+  | "openai"
+  | "qwen"
+  | "moonshot"
+  | "zhipu"
+  | "gemini";
 
 export interface ProviderConfig {
   type: ProviderType;
