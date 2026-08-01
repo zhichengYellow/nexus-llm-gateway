@@ -11,6 +11,8 @@ import { zValidator } from "@hono/zod-validator";
 import { getRegistry } from "../providers/registry.js";
 import { getSemanticCache } from "../cache/semantic-cache.js";
 import { checkRateLimit, checkQuota } from "../quota/rate-limiter.js";
+import { getCircuitBreakerRegistry } from "../middleware/circuit-breaker.js";
+import { withRetry } from "../middleware/retry.js";
 import { recordUsage } from "../billing/usage.js";
 import { ProviderError, type ChatCompletionResponse } from "../../shared/types.js";
 import { logger } from "../../shared/logger.js";
@@ -167,21 +169,33 @@ async function handleNonStream(
   ctx: Ctx,
 ) {
   const cache = getSemanticCache();
+  const breakers = getCircuitBreakerRegistry();
   const tenantId = ctx.tenant?.id ?? null;
   let lastErr: unknown;
   for (let i = 0; i < chain.length; i++) {
     const node = chain[i];
     if (!node?.provider) continue;
+    const breaker = breakers.get(`${node.providerType}:${node.upstreamModel}`);
+    // 熔断检查：OPEN 状态下快速跳过该 provider
+    if (!breaker.allowRequest()) {
+      logger.warn({ provider: node.providerType, model: node.upstreamModel }, "circuit OPEN, skipping provider");
+      continue;
+    }
     try {
       // ===== SingleFlight：同 provider+model+prompt 的并发缺失只打一次上游 =====
       const key = `sf:${node.providerType}:${req.model}:${node.upstreamModel}:${String((req.messages as any[]).at(-1)?.content ?? "").slice(0, 100)}`;
-      const res = await cache.deduplicate<ChatCompletionResponse>(key, () => node.provider.chat(req, node.upstreamModel));
+      // ===== 指数退避重试：429/5xx/断连 自动重试 =====
+      const res = await cache.deduplicate<ChatCompletionResponse>(key, () =>
+        withRetry(() => node.provider.chat(req, node.upstreamModel), { maxRetries: 2, baseDelayMs: 500 }),
+      );
+      breaker.recordSuccess();
       const latencyMs = Date.now() - ctx.start;
       res.nexus.requestId = ctx.requestId;
       recordUsage({ requestId: ctx.requestId, tenantId, apiKeyId: ctx.apiKey?.id ?? null, provider: node.providerType, model: req.model, upstreamModel: node.upstreamModel, usage: res.usage, latencyMs, cached: false, stream: false, status: 200 });
       await cache.store(req, req.model, node.providerType, res, tenantId).catch(() => undefined);
       return c.json(res);
     } catch (e) {
+      breaker.recordFailure(); // 记录失败，连续达到阈值后熔断
       lastErr = e;
       logger.warn({ err: (e as Error).message, provider: node.providerType, model: node.upstreamModel, attempt: i + 1 }, "provider failed, trying fallback");
     }
