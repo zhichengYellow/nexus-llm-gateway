@@ -98,6 +98,8 @@ userRoute.get("/timeline", async (c) => {
     .groupBy(sql`date_trunc('hour', ${usageLogs.createdAt})`)
     .orderBy(sql`date_trunc('hour', ${usageLogs.createdAt})`);
 
+  const baseHour = new Date(since);
+  baseHour.setMinutes(0, 0, 0);
   const points = new Map<string, any>();
   for (const r of rows) {
     const hour = new Date(r.hour as string).toISOString();
@@ -105,7 +107,8 @@ userRoute.get("/timeline", async (c) => {
   }
   const timeline: any[] = [];
   for (let i = 0; i <= hoursInRange; i++) {
-    const t = new Date(since.getTime() + i * 3600 * 1000);
+    const t = new Date(baseHour.getTime() + i * 3600 * 1000);
+    if (t.getTime() > Date.now() + 3600 * 1000) break;
     const key = t.toISOString();
     const existing = points.get(key);
     timeline.push(existing ?? { hour: key, totalRequests: 0, totalTokens: 0, cacheHits: 0 });

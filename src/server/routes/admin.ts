@@ -216,7 +216,10 @@ adminRoute.get("/usage/timeline", async (c) => {
     .groupBy(sql`date_trunc('hour', ${usageLogs.createdAt})`)
     .orderBy(sql`date_trunc('hour', ${usageLogs.createdAt})`);
 
-  // 补齐所有小时点，无数据的填 0（保证 X 轴均匀连续）
+  // 对齐到整点基准（与 SQL date_trunc('hour') 一致），保证补零 key 能匹配真实数据
+  const baseHour = new Date(since);
+  baseHour.setMinutes(0, 0, 0);
+
   const points = new Map<string, any>();
   for (const r of rows) {
     const hour = new Date(r.hour as string).toISOString();
@@ -225,7 +228,8 @@ adminRoute.get("/usage/timeline", async (c) => {
 
   const timeline: any[] = [];
   for (let i = 0; i <= hoursInRange; i++) {
-    const t = new Date(since.getTime() + i * 3600 * 1000);
+    const t = new Date(baseHour.getTime() + i * 3600 * 1000);
+    if (t.getTime() > Date.now() + 3600 * 1000) break; // 不超当前时间
     const key = t.toISOString();
     const existing = points.get(key);
     timeline.push(existing ?? { hour: key, totalRequests: 0, totalTokens: 0, cacheHits: 0 });
