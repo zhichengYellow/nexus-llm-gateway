@@ -116,11 +116,22 @@ describe("weightedPicker / buildWeightedChain", () => {
   });
 
   it("buildWeightedChain 返回 picked + 余下按权重降序 fallbacks", () => {
-    const chain = buildWeightedChain(shards);
-    expect(chain.length).toBe(3);
-    // 三个 provider 全覆盖
-    expect(chain.map((n) => n.provider).sort()).toEqual(["deepseek", "openai", "qwen"]);
-    // 权重最低的 qwen 恒为最后一个 fallback
-    expect(chain[2]!.provider).toBe("qwen");
+    // mock Math.random=0 固定选中第一个分片（openai），使 fallback 顺序完全确定
+    const orig = Math.random;
+    Math.random = () => 0;
+    try {
+      const chain = buildWeightedChain(shards);
+      expect(chain.length).toBe(3);
+      // 三个 provider 全覆盖
+      expect(chain.map((n) => n.provider).sort()).toEqual(["deepseek", "openai", "qwen"]);
+      // 主分片 = 权重最高的 openai（r=0 ≤ 50 命中）
+      expect(chain[0]!.provider).toBe("openai");
+      // fallbacks 按权重降序：deepseek(30) → qwen(20)
+      expect(chain[1]!.provider).toBe("deepseek");
+      // 权重最低的 qwen 恒为最后一个 fallback
+      expect(chain[2]!.provider).toBe("qwen");
+    } finally {
+      Math.random = orig;
+    }
   });
 });
