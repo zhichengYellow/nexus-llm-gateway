@@ -6,7 +6,6 @@ import { StreamingBuffer } from "./streaming-buffer.js";
 
 function createMockWriter() {
   const writes: string[] = [];
-  const encoder = new TextEncoder();
   return {
     writes,
     writer: {

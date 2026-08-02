@@ -4,7 +4,6 @@
  */
 import { describe, it, expect } from "vitest";
 import { ProviderRegistry } from "../providers/registry.js";
-import { MockProvider } from "../providers/mock-provider.js";
 import type { ProviderType, ProviderConfig } from "../../shared/types.js";
 
 /** 构建测试用 ProviderConfig */

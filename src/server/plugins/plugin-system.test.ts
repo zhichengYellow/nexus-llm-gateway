@@ -3,7 +3,6 @@
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import {
-  PluginRegistry,
   getPluginRegistry,
   resetPluginRegistry,
   registerBuiltinPlugins,
@@ -26,7 +25,7 @@ function mkProviderPlugin(name: string): ProviderPlugin {
     version: "1.0.0",
     enabled: true,
     providerType: name as any,
-    factory: (cfg) => ({} as any),
+    factory: (_cfg) => ({} as any),
     defaultConfig: { baseUrl: "https://example.com" },
   };
 }

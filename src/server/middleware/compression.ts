@@ -13,8 +13,6 @@
  * - 某些代理（如 Nginx）可能已经开启了 gzip，此时网关不需要重复压缩
  */
 import { createGzip } from "node:zlib";
-import { pipeline } from "node:stream/promises";
-import { Readable } from "node:stream";
 
 export interface GzipOptions {
   /** 压缩级别 1-9，默认 6 */
@@ -36,8 +34,6 @@ export function createGzipStream(options?: GzipOptions): TransformStream<Uint8Ar
   };
 
   if (!opts.enabled) return null;
-
-  const gzip = createGzip({ level: opts.level });
 
   let totalSize = 0;
   let compressed = false;

@@ -53,7 +53,7 @@ export function isRetryableStatus(err: unknown): { retryable: boolean; status?: 
   const status = (err as any)?.status ?? (err as any)?.statusCode;
   if (status === undefined && err instanceof Error) {
     // 网络错误
-    return { retryable: true, strategy: getStrategy() };
+    return { retryable: true, strategy: getStrategy() ?? undefined };
   }
   const strategy = getStrategy(status);
   return { retryable: strategy !== null, status, strategy: strategy ?? undefined };

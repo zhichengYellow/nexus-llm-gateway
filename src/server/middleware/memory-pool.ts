@@ -159,6 +159,10 @@ export class JsonPool {
   getStats() {
     return this.pool.getStats();
   }
+
+  drain(): void {
+    this.pool.drain();
+  }
 }
 
 /**
@@ -183,6 +187,10 @@ export class HeadersPool {
   getStats() {
     return this.pool.getStats();
   }
+
+  drain(): void {
+    this.pool.drain();
+  }
 }
 
 /** 全局单例 */
@@ -200,8 +208,8 @@ export function getHeadersPool(): HeadersPool {
 }
 
 export function resetPools(): void {
-  _jsonPool?.pool.drain();
-  _headersPool?.pool.drain();
+  _jsonPool?.drain();
+  _headersPool?.drain();
   _jsonPool = null;
   _headersPool = null;
 }

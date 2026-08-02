@@ -15,7 +15,7 @@ import { modelRoutes } from "../db/schema.js";
 import { getRegistry } from "../providers/registry.js";
 import { getConfig } from "../../shared/config.js";
 import { logger } from "../../shared/logger.js";
-import type { ProviderType, ProviderConfig } from "../../shared/types.js";
+import type { ProviderType } from "../../shared/types.js";
 
 /** 从数据库加载路由配置并重建 Registry */
 export async function reloadRegistryFromDB(): Promise<{
@@ -47,10 +47,15 @@ export async function reloadRegistryFromDB(): Promise<{
 
       // 设置故障转移
       if (route.fallbacks && Array.isArray(route.fallbacks) && route.fallbacks.length > 0) {
-        const fallbackChain = (route.fallbacks as Array<{ providerType: string; upstreamModel: string }>)
-          .filter((f) => f.providerType && f.upstreamModel);
+        const fallbackChain = route.fallbacks
+          .map((fallback) => {
+            const [providerType, upstreamModel] = fallback.split(":", 2);
+            if (!providerType || !upstreamModel) return null;
+            return { providerType: providerType as ProviderType, upstreamModel };
+          })
+          .filter((f): f is { providerType: ProviderType; upstreamModel: string } => f !== null);
         if (fallbackChain.length > 0) {
-          registry.setFallback(route.alias, fallbackChain as Array<{ providerType: ProviderType; upstreamModel: string }>);
+          registry.setFallback(route.alias, fallbackChain);
         }
       }
     }
