@@ -34,7 +34,7 @@ export class ProviderRegistry {
   /** 上次热加载时间 */
   lastReloadAt: Date | null = null;
 
-  constructor(providers: Record<ProviderType, ProviderConfig>) {
+  constructor(providers: Partial<Record<ProviderType, ProviderConfig>>) {
     for (const [type, cfg] of Object.entries(providers) as Array<[ProviderType, ProviderConfig]>) {
       this.registerProvider(type, cfg);
     }

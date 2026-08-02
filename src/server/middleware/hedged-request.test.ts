@@ -6,7 +6,7 @@ import { hedgedRequest, hedgedProviderCall } from "./hedged-request.js";
 
 describe("hedgedRequest 对冲请求", () => {
   it("主请求快速返回时不触发对冲", async () => {
-    const primary = vi.fn(async (signal: AbortSignal) => {
+    const primary = vi.fn(async () => {
       await new Promise((r) => setTimeout(r, 10));
       return "primary";
     });
@@ -25,7 +25,7 @@ describe("hedgedRequest 对冲请求", () => {
       if (signal.aborted) throw new Error("aborted");
       return "primary";
     });
-    const fallback = vi.fn(async (signal: AbortSignal) => {
+    const fallback = vi.fn(async () => {
       // 备用快速返回
       await new Promise((r) => setTimeout(r, 20));
       return "fallback";
