@@ -1,50 +1,68 @@
 # Nexus LLM Gateway - Roadmap
 
-> 基于当前 v1.1.2 状态（CI 全绿、34/34 测试、工程级缓存 + 容错 + 代理支持），后续按优先级与性价比排序。
+> 基于当前 v1.1.2 状态（CI 全绿、34/34 测试、工程级缓存 + 容错 + 代理支持），后续按产品定位演进。
 
-## P0（必须）
+## 已完成功能
 
-- [x] **测试覆盖率提升**：Provider Mock 服务、集成测试、性能压测。
-- [x] **文档完善**：快速开始教程、Provider 配置示例、代理配置说明、架构图。
-- [x] **Benchmark**：GitHub Action 每日 benchmark，README 自动更新。
-- [x] **ADR（Architecture Decision Records）**：`docs/adr/` 记录设计决策，便于后续 Agent 理解项目。
+- [x] 工程级语义缓存（Canonical Key、SingleFlight、分类 TTL、防毒化）
+- [x] 容错三件套（Circuit Breaker、Weighted Router、Retry）
+- [x] Health Probe 四态
+- [x] Capability Discovery（无 key 自动禁用）
+- [x] Prometheus /metrics
+- [x] Provider 级代理支持（clash）
+- [x] CLI 工具、离线基准测试、性能压测
+- [x] CI 每日基准工作流
+- [x] 时区修复（Asia/Shanghai）
 
-## P1（架构）
+---
 
-- [x] **Middleware Pipeline**：Auth → RateLimit → Cache → Router → Retry → Provider → Metrics → Logger，支持插拔。
-- [x] **Plugin System**：Provider/Router/Cache/Auth/Metrics 插件化，`npm install @nexus/provider-openai` 自动注册。
-- [x] **Config Hot Reload**：Dashboard 修改权重/路由，无需重启。
+## 版本路线
 
-## P2（可靠性）
+### v1.2 —— AI Native Gateway
 
-- [x] **Bulkhead**：Provider 连接池隔离，互不影响。
-- [x] **Hedged Request**：超时未返回时同时发备用 provider，谁快用谁。
-- [x] **Adaptive Retry**：429/500/503 不同退避策略。
+- [ ] **Intent Router**：Prompt → Intent Classifier → Best Provider
+- [ ] **Cost Optimizer**：`model=auto` 时估算 token/预算/历史成功率/当前价格，自动选最便宜 provider
+- [ ] **Quality Score Router**：综合 Quality(0.5) + Latency(0.3) + Cost(0.2) 实时选择
+- [ ] **Adaptive TTL**：按问题类型自动判断 TTL（天气 5min / 知识 30天）
 
-## P3（AI Native）
+### v1.3 —— LLMOps
 
-- [x] **Prompt Router**：Prompt → Classifier → Router → Provider，按意图智能分发。
-- [x] **Prompt Guard**：PII 自动 Mask。
-- [x] **Prompt Rewrite**：System + Tenant + User Prompt 统一。
+- [ ] **Prompt Version**：Prompt 版本管理 + Rollback
+- [ ] **Prompt Playground**：网页调 Prompt，保存/导出/分享
+- [ ] **Prompt Evaluation**：自动用 Judge Model 评分
+- [ ] **A/B Testing**：50% Prompt A / 50% Prompt B，统计 Cost/Latency/Quality
 
-## P4（生态)
+### v1.4 —— Enterprise
 
-- [x] **SDK**：`@nexus/sdk` (npm) / `nexus-sdk` (pip)。
-- [x] **CLI**：`nexus doctor / benchmark / cache clear / provider ls / health`。
-- [x] **Examples**：spring-ai / langchain / openwebui / cline / continue / mcp。
-- [x] **Compatibility Matrix**：OpenAI SDK / LangChain / Spring AI / LlamaIndex / Continue / Cline / Cherry Studio / Open WebUI。
+- [ ] **RBAC**：Owner / Admin / Developer / Viewer / Auditor 细粒度权限
+- [ ] **Budget Center**：租户预算/已花/预测/预警
+- [ ] **审批流**：Key 申请 / Token 申请，Leader 审批
+- [ ] **审计中心**：记录所有敏感操作
 
-## P5（企业)
+### v2.0 —— AI Infrastructure
 
-- [x] **Admin API**：`/admin/providers`、`/admin/cache`、`/admin/router`、`/admin/tenant`、`/admin/metrics`。
-- [x] **Tenant Quota**：按 Token 数限流，套餐 Free/Pro/Enterprise。
-- [x] **Provider Cost Center**：每日/月度消费统计，导出 CSV。
+- [ ] **MCP Gateway**：Client → Gateway → MCP → Database/Search/Browser 统一管理
+- [ ] **Tool Registry**：GitHub/Google/Slack/Notion/MySQL 统一注册
+- [ ] **Policy Engine**：PII Mask / Secret Detector / DLP
+- [ ] **插件市场**：Provider/Cache/Router/Auth 插件发布
 
-## P6（性能)
+---
 
-- [x] **Streaming Buffer**：SSE 缓冲 32ms 后 flush，更稳。
-- [x] **Memory Pool**：减少 JSON Parse / 对象创建。
-- [x] **Compression**：SSE Gzip。
+## 研究方向
+
+- [ ] **Semantic Cache 2.0**：LLM Judge 判断同问，而非单纯 Embedding
+- [ ] **Cache Confidence**：每条缓存 confidence 0~1，低于阈值重新生成
+- [ ] **Prompt Injection Firewall**：检测 "Ignore previous instructions" 等攻击
+- [ ] **Benchmark 平台**：每日自动测试所有模型，输出排行榜
+
+---
+
+## 开源生态
+
+- [ ] **SDK**：`@nexus/sdk` (npm) / `nexus-sdk` (pip)
+- [ ] **CLI**：`nexus doctor / benchmark / cache clear / provider ls / health`
+- [ ] **Examples**：spring-ai / langchain / openwebui / cline / continue / mcp
+- [ ] **Compatibility Matrix**：OpenAI SDK / LangChain / Spring AI / LlamaIndex / Continue / Cline / Cherry Studio / Open WebUI
 
 ---
 
@@ -62,7 +80,7 @@
 - [x] Provider 级代理支持（GEMINI_PROXY 走 clash）
 - [x] Gemini 通过网关调用成功（gemini-flash-lite）
 - [x] 代理配置写入 .env.example/production + README（去隐私化）
-- [x] 定位 CI npm ci 失败根因：lockfile 缺 esbuild 0.28/@emnapi 解析条目（自相矛盥）
+- [x] 定位 CI npm ci 失败根因：lockfile 缺 esbuild 0.28/@emnapi 解析条目（自相矛）
 - [x] 删除 node_modules + lockfile，官方 registry 全新重建自洽 lockfile
 - [x] 本地验证 npm ci 成功（esbuild 0.28.1 / @emnapi 齐全）
 - [x] 本地验证 tsc + 34/34 通过
@@ -72,5 +90,9 @@
 - [x] 确认 CI 变绿（run 30709007735 success）
 - [x] 修复日志时区：pino-pretty 加入 timeZone: Asia/Shanghai
 - [x] 编写 fit/improve.md 完善方向清单（按 P0~P6 优先级组织）
+- [x] 推送 improve.md + logger 时区修复到 GitHub（bd2cedf）
+- [x] 停止本地服务进程
+- [x] 从 GitHub 拉取同步项目到本地（3655616）
+- [x] 重写 fit/improve.md 为版本路线（v1.2 AI Native / v1.3 LLMOps / v1.4 Enterprise / v2.0 AI Infra）
 </task_progress>
 </write_to_file>
