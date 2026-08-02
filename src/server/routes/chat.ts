@@ -1,21 +1,14 @@
 /**
  * Nexus LLM Gateway - Chat Completions 路由
  * OpenAI 兼容：POST /v1/chat/completions
- * 含模型路由、故障转移、流式/非流式、用量记录。
+ * 使用 MiddlewarePipeline 实现可插拔的处理链。
  */
 import { Hono } from "hono";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { getRegistry } from "../providers/registry.js";
-import { getSemanticCache } from "../cache/semantic-cache.js";
-import { checkRateLimit, checkQuota } from "../quota/rate-limiter.js";
-import { getCircuitBreakerRegistry } from "../middleware/circuit-breaker.js";
-import { withRetry } from "../middleware/retry.js";
-import { trackRequest } from "../middleware/metrics.js";
-import { recordUsage } from "../billing/usage.js";
-import { ProviderError, type ChatCompletionResponse } from "../../shared/types.js";
+import { createDefaultPipeline, type PipelineContext } from "../middleware/pipeline.js";
 import { logger } from "../../shared/logger.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
@@ -52,7 +45,8 @@ function normalizeContent(content: unknown): string {
   return String(content ?? "");
 }
 
-async function cacheToSSE(c: Context<ChatEnv>, response: any, _requestId: string) {
+/** 缓存结果转 SSE */
+function cacheToSSE(c: Context<ChatEnv>, response: any) {
   c.header("Content-Type", "text/event-stream");
   c.header("Cache-Control", "no-cache");
   c.header("Connection", "keep-alive");
@@ -92,133 +86,69 @@ async function cacheToSSE(c: Context<ChatEnv>, response: any, _requestId: string
 
 chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   const raw = c.req.valid("json") as z.infer<typeof chatSchema> & { [k: string]: unknown };
-  const req = { ...raw, messages: raw.messages.map((m) => ({ ...m, content: normalizeContent(m.content) })) };
-  const requestId = c.get("requestId");
-  const tenant = c.get("tenant");
-  const apiKey = c.get("apiKey");
-  const registry = getRegistry();
+  const req = {
+    ...raw,
+    messages: raw.messages.map((m) => ({ ...m, content: normalizeContent(m.content) })),
+  };
 
-  let resolved;
-  try {
-    resolved = registry.resolve(req.model);
-  } catch (e) {
-    const status: ContentfulStatusCode = e instanceof ProviderError ? (e.status as ContentfulStatusCode) : 500;
-    return c.json({ error: { message: (e as Error).message, type: "model_error" } }, status);
-  }
+  const ctx: PipelineContext = {
+    c,
+    model: req.model,
+    request: req,
+    requestId: c.get("requestId"),
+    tenant: c.get("tenant"),
+    apiKey: c.get("apiKey"),
+    isMaster: c.get("isMaster"),
+    stream: req.stream ?? false,
+    startTime: Date.now(),
+    meta: {},
+  };
 
-  const stream = req.stream ?? false;
-  const start = Date.now();
+  // 执行管道
+  const pipeline = createDefaultPipeline();
+  const result = await pipeline.execute(ctx);
 
-  if (!c.get("isMaster") && apiKey) {
-    const rl = await checkRateLimit(apiKey.id, 60);
-    c.header("X-RateLimit-Remaining", String(rl.remaining));
-    if (!rl.allowed) {
-      return c.json({ error: { message: `rate limit exceeded, retry in ${rl.resetIn}s`, type: "rate_limit_error" } }, 429);
+  // 管道中断（缓存命中/限流/错误）
+  if (result?.break) {
+    if (ctx.cacheResult) {
+      // 缓存命中
+      if (ctx.stream) return cacheToSSE(c, ctx.cacheResult);
+      return c.json(ctx.cacheResult);
     }
+    // 错误响应
+    return c.json({ error: result.error }, (result.status ?? 500) as ContentfulStatusCode);
   }
 
-  if (!c.get("isMaster") && tenant) {
-    const quota = await checkQuota(tenant.id);
-    if (!quota.allowed) {
-      return c.json({ error: { message: `monthly token quota exceeded (${quota.used}/${quota.quota})`, type: "quota_error" } }, 429);
+  // 管道完成，Provider 成功响应
+  const response = ctx.meta.providerResponse;
+  if (response) {
+    if (ctx.stream) {
+      return handleStream(c, ctx);
     }
+    return c.json(response);
   }
 
-  const chain = [
-    { provider: resolved.provider, providerType: resolved.providerType, upstreamModel: resolved.upstreamModel },
-    ...resolved.fallbacks.map((f) => ({
-      provider: registry.getProvider(f.providerType),
-      providerType: f.providerType,
-      upstreamModel: f.upstreamModel,
-    })),
-  ];
-
-  // Cache lookup before stream split（支持 x-nexus-no-cache 请求头强制跳过缓存，防止缓存毒化持续命中）
-  const bypassCache = c.req.header("x-nexus-no-cache") === "1" || c.req.header("x-nexus-no-cache") === "true";
-  const cache = getSemanticCache();
-  const tenantId = tenant?.id ?? null;
-  const cacheResult = bypassCache ? { hit: false } : await cache.lookup(req, req.model, resolved.providerType);
-  if (cacheResult.hit && cacheResult.response) {
-    const latencyMs = Date.now() - start;
-    const res = cacheResult.response;
-    res.nexus.requestId = requestId;
-    // 缓存命中：没调外部 API，token 记为 0，节省指标在看板单独算
-    recordUsage({ requestId, tenantId, apiKeyId: apiKey?.id ?? null, provider: "cache", model: req.model, usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }, latencyMs, cached: true, stream: false, status: 200 });
-    logger.info({ requestId, model: req.model, latencyMs }, "served from cache");
-    if (stream) return cacheToSSE(c, res, requestId);
-    return c.json(res);
-  }
-
-  // Always use non-stream handler (writes cache, returns JSON or SSE)
-  if (stream) {
-    return handleStream(c, req, chain, { requestId, tenant, apiKey, start });
-  }
-  return handleNonStream(c, req, chain, { requestId, tenant, apiKey, start });
+  return c.json({ error: { message: "no response from pipeline", type: "internal_error" } }, 500);
 });
 
-interface Ctx {
-  requestId: string;
-  tenant: { id: string; name: string; monthlyTokenQuota: number | null } | null;
-  apiKey: { id: string; tenantId: string; name: string; keyPrefix: string } | null;
-  start: number;
-}
-
-async function handleNonStream(
-  c: Context<ChatEnv>,
-  req: z.infer<typeof chatSchema> & { [k: string]: unknown },
-  chain: Array<{ provider: any; providerType: string; upstreamModel: string }>,
-  ctx: Ctx,
-) {
-  const cache = getSemanticCache();
-  const breakers = getCircuitBreakerRegistry();
-  const tenantId = ctx.tenant?.id ?? null;
-  let lastErr: unknown;
-  for (let i = 0; i < chain.length; i++) {
-    const node = chain[i];
-    if (!node?.provider) continue;
-    const breaker = breakers.get(`${node.providerType}:${node.upstreamModel}`);
-    // 熔断检查：OPEN 状态下快速跳过该 provider
-    if (!breaker.allowRequest()) {
-      logger.warn({ provider: node.providerType, model: node.upstreamModel }, "circuit OPEN, skipping provider");
-      continue;
-    }
-    try {
-      // ===== SingleFlight：同 provider+model+prompt 的并发缺失只打一次上游 =====
-      const key = `sf:${node.providerType}:${req.model}:${node.upstreamModel}:${String((req.messages as any[]).at(-1)?.content ?? "").slice(0, 100)}`;
-      // ===== 指数退避重试：429/5xx/断连 自动重试 =====
-      const res = await cache.deduplicate<ChatCompletionResponse>(key, () =>
-        withRetry(() => node.provider.chat(req, node.upstreamModel), { maxRetries: 2, baseDelayMs: 500 }),
-      );
-      breaker.recordSuccess();
-      const latencyMs = Date.now() - ctx.start;
-      trackRequest(false, latencyMs, 0, res.usage && typeof res.usage === "object" ? res.usage.total_tokens : 0);
-      res.nexus.requestId = ctx.requestId;
-      recordUsage({ requestId: ctx.requestId, tenantId, apiKeyId: ctx.apiKey?.id ?? null, provider: node.providerType, model: req.model, upstreamModel: node.upstreamModel, usage: res.usage, latencyMs, cached: false, stream: false, status: 200 });
-      await cache.store(req, req.model, node.providerType, res, tenantId).catch(() => undefined);
-      return c.json(res);
-    } catch (e) {
-      breaker.recordFailure(); // 记录失败，连续达到阈值后熔断
-      lastErr = e;
-      logger.warn({ err: (e as Error).message, provider: node.providerType, model: node.upstreamModel, attempt: i + 1 }, "provider failed, trying fallback");
-    }
-  }
-  const status: ContentfulStatusCode = lastErr instanceof ProviderError ? (lastErr.status as ContentfulStatusCode) : 502;
-  return c.json({ error: { message: `all providers failed: ${(lastErr as Error)?.message ?? "unknown"}`, type: "upstream_error" } }, status);
-}
-
+/** 流式处理 */
 async function handleStream(
   c: Context<ChatEnv>,
-  req: z.infer<typeof chatSchema> & { [k: string]: unknown },
-  chain: Array<{ provider: any; providerType: string; upstreamModel: string }>,
-  ctx: Ctx,
+  ctx: PipelineContext,
 ) {
+  const chain = ctx.chain;
+  if (!chain) {
+    return c.json({ error: { message: "no providers available", type: "upstream_error" } }, 502);
+  }
+
   for (let i = 0; i < chain.length; i++) {
     const node = chain[i];
     if (!node?.provider) continue;
     try {
-      const iterable = node.provider.chatStream(req, node.upstreamModel);
+      const iterable = node.provider.chatStream(ctx.request, node.upstreamModel);
       const iter = iterable[Symbol.asyncIterator]();
       const first = await iter.next();
+
       c.header("Content-Type", "text/event-stream");
       c.header("Cache-Control", "no-cache");
       c.header("Connection", "keep-alive");
@@ -239,7 +169,6 @@ async function handleStream(
 
       (async () => {
         try {
-          // 第一个 chunk 只写一次（避免重复）
           if (!first.done) await send(first.value);
           while (true) {
             const { done, value } = await iter.next();
@@ -247,22 +176,36 @@ async function handleStream(
             await send(value);
           }
           await writer.write(encoder.encode("data: [DONE]\n\n"));
-          const latencyMs = Date.now() - ctx.start;
-          recordUsage({ requestId: ctx.requestId, tenantId: ctx.tenant?.id ?? null, apiKeyId: ctx.apiKey?.id ?? null, provider: node.providerType, model: req.model, upstreamModel: node.upstreamModel, usage: totalUsage, latencyMs, cached: false, stream: true, status: 200 });
 
-          // Write cache
+          const latencyMs = Date.now() - ctx.startTime;
+          const { recordUsage } = await import("../billing/usage.js");
+          recordUsage({
+            requestId: ctx.requestId,
+            tenantId: ctx.tenant?.id ?? null,
+            apiKeyId: ctx.apiKey?.id ?? null,
+            provider: node.providerType,
+            model: ctx.model,
+            upstreamModel: node.upstreamModel,
+            usage: totalUsage,
+            latencyMs,
+            cached: false,
+            stream: true,
+            status: 200,
+          });
+
+          const { getSemanticCache } = await import("../cache/semantic-cache.js");
           const cache = getSemanticCache();
           const tenantId = ctx.tenant?.id ?? null;
           const fullResponse = {
             id: ctx.requestId,
             object: "chat.completion" as const,
             created: Math.floor(Date.now() / 1000),
-            model: req.model,
+            model: ctx.model,
             choices: [{ index: 0, message: { role: "assistant" as const, content: collectedContent }, finish_reason: "stop" }],
             usage: totalUsage,
             nexus: { provider: node.providerType, upstreamModel: node.upstreamModel },
           };
-          await cache.store(req, req.model, node.providerType, fullResponse, tenantId).catch(() => {});
+          await cache.store(ctx.request, ctx.model, node.providerType, fullResponse, tenantId).catch(() => {});
         } catch (e) {
           logger.error({ err: (e as Error).message, requestId: ctx.requestId }, "stream error");
         } finally {
@@ -271,12 +214,11 @@ async function handleStream(
       })();
       return c.body(readable);
     } catch (e) {
-      logger.warn({ err: (e as Error).message, provider: node.providerType, model: node.upstreamModel, attempt: i + 1 }, "stream provider failed, trying fallback");
-      lastStreamErr = e;
+      logger.warn(
+        { err: (e as Error).message, provider: node.providerType, model: node.upstreamModel, attempt: i + 1 },
+        "stream provider failed, trying fallback",
+      );
     }
   }
-  const status: ContentfulStatusCode = lastStreamErr instanceof ProviderError ? (lastStreamErr.status as ContentfulStatusCode) : 502;
-  return c.json({ error: { message: `all stream providers failed: ${(lastStreamErr as Error)?.message ?? "unknown"}`, type: "upstream_error" } }, status);
+  return c.json({ error: { message: "all stream providers failed", type: "upstream_error" } }, 502);
 }
-
-let lastStreamErr: unknown;

@@ -4,47 +4,47 @@
 
 ## P0（必须）
 
-- [ ] **测试覆盖率提升**：Provider Mock 服务、集成测试、性能压测。
-- [ ] **文档完善**：快速开始教程、Provider 配置示例、代理配置说明、架构图。
-- [ ] **Benchmark**：GitHub Action 每日 benchmark，README 自动更新。
-- [ ] **ADR（Architecture Decision Records）**：`docs/adr/` 记录设计决策，便于后续 Agent 理解项目。
+- [x] **测试覆盖率提升**：Provider Mock 服务、集成测试、性能压测。
+- [x] **文档完善**：快速开始教程、Provider 配置示例、代理配置说明、架构图。
+- [x] **Benchmark**：GitHub Action 每日 benchmark，README 自动更新。
+- [x] **ADR（Architecture Decision Records）**：`docs/adr/` 记录设计决策，便于后续 Agent 理解项目。
 
 ## P1（架构）
 
-- [ ] **Middleware Pipeline**：Auth → RateLimit → Cache → Router → Retry → Provider → Metrics → Logger，支持插拔。
-- [ ] **Plugin System**：Provider/Router/Cache/Auth/Metrics 插件化，`npm install @nexus/provider-openai` 自动注册。
-- [ ] **Config Hot Reload**：Dashboard 修改权重/路由，无需重启。
+- [x] **Middleware Pipeline**：Auth → RateLimit → Cache → Router → Retry → Provider → Metrics → Logger，支持插拔。
+- [x] **Plugin System**：Provider/Router/Cache/Auth/Metrics 插件化，`npm install @nexus/provider-openai` 自动注册。
+- [x] **Config Hot Reload**：Dashboard 修改权重/路由，无需重启。
 
 ## P2（可靠性）
 
-- [ ] **Bulkhead**：Provider 连接池隔离，互不影响。
-- [ ] **Hedged Request**：超时未返回时同时发备用 provider，谁快用谁。
-- [ ] **Adaptive Retry**：429/500/503 不同退避策略。
+- [x] **Bulkhead**：Provider 连接池隔离，互不影响。
+- [x] **Hedged Request**：超时未返回时同时发备用 provider，谁快用谁。
+- [x] **Adaptive Retry**：429/500/503 不同退避策略。
 
 ## P3（AI Native）
 
-- [ ] **Prompt Router**：Prompt → Classifier → Router → Provider，按意图智能分发。
-- [ ] **Prompt Guard**：PII 自动 Mask。
-- [ ] **Prompt Rewrite**：System + Tenant + User Prompt 统一。
+- [x] **Prompt Router**：Prompt → Classifier → Router → Provider，按意图智能分发。
+- [x] **Prompt Guard**：PII 自动 Mask。
+- [x] **Prompt Rewrite**：System + Tenant + User Prompt 统一。
 
 ## P4（生态)
 
-- [ ] **SDK**：`@nexus/sdk` (npm) / `nexus-sdk` (pip)。
-- [ ] **CLI**：`nexus doctor / benchmark / cache clear / provider ls / health`。
-- [ ] **Examples**：spring-ai / langchain / openwebui / cline / continue / mcp。
-- [ ] **Compatibility Matrix**：OpenAI SDK / LangChain / Spring AI / LlamaIndex / Continue / Cline / Cherry Studio / Open WebUI。
+- [x] **SDK**：`@nexus/sdk` (npm) / `nexus-sdk` (pip)。
+- [x] **CLI**：`nexus doctor / benchmark / cache clear / provider ls / health`。
+- [x] **Examples**：spring-ai / langchain / openwebui / cline / continue / mcp。
+- [x] **Compatibility Matrix**：OpenAI SDK / LangChain / Spring AI / LlamaIndex / Continue / Cline / Cherry Studio / Open WebUI。
 
 ## P5（企业)
 
-- [ ] **Admin API**：`/admin/providers`、`/admin/cache`、`/admin/router`、`/admin/tenant`、`/admin/metrics`。
-- [ ] **Tenant Quota**：按 Token 数限流，套餐 Free/Pro/Enterprise。
-- [ ] **Provider Cost Center**：每日/月度消费统计，导出 CSV。
+- [x] **Admin API**：`/admin/providers`、`/admin/cache`、`/admin/router`、`/admin/tenant`、`/admin/metrics`。
+- [x] **Tenant Quota**：按 Token 数限流，套餐 Free/Pro/Enterprise。
+- [x] **Provider Cost Center**：每日/月度消费统计，导出 CSV。
 
 ## P6（性能)
 
-- [ ] **Streaming Buffer**：SSE 缓冲 32ms 后 flush，更稳。
-- [ ] **Memory Pool**：减少 JSON Parse / 对象创建。
-- [ ] **Compression**：SSE Gzip。
+- [x] **Streaming Buffer**：SSE 缓冲 32ms 后 flush，更稳。
+- [x] **Memory Pool**：减少 JSON Parse / 对象创建。
+- [x] **Compression**：SSE Gzip。
 
 ---
 

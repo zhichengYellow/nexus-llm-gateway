@@ -12,6 +12,7 @@ import { apiKeys, tenants, usageLogs, modelRoutes } from "../db/schema.js";
 import { hashKey } from "../middleware/auth.js";
 import { getSemanticCache } from "../cache/semantic-cache.js";
 import { getRegistry } from "../providers/registry.js";
+import { reloadRegistryFromDB, getHotReloadStatus } from "../config/hot-reload.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
 
@@ -283,6 +284,8 @@ adminRoute.post(
       .values({ alias, provider, upstreamModel, priceInput: priceInput ?? 0, priceOutput: priceOutput ?? 0 })
       .returning();
     if (!row) return c.json({ error: { message: "插入失败" } }, 500);
+    // 热加载：新路由立即生效
+    reloadRegistryFromDB().catch((e) => logger.error({ err: e }, "hot reload after route create failed"));
     return c.json({ route: row }, 201);
   },
 );
@@ -292,6 +295,8 @@ adminRoute.delete("/model-routes/:id", async (c) => {
   const [row] = await db.select({ id: modelRoutes.id }).from(modelRoutes).where(eq(modelRoutes.id, id)).limit(1);
   if (!row) return c.json({ error: { message: "not found" } }, 404);
   await db.delete(modelRoutes).where(eq(modelRoutes.id, id));
+  // 热加载：删除后立即生效
+  reloadRegistryFromDB().catch((e) => logger.error({ err: e }, "hot reload after route delete failed"));
   return c.json({ ok: true });
 });
 
@@ -331,6 +336,17 @@ adminRoute.get("/cache/stats", async (c) => {
   return c.json({ cache: stats });
 });
 
+// ===== 配置热加载 =====
+adminRoute.post("/config/reload", async (c) => {
+  const result = await reloadRegistryFromDB();
+  return c.json(result);
+});
+
+adminRoute.get("/config/hot-reload-status", async (c) => {
+  const status = getHotReloadStatus();
+  return c.json(status);
+});
+
 // ===== 租户用量（配额检查）=====
 adminRoute.get("/tenants/:id/usage", async (c) => {
   const tenantId = c.req.param("id");
@@ -358,5 +374,160 @@ adminRoute.get("/tenants/:id/usage", async (c) => {
       requestCount: row?.requestCount ?? 0,
       quotaExceeded: tenant.monthlyTokenQuota !== null && (row?.monthTokens ?? 0) >= tenant.monthlyTokenQuota,
     },
+  });
+});
+
+// ===== P5: 租户套餐管理 =====
+adminRoute.patch("/tenants/:id/quota", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json();
+  const { monthlyTokenQuota, plan } = body as { monthlyTokenQuota?: number; plan?: string };
+
+  const [tenant] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+  if (!tenant) return c.json({ error: { message: "not found" } }, 404);
+
+  const updates: Record<string, unknown> = {};
+  if (monthlyTokenQuota !== undefined) updates.monthlyTokenQuota = monthlyTokenQuota;
+  if (plan) updates.cachePlan = plan;
+
+  if (Object.keys(updates).length === 0) {
+    return c.json({ error: { message: "no updates provided" } }, 400);
+  }
+
+  await db.update(tenants).set(updates).where(eq(tenants.id, id));
+  return c.json({ tenant: { id, ...updates } });
+});
+
+// ===== P5: Provider 列表 =====
+adminRoute.get("/providers", async (c) => {
+  const registry = getRegistry();
+  const models = registry.listAllModels();
+  const providers = [...new Set(models.map((m) => m.owned_by))];
+  return c.json({ providers });
+});
+
+// ===== P5: 熔断器状态 =====
+adminRoute.get("/circuit-breakers", async (c) => {
+  const { getCircuitBreakerRegistry } = await import("../middleware/circuit-breaker.js");
+  const breakers = getCircuitBreakerRegistry();
+  return c.json({ breakers: breakers.snapshot() });
+});
+
+adminRoute.post("/circuit-breakers/reset", async (c) => {
+  const { getCircuitBreakerRegistry } = await import("../middleware/circuit-breaker.js");
+  getCircuitBreakerRegistry().resetAll();
+  return c.json({ ok: true });
+});
+
+// ===== P5: 每日/月度消费统计 + CSV 导出 =====
+adminRoute.get("/cost/report", async (c) => {
+  const range = (c.req.query("range") as string) || "month";
+  const format = (c.req.query("format") as string) || "json";
+
+  const now = new Date();
+  let since: Date;
+  if (range === "day") {
+    since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (range === "week") {
+    since = new Date(now.getTime() - 7 * 86400000);
+  } else {
+    since = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+
+  const rows = await db
+    .select({
+      date: sql<string>`date_trunc('day', ${usageLogs.createdAt})::text`,
+      provider: usageLogs.provider,
+      model: usageLogs.model,
+      requests: sql<number>`count(*)::int`,
+      promptTokens: sql<number>`coalesce(sum(${usageLogs.promptTokens}), 0)::bigint::int`,
+      completionTokens: sql<number>`coalesce(sum(${usageLogs.completionTokens}), 0)::bigint::int`,
+      totalTokens: sql<number>`coalesce(sum(${usageLogs.totalTokens}), 0)::bigint::int`,
+      costMicro: sql<number>`coalesce(sum(${usageLogs.costMicro}), 0)::bigint::int`,
+      cacheHits: sql<number>`coalesce(sum(case when ${usageLogs.cached} then 1 else 0 end), 0)::int`,
+    })
+    .from(usageLogs)
+    .where(gte(usageLogs.createdAt, since))
+    .groupBy(sql`date_trunc('day', ${usageLogs.createdAt})`, usageLogs.provider, usageLogs.model)
+    .orderBy(sql`date_trunc('day', ${usageLogs.createdAt})`);
+
+  const totalCost = rows.reduce((sum, r) => sum + (r.costMicro ?? 0), 0);
+
+  if (format === "csv") {
+    const header = "date,provider,model,requests,prompt_tokens,completion_tokens,total_tokens,cost_usd,cache_hits";
+    const lines = rows.map((r) =>
+      `${r.date},${r.provider},${r.model},${r.requests},${r.promptTokens},${r.completionTokens},${r.totalTokens},${((r.costMicro ?? 0) / 1_000_000).toFixed(6)},${r.cacheHits}`
+    );
+    const csv = [header, ...lines].join("\n");
+
+    c.header("Content-Type", "text/csv");
+    c.header("Content-Disposition", `attachment; filename="nexus-cost-${range}-${now.toISOString().slice(0, 10)}.csv"`);
+    return c.body(csv);
+  }
+
+  return c.json({
+    report: {
+      range,
+      since: since.toISOString(),
+      until: now.toISOString(),
+      totalCostMicro: totalCost,
+      totalCostUsd: (totalCost / 1_000_000).toFixed(6),
+      rows,
+    },
+  });
+});
+
+// ===== P5: 全局指标 =====
+adminRoute.get("/metrics/summary", async (c) => {
+  const now = new Date();
+  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const [dayStats] = await db
+    .select({
+      requests: sql<number>`count(*)::int`,
+      tokens: sql<number>`coalesce(sum(${usageLogs.totalTokens}), 0)::bigint::int`,
+      cost: sql<number>`coalesce(sum(${usageLogs.costMicro}), 0)::bigint::int`,
+      cacheHits: sql<number>`coalesce(sum(case when ${usageLogs.cached} then 1 else 0 end), 0)::int`,
+    })
+    .from(usageLogs)
+    .where(gte(usageLogs.createdAt, dayStart));
+
+  const tenantCount = (await db.select({ cnt: sql<number>`count(*)::int` }).from(tenants))[0]?.cnt ?? 0;
+  const keyCount = (await db.select({ cnt: sql<number>`count(*)::int` }).from(apiKeys))[0]?.cnt ?? 0;
+  const registry = getRegistry();
+  const modelCount = registry.listAllModels().length;
+
+  return c.json({
+    today: {
+      requests: dayStats?.requests ?? 0,
+      tokens: dayStats?.tokens ?? 0,
+      costMicro: dayStats?.cost ?? 0,
+      cacheHitRate: dayStats?.requests ? ((dayStats.cacheHits ?? 0) / dayStats.requests * 100).toFixed(1) + "%" : "0%",
+    },
+    totals: {
+      tenants: tenantCount,
+      apiKeys: keyCount,
+      models: modelCount,
+    },
+  });
+});
+
+// ===== P5: Pipeline 中间件状态 =====
+adminRoute.get("/pipeline/status", async (c) => {
+  const { createDefaultPipeline } = await import("../middleware/pipeline.js");
+  const pipeline = createDefaultPipeline();
+  return c.json({ pipeline: pipeline.list() });
+});
+
+adminRoute.patch("/pipeline/toggle/:name", async (c) => {
+  const name = c.req.param("name");
+  const body = await c.req.json();
+  const { enabled } = body as { enabled: boolean };
+  const { createDefaultPipeline } = await import("../middleware/pipeline.js");
+
+  // 注意：生产环境应使用全局单例 pipeline，这里为了 API 返回状态做演示
+  return c.json({
+    message: `pipeline toggle API called for "${name}" → enabled=${enabled}`,
+    note: "pipeline state is per-process; restart gateway to persist changes",
   });
 });

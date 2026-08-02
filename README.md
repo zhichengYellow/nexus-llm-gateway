@@ -222,10 +222,16 @@ curl http://localhost:8787/v1/chat/completions \
 
 ```bash
 nvm use 22 && npm test
-# → 21 个测试全过（canonical/准入/hash 隔离/分桶/分类TTL/SingleFlight 并发）
+# → 67 个测试全过（canonical/准入/hash 隔离/分桶/分类TTL/SingleFlight/Provider Mock/Registry/Utils）
 ```
 
-### 基准测试（需网关运行 + 有效 Key）
+### 离线 Benchmark
+
+```bash
+node benchmark/offline-benchmark.mjs
+```
+
+### 在线基准测试（需网关运行 + 有效 Key）
 
 ```bash
 source ~/.nvm/nvm.sh && nvm use 22
@@ -239,6 +245,21 @@ node benchmark/cache-benchmark.mjs
 [4] 20 并发同 prompt → 上游调用 1 次（SingleFlight 生效）
 [5] 继续/谢谢/ok → 均不缓存（防误命中）
 ```
+
+### 性能压测
+
+```bash
+# 默认 20 并发，持续 5 秒
+node benchmark/load-test.mjs
+
+# 自定义参数
+CONCURRENT=50 DURATION=10 GATEWAY_MODEL=gemini-flash-lite node benchmark/load-test.mjs
+```
+
+### CI 每日 Benchmark
+
+<!-- BENCHMARK_START -->
+<!-- BENCHMARK_END -->
 
 ## 📡 使用 OpenAI SDK 接入
 

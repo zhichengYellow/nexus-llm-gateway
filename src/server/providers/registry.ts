@@ -31,6 +31,8 @@ export class ProviderRegistry {
   private modelMap = new Map<string, { providerType: ProviderType; upstreamModel: string }>();
   /** 模型别名 → 故障转移链 */
   private fallbackMap = new Map<string, Array<{ providerType: ProviderType; upstreamModel: string }>>();
+  /** 上次热加载时间 */
+  lastReloadAt: Date | null = null;
 
   constructor(providers: Record<ProviderType, ProviderConfig>) {
     for (const [type, cfg] of Object.entries(providers) as Array<[ProviderType, ProviderConfig]>) {
@@ -137,6 +139,22 @@ export class ProviderRegistry {
   /** 设置故障转移链（运行时配置） */
   setFallback(model: string, chain: Array<{ providerType: ProviderType; upstreamModel: string }>) {
     this.fallbackMap.set(model, chain);
+  }
+
+  /** 清除所有模型别名映射（用于热加载前清空旧路由） */
+  clearRoutes(): void {
+    this.modelMap.clear();
+    this.fallbackMap.clear();
+  }
+
+  /** 添加模型别名（用于热加载时重建路由表） */
+  addModelAlias(alias: string, providerType: ProviderType, upstreamModel: string): void {
+    this.modelMap.set(alias, { providerType, upstreamModel });
+  }
+
+  /** 获取所有模型别名列表 */
+  listAllAliases(): string[] {
+    return Array.from(this.modelMap.keys());
   }
 }
 

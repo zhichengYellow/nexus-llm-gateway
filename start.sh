@@ -10,7 +10,7 @@ echo "========================================="
 
 # 1. 启动基础设施
 echo "[1/4] 启动 Postgres + Redis..."
-docker compose up -d postgres redis
+docker-compose up -d postgres redis
 sleep 3
 
 # 2. 初始化 pgvector
@@ -19,8 +19,17 @@ docker exec nexus-postgres psql -U nexus -d nexus -c "CREATE EXTENSION IF NOT EX
 
 # 3. 迁移 + 种子数据
 echo "[3/4] 迁移数据库 & 创建种子数据..."
-source ~/.nvm/nvm.sh
-nvm use 22 >/dev/null 2>&1
+# 检查 node 版本 >= 20
+NODE_VERSION=$(node -v 2>/dev/null | sed 's/v//' | cut -d. -f1)
+if [ -z "$NODE_VERSION" ] || [ "$NODE_VERSION" -lt 20 ]; then
+  if [ -f ~/.nvm/nvm.sh ]; then
+    source ~/.nvm/nvm.sh
+    nvm use 22 >/dev/null 2>&1
+  else
+    echo "错误: 需要 Node.js >= 20，当前未安装或版本过低"
+    exit 1
+  fi
+fi
 npx drizzle-kit push --force
 npx tsx --env-file=.env src/server/db/seed.ts
 
@@ -48,7 +57,7 @@ cleanup() {
   echo "停止服务..."
   kill $GW_PID 2>/dev/null
   kill $DASH_PID 2>/dev/null
-  docker compose down
+  docker-compose down
   echo "已停止"
 }
 trap cleanup EXIT INT TERM

@@ -1,0 +1,51 @@
+name: Daily Benchmark
+
+on:
+  schedule:
+    # 每天 UTC 0:00（北京时间 8:00）运行
+    - cron: "0 0 * * *"
+  workflow_dispatch:  # 手动触发
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Run offline benchmark
+        run: node benchmark/offline-benchmark.mjs
+
+      - name: Update benchmark results in README
+        run: |
+          # 提取 benchmark 输出
+          BENCH_OUTPUT=$(node benchmark/offline-benchmark.mjs 2>&1)
+          # 在 README 中更新 benchmark 结果区块
+          # 使用标记来定位替换区域
+          MARKER_START="<!-- BENCHMARK_START -->"
+          MARKER_END="<!-- BENCHMARK_END -->"
+          # 检查 README 是否有标记，有则替换
+          if grep -q "$MARKER_START" README.md; then
+            sed -i "/$MARKER_START/,/$MARKER_END/{//!d}" README.md
+            sed -i "/$MARKER_START/a\\\n\`\`\`\n${BENCH_OUTPUT}\n\`\`\`\n\n> 更新于 $(date -u +'%Y-%m-%d %H:%M UTC')" README.md
+          fi
+
+      - name: Commit updated README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git diff --staged --quiet || git commit -m "chore: update benchmark results [skip ci]"
+          git push
