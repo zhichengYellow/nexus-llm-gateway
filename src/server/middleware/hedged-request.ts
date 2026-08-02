@@ -19,11 +19,6 @@ export interface HedgedOptions {
   maxHedged: number;
 }
 
-interface HedgedAttempt<T> {
-  result: Promise<T>;
-  abort: () => void;
-}
-
 /**
  * 执行对冲请求：同时向多个 provider 发送，第一个成功的结果被返回
  *

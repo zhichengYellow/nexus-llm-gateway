@@ -13,6 +13,7 @@ import { hashKey } from "../middleware/auth.js";
 import { getSemanticCache } from "../cache/semantic-cache.js";
 import { getRegistry } from "../providers/registry.js";
 import { reloadRegistryFromDB, getHotReloadStatus } from "../config/hot-reload.js";
+import { logger } from "../../shared/logger.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
 
@@ -523,7 +524,6 @@ adminRoute.patch("/pipeline/toggle/:name", async (c) => {
   const name = c.req.param("name");
   const body = await c.req.json();
   const { enabled } = body as { enabled: boolean };
-  const { createDefaultPipeline } = await import("../middleware/pipeline.js");
 
   // 注意：生产环境应使用全局单例 pipeline，这里为了 API 返回状态做演示
   return c.json({
