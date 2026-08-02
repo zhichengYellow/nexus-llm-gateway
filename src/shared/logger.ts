@@ -11,10 +11,16 @@ export const logger = pino({
   level,
   ...(isDev
     ? {
-        transport: {
-          target: "pino-pretty",
-          options: { colorize: true, translateTime: "SYS:standard", ignore: "pid,hostname" },
-        },
+         transport: {
+           target: "pino-pretty",
+           options: {
+             colorize: true,
+             translateTime: "SYS:standard",
+             ignore: "pid,hostname",
+             // 固定北京时间，避免 CI/容器 UTC 与本地时区不一致
+             timeZone: "Asia/Shanghai",
+           },
+         },
       }
     : {}),
 });
