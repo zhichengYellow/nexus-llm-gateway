@@ -2,7 +2,7 @@
 
 > **愿景**：用最少的钱，获得尽可能接近最好的效果。
 > **定位**：一个以 Token 和成本优化为核心的 AI Gateway。
-> **当前状态**：v2.0（12 Phase 中 10 个已完成），CI 全绿，266/266 测试通过。
+> **当前状态**：v2.0，CI 全绿，266/266 测试通过。
 > **核心指标**：每个新功能必须回答三个问题 —— 能减少多少 Token（TRR）？能节省多少成本（CSR）？对回答质量影响多大（QPS）？
 
 ---
@@ -33,133 +33,7 @@
 
 ---
 
-## 项目当前状态
-
-- **版本**：v2.0（12 Phase 中 10 个已完成）
-- **CI**：GitHub Actions 全绿，266/266 测试通过（30 个测试文件）
-- **lockfile**：自洽（esbuild 0.28.1 / @emnapi 2.0.0-alpha.3 齐全）
-- **时区**：pino-pretty 固定 Asia/Shanghai
-- **代理**：git 走 clash 代理 (127.0.0.1:7897)
-
----
-
-## 已完成功能清单
-
-### 基础能力（v1.0~v1.1.2）— ✅ 全部完成
-
-| 状态 | 功能 | 源文件 | 说明 |
-|------|------|--------|------|
-| ✅ COMPLETED | 工程级语义缓存 | `src/server/cache/semantic-cache.ts` | Canonical Key、SingleFlight、分类 TTL、防毒化 |
-| ✅ COMPLETED | 容错三件套 | `src/server/middleware/circuit-breaker.ts` + `weighted-router.ts` + `retry.ts` | Circuit Breaker、Weighted Router、Retry |
-| ✅ COMPLETED | Health Probe 四态 | `src/server/middleware/health-probe.ts` | UNKNOWN/HEALTHY/DEGRADED/UNREACHABLE |
-| ✅ COMPLETED | Capability Discovery | `src/server/providers/registry.ts` | 无 key 自动禁用云 provider |
-| ✅ COMPLETED | Prometheus /metrics | `src/server/middleware/metrics.ts` | /metrics 端点 |
-| ✅ COMPLETED | Provider 级代理 | `src/server/providers/base.ts` | `<TYPE>_PROXY` 环境变量 |
-| ✅ COMPLETED | 时区修复 | `src/shared/logger.ts` | pino-pretty timeZone: Asia/Shanghai |
-
-### 基准测试与 CI（v1.1.3）
-
-| 状态 | 功能 | 源文件 | 说明 |
-|------|------|--------|------|
-| ✅ COMPLETED | 离线基准测试 | `benchmark/offline-benchmark.mjs` | 离线性能测试 |
-| ✅ COMPLETED | 缓存基准测试 | `benchmark/cache-benchmark.mjs` | 缓存性能测试 |
-| ✅ COMPLETED | 性能压测 | `benchmark/load-test.mjs` | 负载压测 |
-| ✅ COMPLETED | CI 每日基准工作流 | `.github/workflows/benchmark.yml` | 每日自动 benchmark |
-| ✅ COMPLETED | CLI 工具 | `cli/nexus-cli.mjs` | `nexus doctor / health / cache clear` 已实现 |
-
-### v1.2 AI Native Gateway — ✅ 全部完成
-
-| 状态 | 功能 | 源文件 | 说明 |
-|------|------|--------|------|
-| ✅ COMPLETED | Intent Router | `src/server/prompt/router.ts` | Prompt → Intent Classifier → Best Provider，支持 `model=auto` |
-| ✅ COMPLETED | Cost Optimizer | `src/server/prompt/cost-optimizer.ts` | 估算 token/预算/历史成功率/价格，自动选最便宜 provider |
-| ✅ COMPLETED | Quality Score Router | `src/server/prompt/quality-score.ts` | Score = 0.5×Quality + 0.3×Latency + 0.2×Cost |
-| ✅ COMPLETED | Adaptive TTL | `src/server/prompt/adaptive-ttl.ts` | 按问题类型自动判断 TTL（天气 5min / 知识 30天） |
-
-### 架构 — ✅ 全部完成
-
-| 状态 | 功能 | 源文件 | 说明 |
-|------|------|--------|------|
-| ✅ COMPLETED | Middleware Pipeline | `src/server/middleware/pipeline.ts` | Auth → RateLimit → Cache → Router → Retry → Provider → Metrics → Logger |
-| ✅ COMPLETED | Plugin System | `src/server/plugins/plugin-system.ts` | Provider/Router/Cache/Auth/Metrics 插件化 |
-| ✅ COMPLETED | Config Hot Reload | `src/server/config/hot-reload.ts` | Dashboard 修改权重/路由，无需重启 |
-
-### 可靠性 — ✅ 全部完成
-
-| 状态 | 功能 | 源文件 | 说明 |
-|------|------|--------|------|
-| ✅ COMPLETED | Bulkhead | `src/server/middleware/bulkhead.ts` | Provider 连接池隔离 |
-| ✅ COMPLETED | Hedged Request | `src/server/middleware/hedged-request.ts` | 超时同时发备用 provider |
-| ✅ COMPLETED | Adaptive Retry | `src/server/middleware/adaptive-retry.ts` | 429/500/503 不同退避策略 |
-
-### AI Native — ✅ 全部完成
-
-| 状态 | 功能 | 源文件 | 说明 |
-|------|------|--------|------|
-| ✅ COMPLETED | Prompt Guard | `src/server/prompt/guard.ts` | PII 自动 Mask |
-| ✅ COMPLETED | Prompt Rewrite | `src/server/prompt/rewrite.ts` | System + Tenant + User Prompt 统一 |
-
-### 性能 — ✅ 全部完成
-
-| 状态 | 功能 | 源文件 | 说明 |
-|------|------|--------|------|
-| ✅ COMPLETED | Streaming Buffer | `src/server/middleware/streaming-buffer.ts` | SSE 缓冲 32ms 后 flush |
-| ✅ COMPLETED | Memory Pool | `src/server/middleware/memory-pool.ts` | 减少 JSON Parse / 对象创建 |
-| ✅ COMPLETED | Compression | `src/server/middleware/compression.ts` | SSE Gzip |
-
-### v1.3 Observability + Analytics — ✅ 全部完成
-
-| 状态 | 功能 | 源文件 | 说明 |
-|------|------|--------|------|
-| ✅ COMPLETED | LLM Observability | `src/server/middleware/observability.ts` | 全链路 Trace + Waterfall + Span |
-| ✅ COMPLETED | LLM Analytics | `src/server/analytics/analytics.ts` | Top10 / 趋势 / 分布统计 |
-| ✅ COMPLETED | Gateway Memory | `src/server/prompt/gateway-memory.ts` | 租户历史/偏好学习/衰减优化 |
-| ✅ COMPLETED | CI 修复 | `.github/workflows/benchmark.yml` + `ci.yml` | Daily Benchmark sed 修复 + Node 20 警告修复 |
-
-### 测试 — ✅ 全部完成
-
-| 状态 | 功能 | 源文件 | 说明 |
-|------|------|--------|------|
-| ✅ COMPLETED | Provider Mock | `src/server/providers/mock-provider.ts` | 单元测试不依赖真实 API |
-| ✅ COMPLETED | Utils 测试 | `src/shared/utils.test.ts` | 工具函数测试 |
-| ✅ COMPLETED | Registry 测试 | `src/server/providers/registry.test.ts` | Provider 注册测试 |
-
-### 12 Phase 核心模块 — ✅ 10/12 完成
-
-| 状态 | Phase | 源文件 | 说明 |
-|------|-------|--------|------|
-| ✅ COMPLETED | Phase 2 Router DSL | `src/server/dsl/router-dsl.ts` | YAML DSL + Parser + Compiler + Runtime |
-| ✅ COMPLETED | Phase 3 Workflow | `src/server/workflow/workflow-engine.ts` | Node/Edge/DAG + 条件分支 + 循环 |
-| ✅ COMPLETED | Phase 4 Prompt Compiler | `src/server/compiler/prompt-compiler.ts` | AST + 编译 Pass + Debug |
-| ✅ COMPLETED | Phase 5 Policy Engine | `src/server/dsl/policy-engine.ts` | PII/Secret/Injection 检测 |
-| ✅ COMPLETED | Phase 6 Agent Runtime | `src/server/agent/agent-runtime.ts` | Planner + Tool + Memory + Executor |
-| ✅ COMPLETED | Phase 7 Event Bus | `src/server/event/event-bus.ts` | Pub/Sub + Event Store + Replay |
-| ✅ COMPLETED | Phase 8 Scheduler | `src/server/scheduler/scheduler.ts` | Cron + 任务管理 + 失败重试 |
-| ✅ COMPLETED | Phase 9 Auto Benchmark | `benchmark/auto-benchmark.mjs` | 自动化基准测试 + Judge 评分 |
-| ✅ COMPLETED | Phase 10 Judge | `src/server/judge/judge.ts` | 相关性/准确性/流畅度/安全性/完整性 |
-| ✅ COMPLETED | Phase 11 Batch | `src/server/routes/batch.ts` | `/v1/batch` 批量请求 |
-| ⬜ TODO | Phase 1 分布式缓存 | - | Faiss/HNSW + 多节点 + Snapshot/WAL（Cache Confidence 已实现） |
-| ⬜ TODO | Phase 12 内核重构 | - | kernel/runtime/pipeline/scheduler/plugin/dsl/compiler/executor/storage |
-
-### 开源生态 — ✅ 全部完成
-
-| 状态 | 功能 | 源文件 | 说明 |
-|------|------|--------|------|
-| ✅ COMPLETED | SDK | `sdk/typescript/` + `sdk/python/` | npm + pip |
-| ✅ COMPLETED | CLI | `cli/nexus-cli.mjs` | health/models/provider/cache/benchmark/doctor |
-| ✅ COMPLETED | Examples | `examples/` | spring-ai/langchain/openwebui/cline/continue/mcp |
-| ✅ COMPLETED | Compatibility Matrix | `examples/compatibility-matrix.md` | 13 种客户端兼容性 |
-| ✅ COMPLETED | 文档 | `docs/` + `docs/adr/` | 架构图 + 快速开始 + 6 个 ADR |
-| ✅ COMPLETED | CONTRIBUTING.md | `CONTRIBUTING.md` | 贡献指南 |
-
----
-
-## 新路线：AI Cost Optimization Platform
-
-> **核心价值主张**：Nexus 是一个以 Token 和成本优化为核心的 AI Gateway。
-> **每个功能必须回答**：TRR（Token 降低率）/ CSR（成本节省率）/ QPS（质量保持率）。
-
----
+## 待实现功能（按 Layer 演进）
 
 ### Layer 0: 数据采集（Priority S）
 
@@ -713,6 +587,15 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 ---
 
+## 必要未完成 TODO（基础设施）
+
+| 状态 | 任务 | 说明 |
+|------|------|------|
+| ⬜ TODO | Phase 1 分布式缓存 | Faiss/HNSW + 多节点 + Snapshot/WAL（Cache Confidence 已实现） |
+| ⬜ TODO | Phase 12 内核重构 | kernel/runtime/pipeline/scheduler/plugin/dsl/compiler/executor/storage |
+
+---
+
 ## 季度路线
 
 ### Q3（当前）—— 数据基础
@@ -765,11 +648,8 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 | 状态 | 任务 | 说明 |
 |------|------|------|
 | ⬜ TODO | 技术博客 | 写高质量技术博客（Token 优化、成本优化、Semantic Cache 2.0 的思路） |
-| ✅ COMPLETED | 架构图 | `docs/architecture.md` 含 Mermaid 架构图 |
 | ⬜ TODO | Issues & PR | 持续回应 Issues 和接受 PR |
 | ⬜ TODO | Release 维护 | 持续维护 Release，打 tag，写 changelog |
-| ✅ COMPLETED | Compatibility Matrix | `examples/compatibility-matrix.md` 13 种客户端兼容性 |
-| ✅ COMPLETED | CONTRIBUTING.md | `CONTRIBUTING.md` 贡献指南 |
 | ⬜ TODO | GitHub Discussions | 开启讨论区 |
 
 ---
@@ -830,4 +710,4 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 ---
 
-> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿（266/266 测试通过）。Daily Benchmark CI 已修复（改用 Node.js 脚本）。项目已重新定位为 AI Cost Optimization Platform，按 Layer0~Layer6 演进。
+> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿（266/266 测试通过）。项目已重新定位为 AI Cost Optimization Platform，按 Layer0~Layer6 演进。已实现功能不在此文档中，请参考 README 和源码。

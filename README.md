@@ -1,16 +1,27 @@
-# Nexus LLM Gateway
+# Nexus - AI Cost Optimization Platform
 
-> 生产级 AI 统一网关 —— OpenAI 兼容协议，多 Provider 适配，工程级缓存、限流配额、故障转移、用量计费、管理看板。
+> **用最少的钱，获得尽可能接近最好的效果。**
 
-让任何 AI 应用只需改一个 `baseURL`，就能获得**成本治理 + 高可用 + 可观测性**。
+Nexus 是一个以 **Token 和成本优化**为核心的 AI Gateway。任何 AI 应用只需改一个 `baseURL`，就能获得**省 Token + 省成本 + 高质量**。
+
+## 🎯 核心指标
+
+| 指标 | 全称 | 定义 | 目标 |
+|------|------|------|------|
+| TRR | Token Reduction Rate | Token 降低率 = 节省 Token / 原始 Token | ≥ 50% |
+| CSR | Cost Saving Rate | 成本节省率 = 节省金额 / 原始金额 | ≥ 40% |
+| QPS | Quality Preservation Score | 质量保持率 = 优化后质量 / 原始质量 | ≥ 95% |
+
+> 每一个新功能都以 TRR / CSR / QPS 衡量投入产出。
 
 ## ✨ 核心能力
 
 | 能力 | 说明 |
 |---|---|
 | OpenAI 兼容协议 | 任何 OpenAI SDK 改 `baseURL` 即可接入 |
-| 多 Provider 适配 | DeepSeek、Ollama（本地）、OpenAI，统一屏蔽差异 |
-| 工程级缓存 | Canonical Key + 参数分桶 + SingleFlight + 分类 TTL + 防毒化 |
+| 多 Provider 适配 | DeepSeek、Ollama（本地）、OpenAI、Gemini，统一屏蔽差异 |
+| 工程级缓存 | Canonical Key + 参数分桶 + SingleFlight + 分类 TTL + 防毒化（省 Token 核心） |
+| 智能路由 | Intent Router + Cost Optimizer + Quality Score，自动选最省最合适的 Provider |
 | 模型路由 | 按模型别名路由到对应 Provider |
 | 故障转移 | 主模型失败自动切备用，流式/非流式均支持 |
 | 限流配额 | Redis 令牌桶 RPM + 月度 Token 配额 |
@@ -18,7 +29,7 @@
 | 多租户 | API Key 隔离、独立配额、增强缓存审批 |
 | 管理看板 | 深色模式、趋势图/缓存统计/模型路由/实时日志、双端（管理/用户） |
 | 可观测性 | 全链路追踪 ID、Cache Metadata、命中率/节省 token 统计 |
-| 测试 | Vitest 单测（21 用例）+ 缓存基准脚本 |
+| 测试 | Vitest 单测（266 用例）+ 缓存基准脚本 |
 
 ## 🏗 系统架构
 
@@ -222,7 +233,7 @@ curl http://localhost:8787/v1/chat/completions \
 
 ```bash
 nvm use 22 && npm test
-# → 67 个测试全过（canonical/准入/hash 隔离/分桶/分类TTL/SingleFlight/Provider Mock/Registry/Utils）
+# → 266 个测试全过（缓存/容错/路由/DSL/Policy/Judge/Scheduler/Agent/Workflow/Event/Compiler 等 30 个测试文件）
 ```
 
 ### 离线 Benchmark
@@ -389,11 +400,17 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## 🗓 开发路线
 
-- [x] **Week 1**: 核心网关 MVP（Provider 适配、OpenAI 兼容路由、认证、用量记录）
-- [x] **Week 2**: 缓存引擎、限流配额、故障转移、全链路日志
-- [x] **Week 3**: 深色管理看板（管理端+用户端）、Docker 化、部署
-- [x] **Week 3.5**: 工程级缓存 v3（Canonical/SingleFlight/分类TTL/防毒化）+ 单测 + 基准
-- [ ] **Week 4**: 多 Provider 高级 failover、熔断器、Retry 指数退避、Prometheus 监控
+> 项目已重新定位为 **AI Cost Optimization Platform**，完整路线见 [`fit/improve.md`](fit/improve.md)。
+
+- [x] **v1.0~v1.1.2**: 核心网关 + 工程级缓存 + 容错三件套 + 可观测性
+- [x] **v1.2**: AI Native Gateway（Intent Router / Cost Optimizer / Quality Score / Adaptive TTL）
+- [x] **v1.3**: Observability + Analytics + Gateway Memory
+- [x] **v1.4**: Router DSL + Policy Engine + Judge + Scheduler
+- [x] **v2.0**: Agent Runtime + Workflow + Event Bus + Prompt Compiler + Batch + Auto Benchmark
+- [ ] **Layer 0**: 数据采集（完整请求数据模型 / Cost Analytics / 请求画像）
+- [ ] **Layer 1**: Token 优化（Prompt Compression / Conversation Compression / Chunk Cache）
+- [ ] **Layer 2**: 成本优化（Cost Estimator / Smart Provider Selection / Budget Controller）
+- [ ] **Layer 3~6**: 质量优化 / 智能路由 / 企业 / 生态
 
 ## 📄 License
 
