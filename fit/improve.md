@@ -1,14 +1,14 @@
 # Nexus LLM Gateway - 产品路线图
 
 > **目标转变**：从"做一个功能很多的 Gateway"转变为"做一个别人愿意真正使用、愿意贡献代码、愿意推荐的 Gateway"。
-> **当前状态**：v1.2 AI Native Gateway，CI 全绿，192/192 测试通过，功能已足够丰富，后续聚焦产品化与影响力。
+> **当前状态**：v1.3 Observability + Analytics + Memory，CI 全绿，206/206 测试通过，功能已足够丰富，后续聚焦产品化与影响力。
 
 ---
 
 ## 项目当前状态
 
-- **版本**：v1.2（AI Native Gateway）
-- **CI**：GitHub Actions 全绿，192/192 测试通过（19 个测试文件）
+- **版本**：v1.3（Observability + Analytics + Memory）
+- **CI**：GitHub Actions 全绿，206/206 测试通过（21 个测试文件）
 - **lockfile**：自洽（esbuild 0.28.1 / @emnapi 2.0.0-alpha.3 齐全）
 - **时区**：pino-pretty 固定 Asia/Shanghai
 - **代理**：git 走 clash 代理 (127.0.0.1:7897)
@@ -97,7 +97,7 @@
 - Daily Benchmark CI 每日成功运行。
 - README 自动更新 "Today's Benchmark" 区块。
 
-### 2. LLM Observability（★★★★★）
+### 2. LLM Observability（★★★★★）✅ 已完成
 
 **背景**：不要只是 Prometheus，而是真正的全链路 Trace。
 
@@ -116,7 +116,7 @@ Request → Router → Cache → Retry → Provider → LLM → Streaming
 - 全链路 Trace 覆盖所有中间件。
 - Waterfall 可视化清晰。
 
-### 3. LLM Analytics（★★★★★）
+### 3. LLM Analytics（★★★★★）✅ 已完成
 
 **背景**：后台每天统计 Prompt Top10 / Model Top10 / Intent Distribution / Cost / Token / Latency。
 
@@ -151,7 +151,7 @@ Request → Router → Cache → Retry → Provider → LLM → Streaming
 2. 实现批量评估。
 3. 输出对比报告。
 
-### 6. Gateway Memory
+### 6. Gateway Memory ✅ 已完成
 
 **背景**：不是 Chat Memory，而是 Gateway Memory。Gateway 越来越聪明。
 
@@ -263,4 +263,4 @@ Request → Router → Cache → Retry → Provider → LLM → Streaming
 
 ---
 
-> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿（192/192 测试通过）。Daily Benchmark CI 因 `sed` 语法错误待修复。
+> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿（206/206 测试通过）。Daily Benchmark CI 已修复（改用 Node.js 脚本）。
