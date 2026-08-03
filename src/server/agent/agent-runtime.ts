@@ -205,7 +205,7 @@ export class AgentRuntime {
     this.tools.register({
       name: "code_executor",
       description: "执行代码",
-      handler: async (params) => `代码执行结果: (模拟)`,
+      handler: async (_params) => `代码执行结果: (模拟)`,
     });
   }
 

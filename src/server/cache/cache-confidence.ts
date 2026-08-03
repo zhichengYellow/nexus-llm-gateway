@@ -15,7 +15,6 @@
  * - 0.7 <= confidence < 0.9：返回缓存 + 异步刷新
  * - confidence < 0.7：重新生成
  */
-import { logger } from "../../shared/logger.js";
 
 export interface ConfidenceResult {
   /** 置信度 0~1 */

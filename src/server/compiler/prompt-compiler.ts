@@ -9,7 +9,6 @@
  * 每个阶段是一个编译 Pass，可插拔。
  */
 import type { ChatMessage, ProviderType } from "../../shared/types.js";
-import { logger } from "../../shared/logger.js";
 
 // ===== AST =====
 

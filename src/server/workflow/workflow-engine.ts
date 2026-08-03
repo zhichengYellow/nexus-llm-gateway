@@ -149,7 +149,7 @@ function evalCondition(condition: string, ctx: WorkflowContext): boolean {
       const obj2 = complexMatch[5]!; const op2 = complexMatch[6]!;
       const val2 = parseFloat(complexMatch[7]!);
       const v1 = (scope[obj1] as any)?.[prop1];
-      const v2 = scope[obj2];
+      const v2 = scope[obj2] as number | undefined;
       if (v1 === undefined || v2 === undefined) return false;
       const r1 = op1 === "<" ? v1 < val1 : op1 === ">" ? v1 > val1 : op1 === "<=" ? v1 <= val1 : op1 === ">=" ? v1 >= val1 : false;
       const r2 = op2 === "<" ? v2 < val2 : op2 === ">" ? v2 > val2 : op2 === "<=" ? v2 <= val2 : op2 === ">=" ? v2 >= val2 : false;
@@ -173,12 +173,12 @@ export class WorkflowEngine {
 
   /** 注册内置 handler */
   private registerBuiltinHandlers(): void {
-    this.register("RouterNode", async (ctx) => {
+    this.register("RouterNode", async (_ctx) => {
       logger.info("workflow: router node");
       return { intent: "general", provider: "deepseek" };
     });
 
-    this.register("CacheNode", async (ctx) => {
+    this.register("CacheNode", async (_ctx) => {
       logger.info("workflow: cache node");
       return { hit: false };
     });
@@ -191,7 +191,7 @@ export class WorkflowEngine {
       };
     });
 
-    this.register("JudgeNode", async (ctx) => {
+    this.register("JudgeNode", async (_ctx) => {
       logger.info("workflow: judge node");
       return { score: 0.85, passed: true };
     });
@@ -211,7 +211,7 @@ export class WorkflowEngine {
       return { done: true };
     });
 
-    this.register("ParallelNode", async (ctx) => {
+    this.register("ParallelNode", async (_ctx) => {
       logger.info("workflow: parallel node");
       return { results: [] };
     });
