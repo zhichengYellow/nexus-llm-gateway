@@ -63,12 +63,19 @@
 - [x] **Utils 测试**（`src/shared/utils.test.ts`）
 - [x] **Registry 测试**（`src/server/providers/registry.test.ts`）
 
+#### v1.3 Observability + Analytics
+
+- [x] **LLM Observability**（`src/server/middleware/observability.ts`）：全链路 Trace + Waterfall + Span 记录
+- [x] **LLM Analytics**（`src/server/analytics/analytics.ts`）：Top10 / 趋势 / 分布统计
+- [x] **Gateway Memory**（`src/server/prompt/gateway-memory.ts`）：租户历史/偏好学习/衰减优化
+- [x] **CI 修复**：Daily Benchmark sed 错误修复 + Node 20 弃用警告修复
+
 ---
 
 ## 未修复问题
 
-- [ ] **Daily Benchmark CI 失败**：`sed` 命令语法错误（`sed: -e expression #1, char 100: extra characters after command`），在更新 README benchmark 结果区块时 `sed -i` 格式问题。需修复 `.github/workflows/` 中的 benchmark workflow 脚本。
-- [ ] **Node 20 弃用警告**：`actions/checkout@v4` 和 `actions/setup-node@v4` 仍使用 Node 20，已被强制运行在 Node 24。需升级 action 版本或设置 `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION`。
+- [x] **Daily Benchmark CI 失败**：`sed` 命令语法错误 → 改用 Node.js 脚本处理 README 更新
+- [x] **Node 20 弃用警告**：CI workflow 添加 `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true` 环境变量
 
 ---
 

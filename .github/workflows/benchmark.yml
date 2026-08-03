@@ -2,9 +2,8 @@ name: Daily Benchmark
 
 on:
   schedule:
-    # 每天 UTC 0:00（北京时间 8:00）运行
     - cron: "0 0 * * *"
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:
 
 jobs:
   benchmark:
@@ -26,21 +25,26 @@ jobs:
         run: npm test
 
       - name: Run offline benchmark
-        run: node benchmark/offline-benchmark.mjs
+        run: node benchmark/offline-benchmark.mjs | tee benchmark-output.txt
 
-      - name: Update benchmark results in README
+      - name: Update README with benchmark results
         run: |
-          # 提取 benchmark 输出
-          BENCH_OUTPUT=$(node benchmark/offline-benchmark.mjs 2>&1)
-          # 在 README 中更新 benchmark 结果区块
-          # 使用标记来定位替换区域
-          MARKER_START="<!-- BENCHMARK_START -->"
-          MARKER_END="<!-- BENCHMARK_END -->"
-          # 检查 README 是否有标记，有则替换
-          if grep -q "$MARKER_START" README.md; then
-            sed -i "/$MARKER_START/,/$MARKER_END/{//!d}" README.md
-            sed -i "/$MARKER_START/a\\\n\`\`\`\n${BENCH_OUTPUT}\n\`\`\`\n\n> 更新于 $(date -u +'%Y-%m-%d %H:%M UTC')" README.md
-          fi
+          node -e "
+          const fs = require('fs');
+          const bench = fs.readFileSync('benchmark-output.txt', 'utf8').trim();
+          const readme = fs.readFileSync('README.md', 'utf8');
+          const start = '<!-- BENCHMARK_START -->';
+          const end = '<!-- BENCHMARK_END -->';
+          const date = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+          const block = start + '\n```\n' + bench + '\n```\n\n> 更新于 ' + date + '\n' + end;
+          const re = new RegExp(start + '[\\s\\S]*' + end, 'm');
+          if (re.test(readme)) {
+            fs.writeFileSync('README.md', readme.replace(re, block));
+            console.log('README updated with benchmark results');
+          } else {
+            console.log('Benchmark markers not found in README, skipping update');
+          }
+          "
 
       - name: Commit updated README
         run: |

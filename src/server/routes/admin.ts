@@ -531,3 +531,59 @@ adminRoute.patch("/pipeline/toggle/:name", async (c) => {
     note: "pipeline state is per-process; restart gateway to persist changes",
   });
 });
+
+// ===== Observability: Trace 查看 =====
+adminRoute.get("/traces/recent", async (c) => {
+  const { getTraceStore } = await import("../middleware/observability.js");
+  const store = getTraceStore();
+  const limit = parseInt(c.req.query("limit") ?? "20", 10);
+  const traces = store.recent(limit);
+  return c.json({
+    traces: traces.map((t) => ({
+      traceId: t.traceId,
+      requestId: t.requestId,
+      duration: Math.max(...t.allSpans.map((s) => s.duration)),
+      spanCount: t.allSpans.length,
+      spans: t.allSpans.map((s) => ({ name: s.name, duration: s.duration, status: s.status })),
+      createdAt: new Date(t.createdAt).toISOString(),
+    })),
+  });
+});
+
+adminRoute.get("/traces/stats", async (c) => {
+  const { getTraceStore } = await import("../middleware/observability.js");
+  const store = getTraceStore();
+  return c.json({ stats: store.stats() });
+});
+
+adminRoute.get("/traces/:requestId", async (c) => {
+  const requestId = c.req.param("requestId");
+  const { getTraceStore } = await import("../middleware/observability.js");
+  const store = getTraceStore();
+  const trace = store.findByRequestId(requestId);
+  if (!trace) return c.json({ error: { message: "trace not found" } }, 404);
+  return c.json({
+    traceId: trace.traceId,
+    requestId: trace.requestId,
+    spans: trace.allSpans.map((s) => ({ name: s.name, duration: s.duration, status: s.status, metadata: s.metadata })),
+    waterfall: new (await import("../middleware/observability.js")).Tracer("").toWaterfall ? null : null,
+  });
+});
+
+// ===== Analytics =====
+adminRoute.get("/analytics/report", async (c) => {
+  const range = (c.req.query("range") as string) || "day";
+  const { getAnalyticsEngine } = await import("../analytics/analytics.js");
+  const engine = getAnalyticsEngine();
+  const report = await engine.generateReport(range as "day" | "week" | "month");
+  return c.json(report);
+});
+
+// ===== Gateway Memory =====
+adminRoute.get("/memory/tenant/:id", async (c) => {
+  const tenantId = c.req.param("id");
+  const { getGatewayMemory } = await import("../prompt/gateway-memory.js");
+  const memory = getGatewayMemory();
+  const summary = memory.getSummary(tenantId);
+  return c.json(summary);
+});
