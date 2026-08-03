@@ -680,6 +680,34 @@ src/
 
 ## 开发约定
 
+### CI 测试要求（每个 Agent 完成功能后必须执行）
+
+> **重要**：任何功能开发完成后，必须本地验证通过以下 3 步，并确保 GitHub Actions CI 变绿后才能标记为 ✅ COMPLETED。
+
+| 步骤 | 命令 | 说明 | 失败处理 |
+|------|------|------|----------|
+| 1. 安装依赖 | `npm ci` | 干净安装依赖，验证 lockfile 自洽 | 若报 EUSAGE，用 `npm install` 重建 lockfile |
+| 2. 类型检查 | `npx tsc --noEmit` | TypeScript 类型检查 | 修复所有 TS 错误（常见：未使用 import TS6133、类型不匹配 TS2322/TS2678、条件永远为 true TS2774） |
+| 3. 运行测试 | `npm test` | 运行全部 Vitest 测试 | 修复失败的测试，确保全部通过 |
+
+**CI 工作流**（`.github/workflows/ci.yml`）：
+- `npm ci` → `npx tsc --noEmit` → `npm test`
+- 在 `main` 分支 push 和 pull_request 时自动运行
+- 使用 Node 22 + `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true`
+
+**提交前检查清单**：
+- [ ] `npm ci` 成功（无 EUSAGE 错误）
+- [ ] `npx tsc --noEmit` 通过（无 TS 错误）
+- [ ] `npm test` 全部通过（记录测试数，如 230/230）
+- [ ] `git push` 后 GitHub Actions CI 变绿
+- [ ] 更新 `fit/improve.md` 标记对应任务为 ✅ COMPLETED
+
+**常见 TS 错误及修复**：
+- `TS6133: 'xxx' is declared but its value is never read` → 删除未使用的 import/变量
+- `TS2322: Type '"block"' is not assignable to type 'PolicyAction'` → 在类型联合中添加缺失的字符串字面量
+- `TS2678: Type '"block"' is not comparable to type 'PolicyAction'` → 同上，扩展类型定义
+- `TS2774: This condition will always return true` → 检查是否误用函数引用而非调用
+
 ### 代码规范
 - 使用 TypeScript + Hono。
 - 使用 Drizzle ORM + PostgreSQL + Redis。
