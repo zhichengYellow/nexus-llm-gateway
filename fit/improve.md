@@ -6,6 +6,20 @@
 
 ---
 
+## TODO 状态标识说明
+
+> **其他 Agent 请按以下标识识别任务状态**：
+
+| 标识 | 含义 | 说明 |
+|------|------|------|
+| `✅ COMPLETED` | 已完成 | 功能已实现，有对应源文件，测试通过 |
+| `⬜ TODO` | 未开始 | 尚未开始开发 |
+| `🚧 IN_PROGRESS` | 进行中 | 正在开发中 |
+| `❌ BLOCKED` | 阻塞 | 有依赖项未完成，无法开始 |
+| `⚠️ PARTIAL` | 部分完成 | 基础框架已搭建，但功能不完整 |
+
+---
+
 ## 项目当前状态
 
 - **版本**：v1.3（Observability + Analytics + Memory）
@@ -14,74 +28,106 @@
 - **时区**：pino-pretty 固定 Asia/Shanghai
 - **代理**：git 走 clash 代理 (127.0.0.1:7897)
 
-### 已完成功能清单
+---
 
-#### 基础能力（v1.0~v1.1.2）
+## 已完成功能清单
 
-- [x] 工程级语义缓存（Canonical Key、SingleFlight、分类 TTL、防毒化）
-- [x] 容错三件套（Circuit Breaker、Weighted Router、Retry）
-- [x] Health Probe 四态（UNKNOWN/HEALTHY/DEGRADED/UNREACHABLE）
-- [x] Capability Discovery（无 key 自动禁用云 provider）
-- [x] Prometheus /metrics 端点
-- [x] Provider 级代理支持（`<TYPE>_PROXY` 环境变量）
-- [x] 时区修复（Asia/Shanghai）
+### 基础能力（v1.0~v1.1.2）— ✅ 全部完成
 
-#### 基准测试与 CI（v1.1.3）
+| 状态 | 功能 | 源文件 | 说明 |
+|------|------|--------|------|
+| ✅ COMPLETED | 工程级语义缓存 | `src/server/cache/semantic-cache.ts` | Canonical Key、SingleFlight、分类 TTL、防毒化 |
+| ✅ COMPLETED | 容错三件套 | `src/server/middleware/circuit-breaker.ts` + `weighted-router.ts` + `retry.ts` | Circuit Breaker、Weighted Router、Retry |
+| ✅ COMPLETED | Health Probe 四态 | `src/server/middleware/health-probe.ts` | UNKNOWN/HEALTHY/DEGRADED/UNREACHABLE |
+| ✅ COMPLETED | Capability Discovery | `src/server/providers/registry.ts` | 无 key 自动禁用云 provider |
+| ✅ COMPLETED | Prometheus /metrics | `src/server/middleware/metrics.ts` | /metrics 端点 |
+| ✅ COMPLETED | Provider 级代理 | `src/server/providers/base.ts` | `<TYPE>_PROXY` 环境变量 |
+| ✅ COMPLETED | 时区修复 | `src/shared/logger.ts` | pino-pretty timeZone: Asia/Shanghai |
 
-- [x] 离线基准测试（`benchmark/offline-benchmark.mjs`）
-- [x] 缓存基准测试（`benchmark/cache-benchmark.mjs`）
-- [x] 性能压测（`benchmark/load-test.mjs`）
-- [x] CI 每日基准工作流（`.github/workflows/benchmark.yml`）
-- [ ] CLI 工具（`nexus doctor / health / cache clear`）— 尚未实现
+### 基准测试与 CI（v1.1.3）
 
-#### v1.2 AI Native Gateway
+| 状态 | 功能 | 源文件 | 说明 |
+|------|------|--------|------|
+| ✅ COMPLETED | 离线基准测试 | `benchmark/offline-benchmark.mjs` | 离线性能测试 |
+| ✅ COMPLETED | 缓存基准测试 | `benchmark/cache-benchmark.mjs` | 缓存性能测试 |
+| ✅ COMPLETED | 性能压测 | `benchmark/load-test.mjs` | 负载压测 |
+| ✅ COMPLETED | CI 每日基准工作流 | `.github/workflows/benchmark.yml` | 每日自动 benchmark |
+| ⬜ TODO | CLI 工具 | 无 | `nexus doctor / health / cache clear` 尚未实现，无 `src/cli/` 目录 |
 
-- [x] **Intent Router**（`src/server/prompt/router.ts`）：Prompt → Intent Classifier → Best Provider，支持 `model=auto`
-- [x] **Cost Optimizer**（`src/server/prompt/cost-optimizer.ts`）：估算 token/预算/历史成功率/价格，自动选最便宜 provider
-- [x] **Quality Score Router**（`src/server/prompt/quality-score.ts`）：Score = 0.5×Quality + 0.3×Latency + 0.2×Cost
-- [x] **Adaptive TTL**（`src/server/prompt/adaptive-ttl.ts`）：按问题类型自动判断 TTL（天气 5min / 知识 30天）
+### v1.2 AI Native Gateway — ✅ 全部完成
 
-#### 架构
+| 状态 | 功能 | 源文件 | 说明 |
+|------|------|--------|------|
+| ✅ COMPLETED | Intent Router | `src/server/prompt/router.ts` | Prompt → Intent Classifier → Best Provider，支持 `model=auto` |
+| ✅ COMPLETED | Cost Optimizer | `src/server/prompt/cost-optimizer.ts` | 估算 token/预算/历史成功率/价格，自动选最便宜 provider |
+| ✅ COMPLETED | Quality Score Router | `src/server/prompt/quality-score.ts` | Score = 0.5×Quality + 0.3×Latency + 0.2×Cost |
+| ✅ COMPLETED | Adaptive TTL | `src/server/prompt/adaptive-ttl.ts` | 按问题类型自动判断 TTL（天气 5min / 知识 30天） |
 
-- [x] **Middleware Pipeline**（`src/server/middleware/pipeline.ts`）：Auth → RateLimit → Cache → Router → Retry → Provider → Metrics → Logger，支持插拔
-- [x] **Plugin System**（`src/server/plugins/plugin-system.ts`）：Provider/Router/Cache/Auth/Metrics 插件化
-- [x] **Config Hot Reload**（`src/server/config/hot-reload.ts`）：Dashboard 修改权重/路由，无需重启
+### 架构 — ✅ 全部完成
 
-#### 可靠性
+| 状态 | 功能 | 源文件 | 说明 |
+|------|------|--------|------|
+| ✅ COMPLETED | Middleware Pipeline | `src/server/middleware/pipeline.ts` | Auth → RateLimit → Cache → Router → Retry → Provider → Metrics → Logger |
+| ✅ COMPLETED | Plugin System | `src/server/plugins/plugin-system.ts` | Provider/Router/Cache/Auth/Metrics 插件化 |
+| ✅ COMPLETED | Config Hot Reload | `src/server/config/hot-reload.ts` | Dashboard 修改权重/路由，无需重启 |
 
-- [x] **Bulkhead**（`src/server/middleware/bulkhead.ts`）：Provider 连接池隔离，互不影响
-- [x] **Hedged Request**（`src/server/middleware/hedged-request.ts`）：超时未返回时同时发备用 provider，谁快用谁
-- [x] **Adaptive Retry**（`src/server/middleware/adaptive-retry.ts`）：429/500/503 不同退避策略
+### 可靠性 — ✅ 全部完成
 
-#### AI Native
+| 状态 | 功能 | 源文件 | 说明 |
+|------|------|--------|------|
+| ✅ COMPLETED | Bulkhead | `src/server/middleware/bulkhead.ts` | Provider 连接池隔离 |
+| ✅ COMPLETED | Hedged Request | `src/server/middleware/hedged-request.ts` | 超时同时发备用 provider |
+| ✅ COMPLETED | Adaptive Retry | `src/server/middleware/adaptive-retry.ts` | 429/500/503 不同退避策略 |
 
-- [x] **Prompt Guard**（`src/server/prompt/guard.ts`）：PII 自动 Mask
-- [x] **Prompt Rewrite**（`src/server/prompt/rewrite.ts`）：System + Tenant + User Prompt 统一
+### AI Native — ✅ 全部完成
 
-#### 性能
+| 状态 | 功能 | 源文件 | 说明 |
+|------|------|--------|------|
+| ✅ COMPLETED | Prompt Guard | `src/server/prompt/guard.ts` | PII 自动 Mask |
+| ✅ COMPLETED | Prompt Rewrite | `src/server/prompt/rewrite.ts` | System + Tenant + User Prompt 统一 |
 
-- [x] **Streaming Buffer**（`src/server/middleware/streaming-buffer.ts`）：SSE 缓冲 32ms 后 flush
-- [x] **Memory Pool**（`src/server/middleware/memory-pool.ts`）：减少 JSON Parse / 对象创建
-- [x] **Compression**（`src/server/middleware/compression.ts`）：SSE Gzip
+### 性能 — ✅ 全部完成
 
-#### v1.3 Observability + Analytics
+| 状态 | 功能 | 源文件 | 说明 |
+|------|------|--------|------|
+| ✅ COMPLETED | Streaming Buffer | `src/server/middleware/streaming-buffer.ts` | SSE 缓冲 32ms 后 flush |
+| ✅ COMPLETED | Memory Pool | `src/server/middleware/memory-pool.ts` | 减少 JSON Parse / 对象创建 |
+| ✅ COMPLETED | Compression | `src/server/middleware/compression.ts` | SSE Gzip |
 
-- [x] **LLM Observability**（`src/server/middleware/observability.ts`）：全链路 Trace + Waterfall + Span 记录
-- [x] **LLM Analytics**（`src/server/analytics/analytics.ts`）：Top10 / 趋势 / 分布统计
-- [x] **Gateway Memory**（`src/server/prompt/gateway-memory.ts`）：租户历史/偏好学习/衰减优化
-- [x] **CI 修复**：Daily Benchmark sed 错误修复 + Node 20 弃用警告修复
+### v1.3 Observability + Analytics — ✅ 全部完成
 
-#### 测试
+| 状态 | 功能 | 源文件 | 说明 |
+|------|------|--------|------|
+| ✅ COMPLETED | LLM Observability | `src/server/middleware/observability.ts` | 全链路 Trace + Waterfall + Span |
+| ✅ COMPLETED | LLM Analytics | `src/server/analytics/analytics.ts` | Top10 / 趋势 / 分布统计 |
+| ✅ COMPLETED | Gateway Memory | `src/server/prompt/gateway-memory.ts` | 租户历史/偏好学习/衰减优化 |
+| ✅ COMPLETED | CI 修复 | `.github/workflows/benchmark.yml` + `ci.yml` | Daily Benchmark sed 修复 + Node 20 警告修复 |
 
-- [x] **Provider Mock**（`src/server/providers/mock-provider.ts`）：单元测试不依赖真实 API
-- [x] **Utils 测试**（`src/shared/utils.test.ts`）
-- [x] **Registry 测试**（`src/server/providers/registry.test.ts`）
+### 测试 — ✅ 全部完成
+
+| 状态 | 功能 | 源文件 | 说明 |
+|------|------|--------|------|
+| ✅ COMPLETED | Provider Mock | `src/server/providers/mock-provider.ts` | 单元测试不依赖真实 API |
+| ✅ COMPLETED | Utils 测试 | `src/shared/utils.test.ts` | 工具函数测试 |
+| ✅ COMPLETED | Registry 测试 | `src/server/providers/registry.test.ts` | Provider 注册测试 |
 
 ---
 
 ## 长远路线：Nexus Runtime 演进
 
+> **其他 Agent 请按 Phase 顺序开发，每个 Phase 是独立的工程。**
+> **每个 Phase 包含：背景、目标架构、实现步骤、验收标准、预估工作量。**
+
+---
+
 ### Phase 1: 分布式语义缓存（★★★★★）
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | P0 |
+| 预估工作量 | 5000+ 行，2~3 周 |
+| 依赖 | 无 |
 
 **背景**：当前缓存基于单机 Redis，无法水平扩展。需要独立出 Semantic Cache Service。
 
@@ -98,14 +144,14 @@ Redis Metadata
 ```
 
 **实现步骤**：
-1. **Embedding 自动生成**：集成 embedding 模型（text-embedding-3-small / bge-small），自动为每个 prompt 生成 embedding。
-2. **ANN Index**：集成 Faiss 或 HNSW，支持近似最近邻搜索，替代当前的 Redis 向量搜索。
-3. **Cache Confidence**：为每条缓存记录 confidence 分数（0~1），低于阈值时重新生成而非直接返回。
-4. **Auto Refresh**：后台定时刷新热门缓存的 embedding，保持时效性。
-5. **多节点同步**：缓存节点间通过 Redis Pub/Sub 或 Raft 协议同步索引。
-6. **分片（Sharding）**：按 hash(prompt) 分片，支持水平扩展。
-7. **Snapshot + WAL**：定期快照 + Write-Ahead Log，支持崩溃恢复。
-8. **独立服务**：将缓存从 Gateway 中拆出，成为独立的 Semantic Cache Service。
+1. ⬜ TODO — **Embedding 自动生成**：集成 embedding 模型（text-embedding-3-small / bge-small），自动为每个 prompt 生成 embedding。
+2. ⬜ TODO — **ANN Index**：集成 Faiss 或 HNSW，支持近似最近邻搜索，替代当前的 Redis 向量搜索。
+3. ⬜ TODO — **Cache Confidence**：为每条缓存记录 confidence 分数（0~1），低于阈值时重新生成而非直接返回。
+4. ⬜ TODO — **Auto Refresh**：后台定时刷新热门缓存的 embedding，保持时效性。
+5. ⬜ TODO — **多节点同步**：缓存节点间通过 Redis Pub/Sub 或 Raft 协议同步索引。
+6. ⬜ TODO — **分片（Sharding）**：按 hash(prompt) 分片，支持水平扩展。
+7. ⬜ TODO — **Snapshot + WAL**：定期快照 + Write-Ahead Log，支持崩溃恢复。
+8. ⬜ TODO — **独立服务**：将缓存从 Gateway 中拆出，成为独立的 Semantic Cache Service。
 
 **验收标准**：
 - 缓存查询延迟 P99 ≤ 10ms。
@@ -113,11 +159,16 @@ Redis Metadata
 - 崩溃恢复后数据零丢失。
 - 缓存命中率 ≥ 60%（相同 prompt）。
 
-**预估工作量**：5000+ 行，2~3 周。
-
 ---
 
 ### Phase 2: 自研 Router DSL Engine（★★★★★）
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | P0 |
+| 预估工作量 | 3000+ 行，1~2 周 |
+| 依赖 | 无 |
 
 **背景**：当前 Router 是硬编码的 if/weight/score 逻辑，无法灵活配置。
 
@@ -142,23 +193,14 @@ routes:
     provider: deepseek
 ```
 
-**动态规则示例**：
-```yaml
-policies:
-  - if: "latency > 1000"
-    then: "disable provider"
-  - if: "error_rate > 0.05"
-    then: "circuit_break"
-```
-
 **实现步骤**：
-1. **DSL 设计**：定义 YAML schema，支持条件表达式（intent/latency/cost/context_length/error_rate）。
-2. **DSL Parser**：实现 YAML → AST 解析器。
-3. **DSL Compiler**：AST → 可执行的路由规则。
-4. **DSL Runtime**：运行时引擎，支持热加载 YAML。
-5. **规则验证**：启动时校验 DSL 语法和逻辑。
-6. **Dashboard 集成**：在 Dashboard 中可视化编辑 DSL。
-7. **版本管理**：DSL 变更支持版本管理和回滚。
+1. ⬜ TODO — **DSL 设计**：定义 YAML schema，支持条件表达式（intent/latency/cost/context_length/error_rate）。
+2. ⬜ TODO — **DSL Parser**：实现 YAML → AST 解析器。
+3. ⬜ TODO — **DSL Compiler**：AST → 可执行的路由规则。
+4. ⬜ TODO — **DSL Runtime**：运行时引擎，支持热加载 YAML。
+5. ⬜ TODO — **规则验证**：启动时校验 DSL 语法和逻辑。
+6. ⬜ TODO — **Dashboard 集成**：在 Dashboard 中可视化编辑 DSL。
+7. ⬜ TODO — **版本管理**：DSL 变更支持版本管理和回滚。
 
 **验收标准**：
 - DSL 语法覆盖所有路由场景。
@@ -166,11 +208,16 @@ policies:
 - DSL 解析错误有清晰报错。
 - 支持 50+ 规则无性能下降。
 
-**预估工作量**：3000+ 行，1~2 周。
-
 ---
 
 ### Phase 3: Workflow Engine（★★★★★）
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | P1 |
+| 预估工作量 | 4000+ 行，2~3 周 |
+| 依赖 | Phase 2（DSL Engine） |
 
 **背景**：当前请求流程是固定的 Pipeline，无法支持复杂的多步推理。
 
@@ -182,14 +229,14 @@ Prompt → Router → Judge → Retry → Rewrite → LLM → Judge → Cache
 ```
 
 **实现步骤**：
-1. **Node 抽象**：定义 `WorkflowNode` 接口（input/output/execute）。
-2. **Edge 定义**：定义节点间的连接（条件跳转、循环、并行）。
-3. **Workflow DSL**：YAML 定义工作流。
-4. **Workflow Runtime**：执行引擎，支持 DAG 调度。
-5. **条件分支**：支持 if/else、switch 分支。
-6. **循环**：支持 retry 循环、judge 循环。
-7. **并行**：支持多节点并行执行（如同时调用多个 provider）。
-8. **可视化**：在 Dashboard 中展示 Workflow DAG 图。
+1. ⬜ TODO — **Node 抽象**：定义 `WorkflowNode` 接口（input/output/execute）。
+2. ⬜ TODO — **Edge 定义**：定义节点间的连接（条件跳转、循环、并行）。
+3. ⬜ TODO — **Workflow DSL**：YAML 定义工作流。
+4. ⬜ TODO — **Workflow Runtime**：执行引擎，支持 DAG 调度。
+5. ⬜ TODO — **条件分支**：支持 if/else、switch 分支。
+6. ⬜ TODO — **循环**：支持 retry 循环、judge 循环。
+7. ⬜ TODO — **并行**：支持多节点并行执行（如同时调用多个 provider）。
+8. ⬜ TODO — **可视化**：在 Dashboard 中展示 Workflow DAG 图。
 
 **验收标准**：
 - 支持至少 10 种 Node 类型。
@@ -197,11 +244,16 @@ Prompt → Router → Judge → Retry → Rewrite → LLM → Judge → Cache
 - 支持循环和并行。
 - 可视化清晰。
 
-**预估工作量**：4000+ 行，2~3 周。
-
 ---
 
 ### Phase 4: Prompt Compiler（★★★★★）
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | P1 |
+| 预估工作量 | 3000+ 行，1~2 周 |
+| 依赖 | 无 |
 
 **背景**：当前 Prompt 处理是简单的拼接，没有编译优化。
 
@@ -225,12 +277,12 @@ Compiled Prompt
 ```
 
 **实现步骤**：
-1. **Prompt AST**：定义 Prompt 的抽象语法树。
-2. **编译 Pass**：每个阶段是一个编译 Pass（Rewrite/Merge/Tool/Safety/Provider）。
-3. **优化**：Token 压缩、冗余去除、上下文窗口管理。
-4. **Provider 适配**：不同 Provider 的 Prompt 格式自动转换。
-5. **缓存**：编译结果缓存，相同输入直接复用。
-6. **Debug**：编译过程可视化，每一步的中间结果可查看。
+1. ⬜ TODO — **Prompt AST**：定义 Prompt 的抽象语法树。
+2. ⬜ TODO — **编译 Pass**：每个阶段是一个编译 Pass（Rewrite/Merge/Tool/Safety/Provider）。
+3. ⬜ TODO — **优化**：Token 压缩、冗余去除、上下文窗口管理。
+4. ⬜ TODO — **Provider 适配**：不同 Provider 的 Prompt 格式自动转换。
+5. ⬜ TODO — **缓存**：编译结果缓存，相同输入直接复用。
+6. ⬜ TODO — **Debug**：编译过程可视化，每一步的中间结果可查看。
 
 **验收标准**：
 - 编译 Pass 可插拔。
@@ -238,11 +290,16 @@ Compiled Prompt
 - Provider 适配覆盖所有支持的 Provider。
 - 编译过程可 Debug。
 
-**预估工作量**：3000+ 行，1~2 周。
-
 ---
 
 ### Phase 5: Policy Engine（★★★★★）
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | P1 |
+| 预估工作量 | 2500+ 行，1~2 周 |
+| 依赖 | 无 |
 
 **背景**：当前安全检查是硬编码的 if 判断，无法灵活配置。
 
@@ -268,14 +325,14 @@ policies:
 ```
 
 **实现步骤**：
-1. **Policy DSL**：定义 YAML schema，支持表达式（contains_pii/contains_secret/contains_injection）。
-2. **Policy Compiler**：DSL → 可执行规则。
-3. **Policy Runtime**：运行时引擎，在请求链路中插入检查。
-4. **PII 检测**：身份证/银行卡/手机号/邮箱。
-5. **Secret 检测**：API Key/密码/Token。
-6. **Injection 检测**：Prompt 注入攻击模式。
-7. **DLP**：数据泄露防护（敏感数据不出域）。
-8. **审计**：所有 Policy 触发记录审计日志。
+1. ⬜ TODO — **Policy DSL**：定义 YAML schema，支持表达式。
+2. ⬜ TODO — **Policy Compiler**：DSL → 可执行规则。
+3. ⬜ TODO — **Policy Runtime**：运行时引擎，在请求链路中插入检查。
+4. ⬜ TODO — **PII 检测**：身份证/银行卡/手机号/邮箱。
+5. ⬜ TODO — **Secret 检测**：API Key/密码/Token。
+6. ⬜ TODO — **Injection 检测**：Prompt 注入攻击模式。
+7. ⬜ TODO — **DLP**：数据泄露防护（敏感数据不出域）。
+8. ⬜ TODO — **审计**：所有 Policy 触发记录审计日志。
 
 **验收标准**：
 - PII 检测准确率 ≥ 95%。
@@ -283,11 +340,16 @@ policies:
 - Injection 检测覆盖已知攻击模式。
 - Policy 热加载延迟 ≤ 1s。
 
-**预估工作量**：2500+ 行，1~2 周。
-
 ---
 
 ### Phase 6: Query Planner（Agent Runtime）（★★★★★）
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | P1 |
+| 预估工作量 | 5000+ 行，2~3 周 |
+| 依赖 | Phase 3（Workflow Engine） |
 
 **背景**：Gateway 还是 Chat，以后支持 Tool/Memory/Planner/Executor，直接变成 Agent Runtime。
 
@@ -309,13 +371,13 @@ Response
 ```
 
 **实现步骤**：
-1. **Planner**：根据 Prompt 规划执行步骤（ReAct / Plan-and-Execute）。
-2. **Tool Registry**：工具注册/发现/调用。
-3. **Memory**：短期记忆（对话上下文）+ 长期记忆（向量检索）。
-4. **Executor**：执行引擎，支持串行/并行/循环。
-5. **Judge**：结果评估，决定是否重试或继续。
-6. **MCP 集成**：支持 MCP 协议调用外部工具。
-7. **Sandbox**：工具执行沙箱，限制权限。
+1. ⬜ TODO — **Planner**：根据 Prompt 规划执行步骤（ReAct / Plan-and-Execute）。
+2. ⬜ TODO — **Tool Registry**：工具注册/发现/调用。
+3. ⬜ TODO — **Memory**：短期记忆（对话上下文）+ 长期记忆（向量检索）。
+4. ⬜ TODO — **Executor**：执行引擎，支持串行/并行/循环。
+5. ⬜ TODO — **Judge**：结果评估，决定是否重试或继续。
+6. ⬜ TODO — **MCP 集成**：支持 MCP 协议调用外部工具。
+7. ⬜ TODO — **Sandbox**：工具执行沙箱，限制权限。
 
 **验收标准**：
 - 支持至少 5 种工具（搜索/代码执行/数据库查询/API 调用/文件操作）。
@@ -323,11 +385,16 @@ Response
 - 工具执行成功率 ≥ 95%。
 - 支持多步推理（≥ 5 步）。
 
-**预估工作量**：5000+ 行，2~3 周。
-
 ---
 
 ### Phase 7: Event Bus（★★★★☆）
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | P2 |
+| 预估工作量 | 2000+ 行，1 周 |
+| 依赖 | 无 |
 
 **背景**：整个 Gateway 是同步调用链，无法支持异步事件驱动。
 
@@ -339,58 +406,68 @@ RequestStart → Retry → CacheHit → ProviderSwitch → CostChanged → Respo
 ```
 
 **实现步骤**：
-1. **Event 定义**：定义所有事件类型和 payload。
-2. **Event Bus**：实现 Pub/Sub 模式。
-3. **Event Store**：事件持久化（可选）。
-4. **Plugin 监听**：插件可订阅任意事件。
-5. **Event Replay**：支持事件回放（调试/恢复）。
-6. **Webhook**：支持外部 Webhook 订阅。
+1. ⬜ TODO — **Event 定义**：定义所有事件类型和 payload。
+2. ⬜ TODO — **Event Bus**：实现 Pub/Sub 模式。
+3. ⬜ TODO — **Event Store**：事件持久化（可选）。
+4. ⬜ TODO — **Plugin 监听**：插件可订阅任意事件。
+5. ⬜ TODO — **Event Replay**：支持事件回放（调试/恢复）。
+6. ⬜ TODO — **Webhook**：支持外部 Webhook 订阅。
 
 **验收标准**：
 - 事件投递延迟 ≤ 10ms。
 - 支持至少 20 种事件类型。
 - 插件订阅无性能影响。
 
-**预估工作量**：2000+ 行，1 周。
-
 ---
 
 ### Phase 8: Scheduler（★★★★☆）
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | P2 |
+| 预估工作量 | 1500+ 行，3~5 天 |
+| 依赖 | 无 |
 
 **背景**：后台任务（Benchmark/Health Check/TTL Refresh）散落各处，无统一管理。
 
 **目标**：统一 Scheduler，支持 Cron 表达式。
 
 **实现步骤**：
-1. **Cron 引擎**：支持 Cron 表达式定义任务。
-2. **任务注册**：Benchmark / Health Check / TTL Refresh / Embedding Refresh / Report。
-3. **任务管理**：启动/停止/暂停/查看状态。
-4. **失败重试**：任务失败自动重试。
-5. **Dashboard 集成**：在 Dashboard 中管理任务。
+1. ⬜ TODO — **Cron 引擎**：支持 Cron 表达式定义任务。
+2. ⬜ TODO — **任务注册**：Benchmark / Health Check / TTL Refresh / Embedding Refresh / Report。
+3. ⬜ TODO — **任务管理**：启动/停止/暂停/查看状态。
+4. ⬜ TODO — **失败重试**：任务失败自动重试。
+5. ⬜ TODO — **Dashboard 集成**：在 Dashboard 中管理任务。
 
 **验收标准**：
 - Cron 表达式支持标准语法。
 - 任务执行不阻塞主线程。
 - 失败重试可配置。
 
-**预估工作量**：1500+ 行，3~5 天。
-
 ---
 
 ### Phase 9: Auto Benchmark Platform（★★★★★）
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | P2 |
+| 预估工作量 | 3000+ 行，1~2 周 |
+| 依赖 | Phase 10（LLM Judge Framework） |
 
 **背景**：当前 Benchmark 只是简单的延迟测试，无法全面评估。
 
 **目标**：每天 100+ Prompt × 20 Model × 10 Provider，统计 Latency/Accuracy/Cost/Cache/Judge Score，生成网页。
 
 **实现步骤**：
-1. **Prompt 集**：收集 100+ 标准测试 Prompt（代码/数学/翻译/推理/创作）。
-2. **多模型测试**：每个 Prompt 对所有支持的模型测试。
-3. **多 Provider 测试**：每个模型对所有 Provider 测试。
-4. **Judge 评分**：用 Judge Model 对每个响应评分。
-5. **统计报告**：Latency P50/P95/P99、Accuracy、Cost、Cache Hit。
-6. **网页生成**：自动生成排行榜网页，部署到 GitHub Pages。
-7. **历史趋势**：保存历史数据，展示趋势图。
+1. ⬜ TODO — **Prompt 集**：收集 100+ 标准测试 Prompt（代码/数学/翻译/推理/创作）。
+2. ⬜ TODO — **多模型测试**：每个 Prompt 对所有支持的模型测试。
+3. ⬜ TODO — **多 Provider 测试**：每个模型对所有 Provider 测试。
+4. ⬜ TODO — **Judge 评分**：用 Judge Model 对每个响应评分。
+5. ⬜ TODO — **统计报告**：Latency P50/P95/P99、Accuracy、Cost、Cache Hit。
+6. ⬜ TODO — **网页生成**：自动生成排行榜网页，部署到 GitHub Pages。
+7. ⬜ TODO — **历史趋势**：保存历史数据，展示趋势图。
 
 **验收标准**：
 - 每日自动运行。
@@ -398,11 +475,16 @@ RequestStart → Retry → CacheHit → ProviderSwitch → CostChanged → Respo
 - Judge 评分一致性 ≥ 85%。
 - 网页自动更新。
 
-**预估工作量**：3000+ 行，1~2 周。
-
 ---
 
 ### Phase 10: LLM Judge Framework（★★★★★）
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | P2 |
+| 预估工作量 | 2000+ 行，1 周 |
+| 依赖 | 无 |
 
 **背景**：需要客观评估不同 LLM 的输出质量。
 
@@ -412,51 +494,61 @@ Prompt → OpenAI / Claude / Gemini → Judge → Score
 ```
 
 **实现步骤**：
-1. **Judge Model 集成**：支持 GPT-4 / Claude / Gemini 作为 Judge。
-2. **评分维度**：相关性、准确性、流畅度、安全性、完整性。
-3. **批量评估**：支持批量评估 100+ 响应。
-4. **对比报告**：多模型对比，输出排行榜。
-5. **自定义评分**：支持自定义评分标准。
-6. **API**：提供 `/api/judge` 接口。
+1. ⬜ TODO — **Judge Model 集成**：支持 GPT-4 / Claude / Gemini 作为 Judge。
+2. ⬜ TODO — **评分维度**：相关性、准确性、流畅度、安全性、完整性。
+3. ⬜ TODO — **批量评估**：支持批量评估 100+ 响应。
+4. ⬜ TODO — **对比报告**：多模型对比，输出排行榜。
+5. ⬜ TODO — **自定义评分**：支持自定义评分标准。
+6. ⬜ TODO — **API**：提供 `/api/judge` 接口。
 
 **验收标准**：
 - 评分一致性 ≥ 85%。
 - 批量评估 100 条 ≤ 30s。
 - 支持至少 3 个 Judge Model。
 
-**预估工作量**：2000+ 行，1 周。
-
 ---
 
 ### Phase 11: Gateway Evolution → Universal AI Gateway（★★★★★）
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | P3 |
+| 预估工作量 | 5000+ 行，2~3 周 |
+| 依赖 | Phase 6（Agent Runtime） |
 
 **背景**：Gateway 不只是 Chat，而是支持所有 OpenAI API。
 
 **目标**：支持 Chat / Completion / Embedding / Image / Speech / Realtime / MCP / Agent / Workflow / Judge / Batch / FineTune。
 
 **实现步骤**：
-1. **Chat/Completion**：已有。
-2. **Embedding**：已有，增加缓存。
-3. **Image**：支持 DALL-E / Stable Diffusion / Midjourney。
-4. **Speech**：支持 Whisper / TTS。
-5. **Realtime**：支持 WebSocket 实时对话。
-6. **MCP**：支持 MCP 协议。
-7. **Agent**：支持 Agent Runtime。
-8. **Workflow**：支持 Workflow Engine。
-9. **Judge**：支持 LLM Judge。
-10. **Batch**：支持批量请求。
-11. **FineTune**：支持微调任务管理。
+1. ✅ COMPLETED — **Chat/Completion**：已有。
+2. ✅ COMPLETED — **Embedding**：已有，增加缓存。
+3. ⬜ TODO — **Image**：支持 DALL-E / Stable Diffusion / Midjourney。
+4. ⬜ TODO — **Speech**：支持 Whisper / TTS。
+5. ⬜ TODO — **Realtime**：支持 WebSocket 实时对话。
+6. ⬜ TODO — **MCP**：支持 MCP 协议。
+7. ⬜ TODO — **Agent**：支持 Agent Runtime。
+8. ⬜ TODO — **Workflow**：支持 Workflow Engine。
+9. ⬜ TODO — **Judge**：支持 LLM Judge。
+10. ⬜ TODO — **Batch**：支持批量请求。
+11. ⬜ TODO — **FineTune**：支持微调任务管理。
 
 **验收标准**：
 - 覆盖所有 OpenAI API 端点。
 - 每种 API 都有缓存/限流/计费。
 - 统一的 Dashboard 管理。
 
-**预估工作量**：5000+ 行，2~3 周。
-
 ---
 
 ### Phase 12: 内核重构 → Nexus Runtime（★★★★★）
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | P3 |
+| 预估工作量 | 8000+ 行，3~4 周 |
+| 依赖 | Phase 1~11 全部完成 |
 
 **背景**：当前目录结构是 provider/router/cache/retry，需要重构为 kernel/runtime/pipeline/scheduler/plugin/dsl/compiler/executor/storage。
 
@@ -492,15 +584,15 @@ src/
 ```
 
 **实现步骤**：
-1. **Kernel**：生命周期管理（init/start/stop）、依赖注入容器。
-2. **Runtime**：请求上下文管理、执行栈、错误处理。
-3. **Pipeline**：从 middleware 重构为 pipeline。
-4. **Scheduler**：统一调度器。
-5. **Plugin**：插件系统重构。
-6. **DSL**：统一 DSL 引擎。
-7. **Compiler**：Prompt Compiler。
-8. **Executor**：Agent Runtime + Workflow Engine。
-9. **Storage**：分布式缓存 + 向量索引。
+1. ⬜ TODO — **Kernel**：生命周期管理（init/start/stop）、依赖注入容器。
+2. ⬜ TODO — **Runtime**：请求上下文管理、执行栈、错误处理。
+3. ⬜ TODO — **Pipeline**：从 middleware 重构为 pipeline。
+4. ⬜ TODO — **Scheduler**：统一调度器。
+5. ⬜ TODO — **Plugin**：插件系统重构。
+6. ⬜ TODO — **DSL**：统一 DSL 引擎。
+7. ⬜ TODO — **Compiler**：Prompt Compiler。
+8. ⬜ TODO — **Executor**：Agent Runtime + Workflow Engine。
+9. ⬜ TODO — **Storage**：分布式缓存 + 向量索引。
 
 **验收标准**：
 - 所有现有功能在新架构下正常工作。
@@ -508,56 +600,77 @@ src/
 - 性能不下降。
 - 插件兼容旧接口。
 
-**预估工作量**：8000+ 行，3~4 周。
-
 ---
 
 ## 季度路线
 
 ### Q3（当前）—— 文档与 Benchmark
 
-- [ ] **Documentation**：完善 README、API 文档、架构图。
-- [ ] **Tutorial**：5 分钟快速开始教程。
-- [ ] **Video**：录制演示视频。
-- [ ] **Examples**：spring-ai / langchain / openwebui / cline / continue / mcp 接入示例。
-- [ ] **Benchmark**：修复 Daily Benchmark CI，README 自动更新每日结果。
-- [ ] **ADR**：建立 `docs/adr/` 记录设计决策。
+| 状态 | 任务 | 说明 |
+|------|------|------|
+| ⬜ TODO | Documentation | 完善 README、API 文档、架构图 |
+| ⬜ TODO | Tutorial | 5 分钟快速开始教程 |
+| ⬜ TODO | Video | 录制演示视频 |
+| ⬜ TODO | Examples | spring-ai / langchain / openwebui / cline / continue / mcp 接入示例 |
+| ⬜ TODO | Benchmark | 修复 Daily Benchmark CI，README 自动更新每日结果 |
+| ⬜ TODO | ADR | 建立 `docs/adr/` 记录设计决策 |
 
 ### Q4 —— Research Phase 1~3
 
-- [ ] **Phase 1**：分布式语义缓存（Faiss/HNSW + 多节点 + Snapshot/WAL）。
-- [ ] **Phase 2**：Router DSL Engine（YAML DSL + Parser + Compiler + Runtime）。
-- [ ] **Phase 3**：Workflow Engine（Node/Edge/DAG + 条件分支 + 循环 + 并行）。
+| 状态 | 任务 | 说明 |
+|------|------|------|
+| ⬜ TODO | Phase 1 | 分布式语义缓存（Faiss/HNSW + 多节点 + Snapshot/WAL） |
+| ⬜ TODO | Phase 2 | Router DSL Engine（YAML DSL + Parser + Compiler + Runtime） |
+| ⬜ TODO | Phase 3 | Workflow Engine（Node/Edge/DAG + 条件分支 + 循环 + 并行） |
 
 ### Q1（明年）—— Research Phase 4~6
 
-- [ ] **Phase 4**：Prompt Compiler（AST + 编译 Pass + 优化 + Provider 适配）。
-- [ ] **Phase 5**：Policy Engine（DSL + PII/Secret/Injection 检测 + DLP）。
-- [ ] **Phase 6**：Query Planner / Agent Runtime（Planner + Tool + Memory + Judge + MCP）。
+| 状态 | 任务 | 说明 |
+|------|------|------|
+| ⬜ TODO | Phase 4 | Prompt Compiler（AST + 编译 Pass + 优化 + Provider 适配） |
+| ⬜ TODO | Phase 5 | Policy Engine（DSL + PII/Secret/Injection 检测 + DLP） |
+| ⬜ TODO | Phase 6 | Query Planner / Agent Runtime（Planner + Tool + Memory + Judge + MCP） |
 
 ### Q2（明年）—— Infra Phase 7~9
 
-- [ ] **Phase 7**：Event Bus（Pub/Sub + Event Store + Webhook）。
-- [ ] **Phase 8**：Scheduler（Cron + 任务管理 + 失败重试）。
-- [ ] **Phase 9**：Auto Benchmark Platform（100+ Prompt × 20 Model + Judge + 网页）。
+| 状态 | 任务 | 说明 |
+|------|------|------|
+| ⬜ TODO | Phase 7 | Event Bus（Pub/Sub + Event Store + Webhook） |
+| ⬜ TODO | Phase 8 | Scheduler（Cron + 任务管理 + 失败重试） |
+| ⬜ TODO | Phase 9 | Auto Benchmark Platform（100+ Prompt × 20 Model + Judge + 网页） |
 
 ### Q3（明年）—— Evolution Phase 10~12
 
-- [ ] **Phase 10**：LLM Judge Framework（多 Judge Model + 评分维度 + 对比报告）。
-- [ ] **Phase 11**：Universal AI Gateway（Image/Speech/Realtime/MCP/Agent/Workflow/Batch/FineTune）。
-- [ ] **Phase 12**：内核重构 → Nexus Runtime（kernel/runtime/pipeline/scheduler/plugin/dsl/compiler/executor/storage）。
+| 状态 | 任务 | 说明 |
+|------|------|------|
+| ⬜ TODO | Phase 10 | LLM Judge Framework（多 Judge Model + 评分维度 + 对比报告） |
+| ⬜ TODO | Phase 11 | Universal AI Gateway（Image/Speech/Realtime/MCP/Agent/Workflow/Batch/FineTune） |
+| ⬜ TODO | Phase 12 | 内核重构 → Nexus Runtime（kernel/runtime/pipeline/scheduler/plugin/dsl/compiler/executor/storage） |
 
 ---
 
 ## 影响力建设（与开发同等重要）
 
-- [ ] **技术博客**：写高质量技术博客（设计缓存、路由、容错、DSL、Compiler 的思路）。
-- [ ] **架构图**：制作清晰的架构图和性能分析。
-- [ ] **Issues & PR**：持续回应 Issues 和接受 PR。
-- [ ] **Release 维护**：持续维护 Release，打 tag，写 changelog。
-- [ ] **Compatibility Matrix**：在 README 中维护客户端兼容性矩阵。
-- [ ] **CONTRIBUTING.md**：编写贡献指南，降低贡献门槛。
-- [ ] **GitHub Discussions**：开启讨论区。
+| 状态 | 任务 | 说明 |
+|------|------|------|
+| ⬜ TODO | 技术博客 | 写高质量技术博客（设计缓存、路由、容错、DSL、Compiler 的思路） |
+| ⬜ TODO | 架构图 | 制作清晰的架构图和性能分析 |
+| ⬜ TODO | Issues & PR | 持续回应 Issues 和接受 PR |
+| ⬜ TODO | Release 维护 | 持续维护 Release，打 tag，写 changelog |
+| ⬜ TODO | Compatibility Matrix | 在 README 中维护客户端兼容性矩阵 |
+| ⬜ TODO | CONTRIBUTING.md | 编写贡献指南，降低贡献门槛 |
+| ⬜ TODO | GitHub Discussions | 开启讨论区 |
+
+---
+
+## 开源生态
+
+| 状态 | 任务 | 说明 |
+|------|------|------|
+| ⬜ TODO | SDK | `@nexus/sdk` (npm) / `nexus-sdk` (pip) |
+| ⬜ TODO | CLI | `nexus doctor / benchmark / cache clear / provider ls / health` |
+| ⬜ TODO | Examples | spring-ai / langchain / openwebui / cline / continue / mcp |
+| ⬜ TODO | Compatibility Matrix | OpenAI SDK / LangChain / Spring AI / LlamaIndex / Continue / Cline / Cherry Studio / Open WebUI |
 
 ---
 
