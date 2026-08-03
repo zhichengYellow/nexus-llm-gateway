@@ -11,7 +11,6 @@ import { zValidator } from "@hono/zod-validator";
 import { createDefaultPipeline, type PipelineContext } from "../middleware/pipeline.js";
 import { logger } from "../../shared/logger.js";
 import { getPromptRouter } from "../prompt/router.js";
-import { getRegistry } from "../providers/registry.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
 
