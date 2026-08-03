@@ -1,8 +1,21 @@
-# Nexus Runtime - 长远路线图
+# Nexus - AI Cost Optimization Platform
 
-> **愿景**：从 LLM Gateway 演进为 Universal AI Runtime —— 所有 AI App 跑在 Nexus Runtime 上。
+> **愿景**：用最少的钱，获得尽可能接近最好的效果。
+> **定位**：一个以 Token 和成本优化为核心的 AI Gateway。
 > **当前状态**：v2.0（12 Phase 中 10 个已完成），CI 全绿，266/266 测试通过。
-> **原则**：不再以"新增功能"为单位，而是以"基础设施抽象"为单位。每个阶段是一个需要数周打磨的 Research/Infra 工程。
+> **核心指标**：每个新功能必须回答三个问题 —— 能减少多少 Token（TRR）？能节省多少成本（CSR）？对回答质量影响多大（QPS）？
+
+---
+
+## 核心指标定义
+
+| 指标 | 全称 | 定义 | 目标 |
+|------|------|------|------|
+| TRR | Token Reduction Rate | Token 降低率 = 节省 Token / 原始 Token | ≥ 50% |
+| CSR | Cost Saving Rate | 成本节省率 = 节省金额 / 原始金额 | ≥ 40% |
+| QPS | Quality Preservation Score | 质量保持率 = 优化后质量 / 原始质量 | ≥ 95% |
+
+**开发原则**：只有能提升 TRR/CSR/QPS 之一的功能才进入开发计划，否则放入长期待办。
 
 ---
 
@@ -111,549 +124,639 @@
 | ✅ COMPLETED | Utils 测试 | `src/shared/utils.test.ts` | 工具函数测试 |
 | ✅ COMPLETED | Registry 测试 | `src/server/providers/registry.test.ts` | Provider 注册测试 |
 
+### 12 Phase 核心模块 — ✅ 10/12 完成
+
+| 状态 | Phase | 源文件 | 说明 |
+|------|-------|--------|------|
+| ✅ COMPLETED | Phase 2 Router DSL | `src/server/dsl/router-dsl.ts` | YAML DSL + Parser + Compiler + Runtime |
+| ✅ COMPLETED | Phase 3 Workflow | `src/server/workflow/workflow-engine.ts` | Node/Edge/DAG + 条件分支 + 循环 |
+| ✅ COMPLETED | Phase 4 Prompt Compiler | `src/server/compiler/prompt-compiler.ts` | AST + 编译 Pass + Debug |
+| ✅ COMPLETED | Phase 5 Policy Engine | `src/server/dsl/policy-engine.ts` | PII/Secret/Injection 检测 |
+| ✅ COMPLETED | Phase 6 Agent Runtime | `src/server/agent/agent-runtime.ts` | Planner + Tool + Memory + Executor |
+| ✅ COMPLETED | Phase 7 Event Bus | `src/server/event/event-bus.ts` | Pub/Sub + Event Store + Replay |
+| ✅ COMPLETED | Phase 8 Scheduler | `src/server/scheduler/scheduler.ts` | Cron + 任务管理 + 失败重试 |
+| ✅ COMPLETED | Phase 9 Auto Benchmark | `benchmark/auto-benchmark.mjs` | 自动化基准测试 + Judge 评分 |
+| ✅ COMPLETED | Phase 10 Judge | `src/server/judge/judge.ts` | 相关性/准确性/流畅度/安全性/完整性 |
+| ✅ COMPLETED | Phase 11 Batch | `src/server/routes/batch.ts` | `/v1/batch` 批量请求 |
+| ⬜ TODO | Phase 1 分布式缓存 | - | Faiss/HNSW + 多节点 + Snapshot/WAL（Cache Confidence 已实现） |
+| ⬜ TODO | Phase 12 内核重构 | - | kernel/runtime/pipeline/scheduler/plugin/dsl/compiler/executor/storage |
+
+### 开源生态 — ✅ 全部完成
+
+| 状态 | 功能 | 源文件 | 说明 |
+|------|------|--------|------|
+| ✅ COMPLETED | SDK | `sdk/typescript/` + `sdk/python/` | npm + pip |
+| ✅ COMPLETED | CLI | `cli/nexus-cli.mjs` | health/models/provider/cache/benchmark/doctor |
+| ✅ COMPLETED | Examples | `examples/` | spring-ai/langchain/openwebui/cline/continue/mcp |
+| ✅ COMPLETED | Compatibility Matrix | `examples/compatibility-matrix.md` | 13 种客户端兼容性 |
+| ✅ COMPLETED | 文档 | `docs/` + `docs/adr/` | 架构图 + 快速开始 + 6 个 ADR |
+| ✅ COMPLETED | CONTRIBUTING.md | `CONTRIBUTING.md` | 贡献指南 |
+
 ---
 
-## 长远路线：Nexus Runtime 演进
+## 新路线：AI Cost Optimization Platform
 
-> **其他 Agent 请按 Phase 顺序开发，每个 Phase 是独立的工程。**
-> **每个 Phase 包含：背景、目标架构、实现步骤、验收标准、预估工作量。**
+> **核心价值主张**：Nexus 是一个以 Token 和成本优化为核心的 AI Gateway。
+> **每个功能必须回答**：TRR（Token 降低率）/ CSR（成本节省率）/ QPS（质量保持率）。
 
 ---
 
-### Phase 1: 分布式语义缓存（★★★★★）
+### Layer 0: 数据采集（Priority S）
+
+**目标**：任何优化都必须建立在真实数据上。
+
+#### 0.1 完整请求数据模型
 
 | 属性 | 值 |
 |------|-----|
 | 状态 | ⬜ TODO |
-| 优先级 | P0 |
-| 预估工作量 | 5000+ 行，2~3 周 |
-| 依赖 | 无 |
+| 优先级 | S |
+| TRR/CSR/QPS | 数据基础，所有优化依赖 |
 
-**背景**：当前缓存基于单机 Redis，无法水平扩展。需要独立出 Semantic Cache Service。
-
-**目标架构**：
+**目标**：每一次请求记录完整数据：
 ```
-Gateway A / B / C
-       │
-       ▼
-Semantic Cache Cluster
-       │
-Embedding Index (Faiss/HNSW)
-       │
-Redis Metadata
-```
-
-**实现步骤**：
-1. ⬜ TODO — **Embedding 自动生成**：集成 embedding 模型（text-embedding-3-small / bge-small），自动为每个 prompt 生成 embedding。
-2. ⬜ TODO — **ANN Index**：集成 Faiss 或 HNSW，支持近似最近邻搜索，替代当前的 Redis 向量搜索。
-3. ✅ COMPLETED — **Cache Confidence**（`src/server/cache/cache-confidence.ts`）：为每条缓存记录 confidence 分数（0~1），低于阈值时重新生成而非直接返回。
-4. ⬜ TODO — **Auto Refresh**：后台定时刷新热门缓存的 embedding，保持时效性。
-5. ⬜ TODO — **多节点同步**：缓存节点间通过 Redis Pub/Sub 或 Raft 协议同步索引。
-6. ⬜ TODO — **分片（Sharding）**：按 hash(prompt) 分片，支持水平扩展。
-7. ⬜ TODO — **Snapshot + WAL**：定期快照 + Write-Ahead Log，支持崩溃恢复。
-8. ⬜ TODO — **独立服务**：将缓存从 Gateway 中拆出，成为独立的 Semantic Cache Service。
-
-**验收标准**：
-- 缓存查询延迟 P99 ≤ 10ms。
-- 支持至少 3 节点集群。
-- 崩溃恢复后数据零丢失。
-- 缓存命中率 ≥ 60%（相同 prompt）。
-
----
-
-### Phase 2: 自研 Router DSL Engine（★★★★★）
-
-| 属性 | 值 |
-|------|-----|
-| 状态 | ✅ COMPLETED |
-| 优先级 | P0 |
-| 预估工作量 | 3000+ 行，1~2 周 |
-| 依赖 | 无 |
-| 源文件 | `src/server/dsl/router-dsl.ts` |
-
-**背景**：当前 Router 是硬编码的 if/weight/score 逻辑，无法灵活配置。
-
-**目标**：做一个 YAML DSL，Router 不用改代码，改 YAML 即可。
-
-**DSL 示例**：
-```yaml
-routes:
-  - when:
-      intent: code
-      latency: "< 300"
-      cost: "< 0.002"
-    provider: claude
-
-  - when:
-      intent: math
-      context_length: "> 8000"
-    provider: qwen
-
-  - when:
-      fallback: true
-    provider: deepseek
+Request
+├── Prompt Length
+├── Input Token
+├── Output Token
+├── Compression Ratio
+├── Cache Hit
+├── Cache Type
+├── Provider
+├── Model
+├── Cost
+├── TTFT
+├── TPS
+├── Latency
+├── Retry Count
+├── Router Reason
+└── User Feedback
 ```
 
 **实现步骤**：
-1. ✅ COMPLETED — **DSL 设计**：定义 YAML schema，支持条件表达式（intent/latency/cost/context_length/error_rate）。
-2. ✅ COMPLETED — **DSL Parser**：实现 YAML → AST 解析器。
-3. ✅ COMPLETED — **DSL Compiler**：AST → 可执行的路由规则。
-4. ✅ COMPLETED — **DSL Runtime**：运行时引擎，支持热加载 YAML。
-5. ⬜ TODO — **规则验证**：启动时校验 DSL 语法和逻辑。
-6. ⬜ TODO — **Dashboard 集成**：在 Dashboard 中可视化编辑 DSL。
-7. ⬜ TODO — **版本管理**：DSL 变更支持版本管理和回滚。
+1. ⬜ TODO — 扩展 `usageLogs` 表结构，增加 compressionRatio/cacheType/routerReason/userFeedback 字段。
+2. ⬜ TODO — 在请求链路中采集所有字段。
+3. ⬜ TODO — 提供数据导出 API（JSON/CSV）。
 
 **验收标准**：
-- DSL 语法覆盖所有路由场景。
-- 热加载延迟 ≤ 1s。
-- DSL 解析错误有清晰报错。
-- 支持 50+ 规则无性能下降。
+- 每次请求完整记录 15+ 字段。
+- 数据可导出。
 
----
-
-### Phase 3: Workflow Engine（★★★★★）
-
-| 属性 | 值 |
-|------|-----|
-| 状态 | ✅ COMPLETED |
-| 优先级 | P1 |
-| 预估工作量 | 4000+ 行，2~3 周 |
-| 依赖 | Phase 2（DSL Engine） |
-| 源文件 | `src/server/workflow/workflow-engine.ts` |
-
-**背景**：当前请求流程是固定的 Pipeline，无法支持复杂的多步推理。
-
-**目标**：像 LangGraph 一样，每一步是 Node，真正 Flow。
-
-**目标架构**：
-```
-Prompt → Router → Judge → Retry → Rewrite → LLM → Judge → Cache
-```
-
-**实现步骤**：
-1. ⬜ TODO — **Node 抽象**：定义 `WorkflowNode` 接口（input/output/execute）。
-2. ⬜ TODO — **Edge 定义**：定义节点间的连接（条件跳转、循环、并行）。
-3. ⬜ TODO — **Workflow DSL**：YAML 定义工作流。
-4. ⬜ TODO — **Workflow Runtime**：执行引擎，支持 DAG 调度。
-5. ⬜ TODO — **条件分支**：支持 if/else、switch 分支。
-6. ⬜ TODO — **循环**：支持 retry 循环、judge 循环。
-7. ⬜ TODO — **并行**：支持多节点并行执行（如同时调用多个 provider）。
-8. ⬜ TODO — **可视化**：在 Dashboard 中展示 Workflow DAG 图。
-
-**验收标准**：
-- 支持至少 10 种 Node 类型。
-- DAG 调度无死锁。
-- 支持循环和并行。
-- 可视化清晰。
-
----
-
-### Phase 4: Prompt Compiler（★★★★★）
-
-| 属性 | 值 |
-|------|-----|
-| 状态 | ✅ COMPLETED |
-| 优先级 | P1 |
-| 预估工作量 | 3000+ 行，1~2 周 |
-| 依赖 | 无 |
-| 源文件 | `src/server/compiler/prompt-compiler.ts` |
-
-**背景**：当前 Prompt 处理是简单的拼接，没有编译优化。
-
-**目标**：真正 Compiler，支持多阶段处理和优化。
-
-**编译流程**：
-```
-User Prompt
-    ↓
-Rewrite（改写优化）
-    ↓
-Context Merge（上下文合并）
-    ↓
-Tool Prompt（工具提示注入）
-    ↓
-Safety Prompt（安全提示注入）
-    ↓
-Provider Prompt（Provider 特定格式化）
-    ↓
-Compiled Prompt
-```
-
-**实现步骤**：
-1. ✅ COMPLETED — **Prompt AST**：定义 Prompt 的抽象语法树。
-2. ✅ COMPLETED — **编译 Pass**：每个阶段是一个编译 Pass（Rewrite/Merge/Tool/Safety/Provider）。
-3. ⬜ TODO — **优化**：Token 压缩、冗余去除、上下文窗口管理。
-4. ⬜ TODO — **Provider 适配**：不同 Provider 的 Prompt 格式自动转换。
-5. ⬜ TODO — **缓存**：编译结果缓存，相同输入直接复用。
-6. ✅ COMPLETED — **Debug**：编译过程可视化，每一步的中间结果可查看。
-
-**验收标准**：
-- 编译 Pass 可插拔。
-- Token 压缩率 ≥ 15%。
-- Provider 适配覆盖所有支持的 Provider。
-- 编译过程可 Debug。
-
----
-
-### Phase 5: Policy Engine（★★★★★）
-
-| 属性 | 值 |
-|------|-----|
-| 状态 | ✅ COMPLETED |
-| 优先级 | P1 |
-| 预估工作量 | 2500+ 行，1~2 周 |
-| 依赖 | 无 |
-| 源文件 | `src/server/dsl/policy-engine.ts` |
-
-**背景**：当前安全检查是硬编码的 if 判断，无法灵活配置。
-
-**目标**：Policy DSL → Compile → Runtime。
-
-**DSL 示例**：
-```yaml
-policies:
-  - name: "PII Mask"
-    when: "contains_pii(input)"
-    then: "mask_pii"
-    action: "allow"
-
-  - name: "Secret Block"
-    when: "contains_secret(input)"
-    then: "block"
-    action: "reject"
-
-  - name: "Injection Defense"
-    when: "contains_injection(input)"
-    then: "sanitize"
-    action: "allow"
-```
-
-**实现步骤**：
-1. ✅ COMPLETED — **Policy DSL**：定义 YAML schema，支持表达式。
-2. ✅ COMPLETED — **Policy Compiler**：DSL → 可执行规则。
-3. ✅ COMPLETED — **Policy Runtime**：运行时引擎，在请求链路中插入检查。
-4. ✅ COMPLETED — **PII 检测**：身份证/银行卡/手机号/邮箱。
-5. ✅ COMPLETED — **Secret 检测**：API Key/密码/Token。
-6. ✅ COMPLETED — **Injection 检测**：Prompt 注入攻击模式。
-7. ⬜ TODO — **DLP**：数据泄露防护（敏感数据不出域）。
-8. ⬜ TODO — **审计**：所有 Policy 触发记录审计日志。
-
-**验收标准**：
-- PII 检测准确率 ≥ 95%。
-- Secret 检测准确率 ≥ 99%。
-- Injection 检测覆盖已知攻击模式。
-- Policy 热加载延迟 ≤ 1s。
-
----
-
-### Phase 6: Query Planner（Agent Runtime）（★★★★★）
-
-| 属性 | 值 |
-|------|-----|
-| 状态 | ✅ COMPLETED |
-| 优先级 | P1 |
-| 预估工作量 | 5000+ 行，2~3 周 |
-| 依赖 | Phase 3（Workflow Engine） |
-
-**背景**：Gateway 还是 Chat，以后支持 Tool/Memory/Planner/Executor，直接变成 Agent Runtime。
-
-**目标架构**：
-```
-Prompt
-    ↓
-Planner（规划执行步骤）
-    ↓
-Tool（调用工具）
-    ↓
-Memory（读取/写入记忆）
-    ↓
-Provider（调用 LLM）
-    ↓
-Judge（评估结果）
-    ↓
-Response
-```
-
-**实现步骤**：
-1. ✅ COMPLETED — **Planner**（`src/server/agent/agent-runtime.ts`）：根据 Prompt 规划执行步骤（ReAct / Plan-and-Execute）。
-2. ✅ COMPLETED — **Tool Registry**（`src/server/agent/agent-runtime.ts`）：工具注册/发现/调用，内置 search/calculate/code_executor。
-3. ✅ COMPLETED — **Memory**（`src/server/agent/agent-runtime.ts`）：短期记忆（对话上下文）+ 长期记忆（KV 存储）。
-4. ✅ COMPLETED — **Executor**（`src/server/agent/agent-runtime.ts`）：AgentRuntime.run() 执行引擎。
-5. ⬜ TODO — **Judge**：结果评估，决定是否重试或继续。
-6. ⬜ TODO — **MCP 集成**：支持 MCP 协议调用外部工具。
-7. ⬜ TODO — **Sandbox**：工具执行沙箱，限制权限。
-
-**验收标准**：
-- 支持至少 5 种工具（搜索/代码执行/数据库查询/API 调用/文件操作）。
-- Planner 规划准确率 ≥ 80%。
-- 工具执行成功率 ≥ 95%。
-- 支持多步推理（≥ 5 步）。
-
----
-
-### Phase 7: Event Bus（★★★★☆）
-
-| 属性 | 值 |
-|------|-----|
-| 状态 | ✅ COMPLETED |
-| 优先级 | P2 |
-| 预估工作量 | 2000+ 行，1 周 |
-| 依赖 | 无 |
-| 源文件 | `src/server/event/event-bus.ts` |
-
-**背景**：整个 Gateway 是同步调用链，无法支持异步事件驱动。
-
-**目标**：Event Driven，插件监听 Event。
-
-**事件类型**：
-```
-RequestStart → Retry → CacheHit → ProviderSwitch → CostChanged → ResponseEnd
-```
-
-**实现步骤**：
-1. ✅ COMPLETED — **Event 定义**：定义所有事件类型和 payload。
-2. ✅ COMPLETED — **Event Bus**：实现 Pub/Sub 模式。
-3. ✅ COMPLETED — **Event Store**：事件持久化（可选）。
-4. ✅ COMPLETED — **Plugin 监听**：插件可订阅任意事件。
-5. ✅ COMPLETED — **Event Replay**：支持事件回放（调试/恢复）。
-6. ⬜ TODO — **Webhook**：支持外部 Webhook 订阅。
-
-**验收标准**：
-- 事件投递延迟 ≤ 10ms。
-- 支持至少 20 种事件类型。
-- 插件订阅无性能影响。
-
----
-
-### Phase 8: Scheduler（★★★★☆）
-
-| 属性 | 值 |
-|------|-----|
-| 状态 | ✅ COMPLETED |
-| 优先级 | P2 |
-| 预估工作量 | 1500+ 行，3~5 天 |
-| 依赖 | 无 |
-| 源文件 | `src/server/scheduler/scheduler.ts` |
-
-**背景**：后台任务（Benchmark/Health Check/TTL Refresh）散落各处，无统一管理。
-
-**目标**：统一 Scheduler，支持 Cron 表达式。
-
-**实现步骤**：
-1. ✅ COMPLETED — **Cron 引擎**：支持 Cron 表达式定义任务。
-2. ✅ COMPLETED — **任务注册**：Benchmark / Health Check / TTL Refresh / Embedding Refresh / Report。
-3. ✅ COMPLETED — **任务管理**：启动/停止/暂停/查看状态。
-4. ✅ COMPLETED — **失败重试**：任务失败自动重试。
-5. ⬜ TODO — **Dashboard 集成**：在 Dashboard 中管理任务。
-
-**验收标准**：
-- Cron 表达式支持标准语法。
-- 任务执行不阻塞主线程。
-- 失败重试可配置。
-
----
-
-### Phase 9: Auto Benchmark Platform（★★★★★）
-
-| 属性 | 值 |
-|------|-----|
-| 状态 | ✅ COMPLETED |
-| 优先级 | P2 |
-| 预估工作量 | 3000+ 行，1~2 周 |
-| 依赖 | Phase 10（LLM Judge Framework） |
-| 源文件 | `benchmark/auto-benchmark.mjs` |
-
-**背景**：当前 Benchmark 只是简单的延迟测试，无法全面评估。
-
-**目标**：每天 100+ Prompt × 20 Model × 10 Provider，统计 Latency/Accuracy/Cost/Cache/Judge Score，生成网页。
-
-**实现步骤**：
-1. ⬜ TODO — **Prompt 集**：收集 100+ 标准测试 Prompt（代码/数学/翻译/推理/创作）。
-2. ⬜ TODO — **多模型测试**：每个 Prompt 对所有支持的模型测试。
-3. ⬜ TODO — **多 Provider 测试**：每个模型对所有 Provider 测试。
-4. ⬜ TODO — **Judge 评分**：用 Judge Model 对每个响应评分。
-5. ⬜ TODO — **统计报告**：Latency P50/P95/P99、Accuracy、Cost、Cache Hit。
-6. ⬜ TODO — **网页生成**：自动生成排行榜网页，部署到 GitHub Pages。
-7. ⬜ TODO — **历史趋势**：保存历史数据，展示趋势图。
-
-**验收标准**：
-- 每日自动运行。
-- 覆盖 100+ Prompt × 20+ Model。
-- Judge 评分一致性 ≥ 85%。
-- 网页自动更新。
-
----
-
-### Phase 10: LLM Judge Framework（★★★★★）
-
-| 属性 | 值 |
-|------|-----|
-| 状态 | ✅ COMPLETED |
-| 优先级 | P2 |
-| 预估工作量 | 2000+ 行，1 周 |
-| 依赖 | 无 |
-| 源文件 | `src/server/judge/judge.ts` |
-
-**背景**：需要客观评估不同 LLM 的输出质量。
-
-**目标**：
-```
-Prompt → OpenAI / Claude / Gemini → Judge → Score
-```
-
-**实现步骤**：
-1. ✅ COMPLETED — **Judge Model 集成**：支持 GPT-4 / Claude / Gemini 作为 Judge。
-2. ✅ COMPLETED — **评分维度**：相关性、准确性、流畅度、安全性、完整性。
-3. ✅ COMPLETED — **批量评估**：支持批量评估 100+ 响应。
-4. ⬜ TODO — **对比报告**：多模型对比，输出排行榜。
-5. ⬜ TODO — **自定义评分**：支持自定义评分标准。
-6. ⬜ TODO — **API**：提供 `/api/judge` 接口。
-
-**验收标准**：
-- 评分一致性 ≥ 85%。
-- 批量评估 100 条 ≤ 30s。
-- 支持至少 3 个 Judge Model。
-
----
-
-### Phase 11: Gateway Evolution → Universal AI Gateway（★★★★★）
+#### 0.2 Cost Analytics Dashboard
 
 | 属性 | 值 |
 |------|-----|
 | 状态 | ⬜ TODO |
-| 优先级 | P3 |
-| 预估工作量 | 5000+ 行，2~3 周 |
-| 依赖 | Phase 6（Agent Runtime） |
+| 优先级 | S |
+| TRR/CSR/QPS | CSR 可视化 |
 
-**背景**：Gateway 不只是 Chat，而是支持所有 OpenAI API。
-
-**目标**：支持 Chat / Completion / Embedding / Image / Speech / Realtime / MCP / Agent / Workflow / Judge / Batch / FineTune。
+**目标**：Dashboard 展示：
+```
+今日
+总 Token: 128万
+节省 Token: 82万
+节省比例: 64%
+节省金额: ￥381
+```
 
 **实现步骤**：
-1. ✅ COMPLETED — **Chat/Completion**：已有。
-2. ✅ COMPLETED — **Embedding**：已有，增加缓存。
-3. ⬜ TODO — **Image**：支持 DALL-E / Stable Diffusion / Midjourney。
-4. ⬜ TODO — **Speech**：支持 Whisper / TTS。
-5. ⬜ TODO — **Realtime**：支持 WebSocket 实时对话。
-6. ⬜ TODO — **MCP**：支持 MCP 协议。
-7. ✅ COMPLETED — **Agent**：支持 Agent Runtime（`src/server/agent/agent-runtime.ts`）。
-8. ✅ COMPLETED — **Workflow**：支持 Workflow Engine（`src/server/workflow/workflow-engine.ts`）。
-9. ✅ COMPLETED — **Judge**：支持 LLM Judge（`src/server/judge/judge.ts`）。
-10. ✅ COMPLETED — **Batch**（`src/server/routes/batch.ts`）：支持批量请求 `/v1/batch`。
-11. ⬜ TODO — **FineTune**：支持微调任务管理。
+1. ⬜ TODO — 聚合每日 Token/成本/节省数据。
+2. ⬜ TODO — Dashboard 新增 Cost Analytics 面板。
+3. ⬜ TODO — 展示节省来源（缓存/压缩/路由）。
 
 **验收标准**：
-- 覆盖所有 OpenAI API 端点。
-- 每种 API 都有缓存/限流/计费。
-- 统一的 Dashboard 管理。
+- Dashboard 展示 TRR/CSR 实时数据。
+- 节省来源可追溯。
 
----
-
-### Phase 12: 内核重构 → Nexus Runtime（★★★★★）
+#### 0.3 请求画像
 
 | 属性 | 值 |
 |------|-----|
 | 状态 | ⬜ TODO |
-| 优先级 | P3 |
-| 预估工作量 | 8000+ 行，3~4 周 |
-| 依赖 | Phase 1~11 全部完成 |
+| 优先级 | S |
+| TRR/CSR/QPS | 路由优化基础 |
 
-**背景**：当前目录结构是 provider/router/cache/retry，需要重构为 kernel/runtime/pipeline/scheduler/plugin/dsl/compiler/executor/storage。
-
-**目标架构**：
+**目标**：统计请求类型分布：
 ```
-Nexus Runtime
-      │
-  ┌───┼────────┐
-  │   │        │
-Gateway  Agent   MCP
-  │   │     │
-Workflow  Memory  Tools
-  │
-Plugin Runtime
-  │
-Policy + Router + Cache
-  │
-All LLM Providers
-```
-
-**新目录结构**：
-```
-src/
-  kernel/          # 内核：生命周期管理、依赖注入
-  runtime/         # 运行时：请求执行、上下文管理
-  pipeline/        # 管道：中间件链
-  scheduler/       # 调度器：Cron 任务
-  plugin/          # 插件系统
-  dsl/             # DSL 引擎（Router DSL / Policy DSL / Workflow DSL）
-  compiler/        # 编译器（Prompt Compiler）
-  executor/        # 执行器（Agent Runtime / Workflow Engine）
-  storage/         # 存储层（Cache Cluster / Vector Index）
+Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 ```
 
 **实现步骤**：
-1. ⬜ TODO — **Kernel**：生命周期管理（init/start/stop）、依赖注入容器。
-2. ⬜ TODO — **Runtime**：请求上下文管理、执行栈、错误处理。
-3. ⬜ TODO — **Pipeline**：从 middleware 重构为 pipeline。
-4. ⬜ TODO — **Scheduler**：统一调度器。
-5. ⬜ TODO — **Plugin**：插件系统重构。
-6. ⬜ TODO — **DSL**：统一 DSL 引擎。
-7. ⬜ TODO — **Compiler**：Prompt Compiler。
-8. ⬜ TODO — **Executor**：Agent Runtime + Workflow Engine。
-9. ⬜ TODO — **Storage**：分布式缓存 + 向量索引。
+1. ⬜ TODO — 基于 Intent Router 统计请求画像。
+2. ⬜ TODO — Dashboard 展示画像分布。
+3. ⬜ TODO — 画像数据供 Router 学习。
 
 **验收标准**：
-- 所有现有功能在新架构下正常工作。
-- 测试覆盖率 ≥ 80%。
-- 性能不下降。
-- 插件兼容旧接口。
+- 画像分布准确。
+- Router 可基于画像优化。
+
+---
+
+### Layer 1: Token Optimization（Priority SSS）
+
+**目标**：这是核心卖点，最大化 TRR。
+
+#### 1.1 Prompt Compression
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | SSS |
+| TRR | 预计 10~20% |
+| CSR | 预计 10~20% |
+| QPS | ≥ 98% |
+
+**目标**：删除礼貌语、压缩 System Prompt、保留语义。
+
+**实现步骤**：
+1. ⬜ TODO — 礼貌语检测与删除（"请帮我..."、"谢谢..."、"麻烦..."）。
+2. ⬜ TODO — System Prompt 压缩（去冗余、合并重复指令）。
+3. ⬜ TODO — 语义保持验证（Judge 评分对比）。
+
+**验收标准**：
+- TRR ≥ 10%。
+- QPS ≥ 98%。
+
+#### 1.2 Conversation Compression
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | SSS |
+| TRR | 预计 70% |
+| CSR | 预计 70% |
+| QPS | ≥ 90% |
+
+**目标**：20 轮历史 → 前 18 轮 Summary + 后 2 轮原文。
+
+**实现步骤**：
+1. ⬜ TODO — 对话摘要生成（LLM 或规则）。
+2. ⬜ TODO — 摘要 + 最近 N 轮原文混合策略。
+3. ⬜ TODO — 摘要质量评估。
+
+**验收标准**：
+- TRR ≥ 70%。
+- QPS ≥ 90%。
+
+#### 1.3 Adaptive Context
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | SSS |
+| TRR | 预计 30% |
+| CSR | 预计 30% |
+| QPS | ≥ 95% |
+
+**目标**：不是所有请求都带 History。"你好" → History 0；"继续" → History 保留。
+
+**实现步骤**：
+1. ⬜ TODO — 请求类型检测（新对话/继续/引用）。
+2. ⬜ TODO — 动态 History 长度策略。
+3. ⬜ TODO — 上下文相关性判断。
+
+**验收标准**：
+- TRR ≥ 30%。
+- QPS ≥ 95%。
+
+#### 1.4 History Pruning
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | SSS |
+| TRR | 预计 20% |
+| CSR | 预计 20% |
+| QPS | ≥ 93% |
+
+**目标**：根据 Attention Score / Semantic Score / Importance 删除最没价值的上下文。
+
+**实现步骤**：
+1. ⬜ TODO — 上下文重要性评分。
+2. ⬜ TODO — 低价值上下文删除策略。
+3. ⬜ TODO — 删除后质量验证。
+
+**验收标准**：
+- TRR ≥ 20%。
+- QPS ≥ 93%。
+
+#### 1.5 Chunk Cache
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | SSS |
+| TRR | 预计 40% |
+| CSR | 预计 40% |
+| QPS | ≥ 95% |
+
+**目标**：不是整个 Prompt Cache，而是 Chunk 级缓存。"Transformer 和 BERT" 可复用 "Transformer 介绍" 的缓存。
+
+**实现步骤**：
+1. ⬜ TODO — Prompt 分块（语义块）。
+2. ⬜ TODO — Chunk 级缓存存储与检索。
+3. ⬜ TODO — Chunk 拼接与去重。
+
+**验收标准**：
+- TRR ≥ 40%。
+- QPS ≥ 95%。
+
+---
+
+### Layer 2: Cost Optimization（Priority SSS）
+
+**目标**：最大化 CSR。
+
+#### 2.1 Cost Estimator
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | SSS |
+| TRR/CSR/QPS | CSR 预估 |
+
+**目标**：请求进入先预测成本：
+```
+预计 Input: 850 / Output: 620 / 成本: ￥0.023
+```
+
+**实现步骤**：
+1. ⬜ TODO — Token 预估（基于历史平均）。
+2. ⬜ TODO — 成本预估（基于 Provider 价格表）。
+3. ⬜ TODO — 预估误差评估。
+
+**验收标准**：
+- 成本预估误差 ≤ 10%。
+
+#### 2.2 Smart Provider Selection
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | SSS |
+| TRR/CSR/QPS | CSR 核心 |
+
+**目标**：复杂代码 → Claude；普通聊天 → DeepSeek；翻译 → Gemini Flash。
+
+**实现步骤**：
+1. ⬜ TODO — 基于 Intent + 成本 + 质量的多维路由。
+2. ⬜ TODO — 动态价格表更新。
+3. ⬜ TODO — 路由决策记录与优化。
+
+**验收标准**：
+- CSR ≥ 30%。
+- QPS ≥ 95%。
+
+#### 2.3 Budget Controller
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | SSS |
+| TRR/CSR/QPS | CSR 保障 |
+
+**目标**：本月预算用 80% 时自动降级模型。
+
+**实现步骤**：
+1. ⬜ TODO — 租户预算跟踪。
+2. ⬜ TODO — 预算阈值触发降级。
+3. ⬜ TODO — 降级策略配置。
+
+**验收标准**：
+- 预算超支自动降级。
+- 降级可配置。
+
+#### 2.4 Cost Report
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | SSS |
+| TRR/CSR/QPS | CSR 可视化 |
+
+**目标**：每日自动报告：
+```
+昨日节省: 42%
+主要来源: 缓存 27% / Prompt Compression 9% / Router 6%
+```
+
+**实现步骤**：
+1. ⬜ TODO — 每日成本聚合。
+2. ⬜ TODO — 节省来源归因。
+3. ⬜ TODO — 报告生成与推送。
+
+**验收标准**：
+- 每日自动生成报告。
+- 节省来源可归因。
+
+---
+
+### Layer 3: Quality Optimization
+
+**目标**：确保 QPS 不因优化而下降。
+
+#### 3.1 LLM Judge 集成
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | A |
+| TRR/CSR/QPS | QPS 保障 |
+
+**目标**：自动评价回答质量，Router 学习。
+
+**实现步骤**：
+1. ⬜ TODO — Judge 引擎接入请求链路。
+2. ⬜ TODO — 质量评分记录。
+3. ⬜ TODO — Router 基于质量反馈优化。
+
+**验收标准**：
+- 质量评分覆盖所有请求。
+- Router 可学习质量反馈。
+
+#### 3.2 Response Ranking
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | A |
+| TRR/CSR/QPS | QPS 提升 |
+
+**目标**：多个模型同时生成，Judge 返回最好。
+
+**实现步骤**：
+1. ⬜ TODO — 多模型并行生成。
+2. ⬜ TODO — Judge 评分排序。
+3. ⬜ TODO — 返回最优响应。
+
+**验收标准**：
+- QPS ≥ 98%。
+- 延迟可控。
+
+#### 3.3 Cache Confidence 增强
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | A |
+| TRR/CSR/QPS | TRR + QPS 平衡 |
+
+**目标**：每条缓存 confidence 0~1，决定是否直接命中。
+
+**实现步骤**：
+1. ⬜ TODO — 集成 `cache-confidence.ts` 到缓存链路。
+2. ⬜ TODO — confidence 阈值动态调整。
+3. ⬜ TODO — 低 confidence 缓存自动刷新。
+
+**验收标准**：
+- TRR 提升且 QPS 不降。
+
+#### 3.4 Quality Dashboard
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | A |
+| TRR/CSR/QPS | QPS 可视化 |
+
+**目标**：展示各 Provider 质量评分：
+```
+Claude 92 / GPT 95 / Gemini 89
+```
+
+**实现步骤**：
+1. ⬜ TODO — 质量评分聚合。
+2. ⬜ TODO — Dashboard 质量面板。
+3. ⬜ TODO — 质量趋势分析。
+
+**验收标准**：
+- Dashboard 展示质量评分。
+- 质量趋势可追踪。
+
+---
+
+### Layer 4: Intelligence
+
+**目标**：真正 AI Native，Router 自动学习。
+
+#### 4.1 Intent Learning
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | A |
+| TRR/CSR/QPS | 路由优化 |
+
+**目标**：Router 不是规则，而是基于 50000 请求训练的分类器。
+
+**实现步骤**：
+1. ⬜ TODO — 历史请求数据收集。
+2. ⬜ TODO — 意图分类器训练。
+3. ⬜ TODO — 分类器部署与更新。
+
+**验收标准**：
+- 分类准确率 ≥ 90%。
+
+#### 4.2 Cost Predictor
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | A |
+| TRR/CSR/QPS | CSR 预测 |
+
+**目标**：预测未来一天的花费。
+
+**实现步骤**：
+1. ⬜ TODO — 历史成本趋势分析。
+2. ⬜ TODO — 预测模型（线性/指数）。
+3. ⬜ TODO — 预测结果展示。
+
+**验收标准**：
+- 预测误差 ≤ 15%。
+
+#### 4.3 Cache Predictor
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | A |
+| TRR/CSR/QPS | TRR 提升 |
+
+**目标**：预测哪些 Prompt 会热门，提前生成缓存。
+
+**实现步骤**：
+1. ⬜ TODO — 热门 Prompt 识别。
+2. ⬜ TODO — 预生成缓存。
+3. ⬜ TODO — 预生成效果评估。
+
+**验收标准**：
+- 预生成缓存命中率 ≥ 30%。
+
+#### 4.4 Auto Routing
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| 优先级 | A |
+| TRR/CSR/QPS | CSR 自动化 |
+
+**目标**：Router 自动学习，不用人工配置。
+
+**实现步骤**：
+1. ⬜ TODO — 路由决策记录。
+2. ⬜ TODO — 基于反馈自动调整权重。
+3. ⬜ TODO — 人工配置降级为可选。
+
+**验收标准**：
+- 自动路由 CSR ≥ 30%。
+- 无需人工干预。
+
+---
+
+### Layer 5: Enterprise
+
+**目标**：商业化能力。
+
+| 状态 | 功能 | 说明 |
+|------|------|------|
+| ⬜ TODO | RBAC | Owner/Admin/Developer/Viewer/Auditor |
+| ⬜ TODO | Quota | 按 Token 数限流，套餐 Free/Pro/Enterprise |
+| ⬜ TODO | Billing | Stripe 集成 / Invoice |
+| ⬜ TODO | Audit | 审计日志 |
+| ⬜ TODO | Organization | 多组织管理 |
+| ⬜ TODO | SSO/LDAP | 企业身份认证 |
+| ⬜ TODO | Webhook | 事件通知 |
+
+---
+
+### Layer 6: Ecosystem
+
+**目标**：生态建设。
+
+| 状态 | 功能 | 说明 |
+|------|------|------|
+| ⬜ TODO | VSCode Plugin | 官方插件 |
+| ⬜ TODO | JetBrains Plugin | 官方插件 |
+| ⬜ TODO | Spring AI Integration | 官方集成 |
+| ⬜ TODO | LangChain Integration | 官方集成 |
+| ⬜ TODO | Continue Integration | 官方集成 |
+| ⬜ TODO | Cline Integration | 官方集成 |
+| ⬜ TODO | OpenWebUI Integration | 官方集成 |
+
+---
+
+## 研究课题（论文价值）
+
+### R1: Semantic Cache 2.0
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| TRR/CSR/QPS | TRR 核心 |
+
+**目标**：LLM Judge + Embedding + Cache Confidence 三级判断。
+
+**实现步骤**：
+1. ⬜ TODO — Embedding 相似度初筛。
+2. ⬜ TODO — LLM Judge 语义等价判断。
+3. ⬜ TODO — Cache Confidence 最终决策。
+
+### R2: Dynamic TTL
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| TRR/CSR/QPS | TRR 提升 |
+
+**目标**：TTL 自动学习：天气 5 分钟 / 数学 30 天 / 代码 3 天。
+
+**实现步骤**：
+1. ⬜ TODO — 问题类型 → TTL 映射学习。
+2. ⬜ TODO — TTL 动态调整。
+
+### R3: Cache Recommendation
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| TRR/CSR/QPS | TRR 引导 |
+
+**目标**：后台告诉用户："建议开启 Conversation Summary，预计节省 18%"。
+
+**实现步骤**：
+1. ⬜ TODO — 优化建议生成。
+2. ⬜ TODO — 建议推送。
+
+### R4: Token Optimization Engine（TOE）
+
+| 属性 | 值 |
+|------|-----|
+| 状态 | ⬜ TODO |
+| TRR | 目标 72% |
+| CSR | 目标 70% |
+| QPS | ≥ 98% |
+
+**目标**：端到端 Token 优化流水线：
+```
+Input → Compression → History Summary → Context Selection → Provider Routing → Semantic Cache → Output
+```
+
+**实现步骤**：
+1. ⬜ TODO — 各模块串联。
+2. ⬜ TODO — 端到端 TRR/CSR/QPS 测量。
+3. ⬜ TODO — 优化调参。
+
+**验收标准**：
+- TRR ≥ 72%。
+- QPS ≥ 98%。
 
 ---
 
 ## 季度路线
 
-### Q3（当前）—— 文档与 Benchmark
+### Q3（当前）—— 数据基础
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ✅ COMPLETED | Documentation | README、API 文档、架构图 (`docs/`) |
-| ✅ COMPLETED | Tutorial | 5 分钟快速开始教程 (`docs/quickstart.md`) |
-| ⬜ TODO | Video | 录制演示视频 |
-| ✅ COMPLETED | Examples | spring-ai / langchain / openwebui / cline / continue / mcp (`examples/`) |
-| ✅ COMPLETED | Benchmark | Daily Benchmark CI 已修复 |
-| ✅ COMPLETED | ADR | `docs/adr/` 6 个设计决策记录 |
+| ⬜ TODO | Layer 0.1 | 完整请求数据模型 |
+| ⬜ TODO | Layer 0.2 | Cost Analytics Dashboard |
+| ⬜ TODO | Layer 0.3 | 请求画像 |
+| ⬜ TODO | Phase 1 | 分布式语义缓存（Faiss/HNSW + 多节点） |
 
-### Q4 —— Research Phase 1~3
+### Q4 —— Token 优化
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | Phase 1 | 分布式语义缓存（Faiss/HNSW + 多节点 + Snapshot/WAL） |
-| ✅ COMPLETED | Phase 2 | Router DSL Engine（`src/server/dsl/router-dsl.ts`） |
-| ✅ COMPLETED | Phase 3 | Workflow Engine（`src/server/workflow/workflow-engine.ts`） |
+| ⬜ TODO | Layer 1.1 | Prompt Compression |
+| ⬜ TODO | Layer 1.2 | Conversation Compression |
+| ⬜ TODO | Layer 1.3 | Adaptive Context |
+| ⬜ TODO | Layer 1.4 | History Pruning |
+| ⬜ TODO | Layer 1.5 | Chunk Cache |
 
-### Q1（明年）—— Research Phase 4~6
-
-| 状态 | 任务 | 说明 |
-|------|------|------|
-| ✅ COMPLETED | Phase 4 | Prompt Compiler（`src/server/compiler/prompt-compiler.ts`） |
-| ✅ COMPLETED | Phase 5 | Policy Engine（`src/server/dsl/policy-engine.ts`） |
-| ✅ COMPLETED | Phase 6 | Agent Runtime（`src/server/agent/agent-runtime.ts`） |
-
-### Q2（明年）—— Infra Phase 7~9
+### Q1（明年）—— 成本优化
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ✅ COMPLETED | Phase 7 | Event Bus（`src/server/event/event-bus.ts`） |
-| ✅ COMPLETED | Phase 8 | Scheduler（`src/server/scheduler/scheduler.ts`） |
-| ⬜ TODO | Phase 9 | Auto Benchmark Platform（100+ Prompt × 20 Model + Judge + 网页） |
+| ⬜ TODO | Layer 2.1 | Cost Estimator |
+| ⬜ TODO | Layer 2.2 | Smart Provider Selection |
+| ⬜ TODO | Layer 2.3 | Budget Controller |
+| ⬜ TODO | Layer 2.4 | Cost Report |
 
-### Q3（明年）—— Evolution Phase 10~12
+### Q2（明年）—— 质量 + 智能
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ✅ COMPLETED | Phase 10 | LLM Judge Framework（`src/server/judge/judge.ts`） |
-| ⬜ TODO | Phase 11 | Universal AI Gateway（Image/Speech/Realtime/MCP/Agent/Workflow/Batch/FineTune） |
-| ⬜ TODO | Phase 12 | 内核重构 → Nexus Runtime（kernel/runtime/pipeline/scheduler/plugin/dsl/compiler/executor/storage） |
+| ⬜ TODO | Layer 3 | Quality Optimization（Judge/Ranking/Confidence/Dashboard） |
+| ⬜ TODO | Layer 4 | Intelligence（Intent Learning/Cost Predictor/Cache Predictor/Auto Routing） |
+
+### Q3（明年）—— 企业 + 生态
+
+| 状态 | 任务 | 说明 |
+|------|------|------|
+| ⬜ TODO | Layer 5 | Enterprise（RBAC/Quota/Billing/Audit/SSO） |
+| ⬜ TODO | Layer 6 | Ecosystem（VSCode/JetBrains/Spring AI/LangChain） |
+| ⬜ TODO | Phase 12 | 内核重构 → Nexus Runtime |
 
 ---
 
@@ -661,24 +764,13 @@ src/
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | 技术博客 | 写高质量技术博客（设计缓存、路由、容错、DSL、Compiler 的思路） |
+| ⬜ TODO | 技术博客 | 写高质量技术博客（Token 优化、成本优化、Semantic Cache 2.0 的思路） |
 | ✅ COMPLETED | 架构图 | `docs/architecture.md` 含 Mermaid 架构图 |
 | ⬜ TODO | Issues & PR | 持续回应 Issues 和接受 PR |
 | ⬜ TODO | Release 维护 | 持续维护 Release，打 tag，写 changelog |
 | ✅ COMPLETED | Compatibility Matrix | `examples/compatibility-matrix.md` 13 种客户端兼容性 |
 | ✅ COMPLETED | CONTRIBUTING.md | `CONTRIBUTING.md` 贡献指南 |
 | ⬜ TODO | GitHub Discussions | 开启讨论区 |
-
----
-
-## 开源生态
-
-| 状态 | 任务 | 说明 |
-|------|------|------|
-| ✅ COMPLETED | SDK | `sdk/typescript/` (npm) / `sdk/python/` (pip) |
-| ✅ COMPLETED | CLI | `cli/nexus-cli.mjs` health/models/provider/cache/benchmark/doctor |
-| ✅ COMPLETED | Examples | `examples/` spring-ai/langchain/openwebui/cline/continue/mcp |
-| ✅ COMPLETED | Compatibility Matrix | `examples/compatibility-matrix.md` |
 
 ---
 
@@ -702,7 +794,7 @@ src/
 **提交前检查清单**：
 - [ ] `npm ci` 成功（无 EUSAGE 错误）
 - [ ] `npx tsc --noEmit` 通过（无 TS 错误）
-- [ ] `npm test` 全部通过（记录测试数，如 230/230）
+- [ ] `npm test` 全部通过（记录测试数，如 266/266）
 - [ ] `git push` 后 GitHub Actions CI 变绿
 - [ ] 更新 `fit/improve.md` 标记对应任务为 ✅ COMPLETED
 
@@ -738,4 +830,4 @@ src/
 
 ---
 
-> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿（266/266 测试通过）。Daily Benchmark CI 已修复（改用 Node.js 脚本）。12 个 Phase 中 10 个已完成，剩余 Phase 1（分布式缓存）和 Phase 12（内核重构）待实现。
+> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿（266/266 测试通过）。Daily Benchmark CI 已修复（改用 Node.js 脚本）。项目已重新定位为 AI Cost Optimization Platform，按 Layer0~Layer6 演进。
