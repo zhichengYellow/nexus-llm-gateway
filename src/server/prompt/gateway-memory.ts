@@ -11,7 +11,6 @@
  * 存储：内存 + 定期持久化到 DB
  */
 import type { ProviderType } from "../../shared/types.js";
-import { logger } from "../../shared/logger.js";
 
 export interface TenantMemory {
   tenantId: string;

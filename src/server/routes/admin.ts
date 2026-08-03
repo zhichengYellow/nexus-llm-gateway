@@ -566,7 +566,7 @@ adminRoute.get("/traces/:requestId", async (c) => {
     traceId: trace.traceId,
     requestId: trace.requestId,
     spans: trace.allSpans.map((s) => ({ name: s.name, duration: s.duration, status: s.status, metadata: s.metadata })),
-    waterfall: new (await import("../middleware/observability.js")).Tracer("").toWaterfall ? null : null,
+    waterfall: null,
   });
 });
 

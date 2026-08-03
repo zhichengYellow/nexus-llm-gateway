@@ -11,10 +11,9 @@
  * - 成本趋势
  * - 延迟趋势
  */
-import { eq, gte, sql, and } from "drizzle-orm";
+import { eq, gte, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { usageLogs, modelRoutes, tenants, apiKeys } from "../db/schema.js";
-import { logger } from "../../shared/logger.js";
+import { usageLogs, tenants } from "../db/schema.js";
 
 export interface AnalyticsReport {
   period: { start: string; end: string };
