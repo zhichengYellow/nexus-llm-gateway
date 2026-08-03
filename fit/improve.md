@@ -24,6 +24,7 @@
 - [x] CLI 工具、离线基准测试、性能压测
 - [x] CI 每日基准工作流
 - [x] 时区修复（Asia/Shanghai）
+- [x] **v1.2 AI Native Gateway**：Intent Router + Cost Optimizer + Quality Score + Adaptive TTL
 
 ---
 

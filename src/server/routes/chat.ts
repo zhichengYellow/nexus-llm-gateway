@@ -10,6 +10,8 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { createDefaultPipeline, type PipelineContext } from "../middleware/pipeline.js";
 import { logger } from "../../shared/logger.js";
+import { getPromptRouter } from "../prompt/router.js";
+import { getRegistry } from "../providers/registry.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
 
@@ -91,9 +93,26 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
     messages: raw.messages.map((m) => ({ ...m, content: normalizeContent(m.content) })),
   };
 
+  // ===== v1.2: model=auto 时使用 Intent Router 自动选择最佳 Provider =====
+  let model = req.model;
+  let intentResult = null;
+  if (model === "auto") {
+    const userPrompt = (req.messages as any[]).filter((m) => m.role === "user").map((m) => normalizeContent(m.content)).join("\n");
+    const router = getPromptRouter();
+    intentResult = router.classify(userPrompt);
+    model = intentResult.model ?? intentResult.provider;
+    logger.info({
+      requestId: c.get("requestId"),
+      intent: intentResult.category,
+      provider: intentResult.provider,
+      model,
+      confidence: intentResult.confidence,
+    }, "auto-routed by intent");
+  }
+
   const ctx: PipelineContext = {
     c,
-    model: req.model,
+    model,
     request: req,
     requestId: c.get("requestId"),
     tenant: c.get("tenant"),
@@ -101,7 +120,7 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
     isMaster: c.get("isMaster"),
     stream: req.stream ?? false,
     startTime: Date.now(),
-    meta: {},
+    meta: { intentResult },
   };
 
   // 执行管道
