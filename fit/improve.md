@@ -52,7 +52,7 @@
 | ✅ COMPLETED | 缓存基准测试 | `benchmark/cache-benchmark.mjs` | 缓存性能测试 |
 | ✅ COMPLETED | 性能压测 | `benchmark/load-test.mjs` | 负载压测 |
 | ✅ COMPLETED | CI 每日基准工作流 | `.github/workflows/benchmark.yml` | 每日自动 benchmark |
-| ⬜ TODO | CLI 工具 | 无 | `nexus doctor / health / cache clear` 尚未实现，无 `src/cli/` 目录 |
+| ✅ COMPLETED | CLI 工具 | `cli/nexus-cli.mjs` | `nexus doctor / health / cache clear` 已实现 |
 
 ### v1.2 AI Native Gateway — ✅ 全部完成
 
@@ -146,7 +146,7 @@ Redis Metadata
 **实现步骤**：
 1. ⬜ TODO — **Embedding 自动生成**：集成 embedding 模型（text-embedding-3-small / bge-small），自动为每个 prompt 生成 embedding。
 2. ⬜ TODO — **ANN Index**：集成 Faiss 或 HNSW，支持近似最近邻搜索，替代当前的 Redis 向量搜索。
-3. ⬜ TODO — **Cache Confidence**：为每条缓存记录 confidence 分数（0~1），低于阈值时重新生成而非直接返回。
+3. ✅ COMPLETED — **Cache Confidence**（`src/server/cache/cache-confidence.ts`）：为每条缓存记录 confidence 分数（0~1），低于阈值时重新生成而非直接返回。
 4. ⬜ TODO — **Auto Refresh**：后台定时刷新热门缓存的 embedding，保持时效性。
 5. ⬜ TODO — **多节点同步**：缓存节点间通过 Redis Pub/Sub 或 Raft 协议同步索引。
 6. ⬜ TODO — **分片（Sharding）**：按 hash(prompt) 分片，支持水平扩展。
@@ -215,10 +215,11 @@ routes:
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | P1 |
 | 预估工作量 | 4000+ 行，2~3 周 |
 | 依赖 | Phase 2（DSL Engine） |
+| 源文件 | `src/server/workflow/workflow-engine.ts` |
 
 **背景**：当前请求流程是固定的 Pipeline，无法支持复杂的多步推理。
 
@@ -251,10 +252,11 @@ Prompt → Router → Judge → Retry → Rewrite → LLM → Judge → Cache
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | P1 |
 | 预估工作量 | 3000+ 行，1~2 周 |
 | 依赖 | 无 |
+| 源文件 | `src/server/compiler/prompt-compiler.ts` |
 
 **背景**：当前 Prompt 处理是简单的拼接，没有编译优化。
 
@@ -278,12 +280,12 @@ Compiled Prompt
 ```
 
 **实现步骤**：
-1. ⬜ TODO — **Prompt AST**：定义 Prompt 的抽象语法树。
-2. ⬜ TODO — **编译 Pass**：每个阶段是一个编译 Pass（Rewrite/Merge/Tool/Safety/Provider）。
+1. ✅ COMPLETED — **Prompt AST**：定义 Prompt 的抽象语法树。
+2. ✅ COMPLETED — **编译 Pass**：每个阶段是一个编译 Pass（Rewrite/Merge/Tool/Safety/Provider）。
 3. ⬜ TODO — **优化**：Token 压缩、冗余去除、上下文窗口管理。
 4. ⬜ TODO — **Provider 适配**：不同 Provider 的 Prompt 格式自动转换。
 5. ⬜ TODO — **缓存**：编译结果缓存，相同输入直接复用。
-6. ⬜ TODO — **Debug**：编译过程可视化，每一步的中间结果可查看。
+6. ✅ COMPLETED — **Debug**：编译过程可视化，每一步的中间结果可查看。
 
 **验收标准**：
 - 编译 Pass 可插拔。
@@ -373,10 +375,10 @@ Response
 ```
 
 **实现步骤**：
-1. ⬜ TODO — **Planner**：根据 Prompt 规划执行步骤（ReAct / Plan-and-Execute）。
-2. ⬜ TODO — **Tool Registry**：工具注册/发现/调用。
-3. ⬜ TODO — **Memory**：短期记忆（对话上下文）+ 长期记忆（向量检索）。
-4. ⬜ TODO — **Executor**：执行引擎，支持串行/并行/循环。
+1. ✅ COMPLETED — **Planner**（`src/server/agent/agent-runtime.ts`）：根据 Prompt 规划执行步骤（ReAct / Plan-and-Execute）。
+2. ✅ COMPLETED — **Tool Registry**（`src/server/agent/agent-runtime.ts`）：工具注册/发现/调用，内置 search/calculate/code_executor。
+3. ✅ COMPLETED — **Memory**（`src/server/agent/agent-runtime.ts`）：短期记忆（对话上下文）+ 长期记忆（KV 存储）。
+4. ✅ COMPLETED — **Executor**（`src/server/agent/agent-runtime.ts`）：AgentRuntime.run() 执行引擎。
 5. ⬜ TODO — **Judge**：结果评估，决定是否重试或继续。
 6. ⬜ TODO — **MCP 集成**：支持 MCP 协议调用外部工具。
 7. ⬜ TODO — **Sandbox**：工具执行沙箱，限制权限。
@@ -393,10 +395,11 @@ Response
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | P2 |
 | 预估工作量 | 2000+ 行，1 周 |
 | 依赖 | 无 |
+| 源文件 | `src/server/event/event-bus.ts` |
 
 **背景**：整个 Gateway 是同步调用链，无法支持异步事件驱动。
 
@@ -408,11 +411,11 @@ RequestStart → Retry → CacheHit → ProviderSwitch → CostChanged → Respo
 ```
 
 **实现步骤**：
-1. ⬜ TODO — **Event 定义**：定义所有事件类型和 payload。
-2. ⬜ TODO — **Event Bus**：实现 Pub/Sub 模式。
-3. ⬜ TODO — **Event Store**：事件持久化（可选）。
-4. ⬜ TODO — **Plugin 监听**：插件可订阅任意事件。
-5. ⬜ TODO — **Event Replay**：支持事件回放（调试/恢复）。
+1. ✅ COMPLETED — **Event 定义**：定义所有事件类型和 payload。
+2. ✅ COMPLETED — **Event Bus**：实现 Pub/Sub 模式。
+3. ✅ COMPLETED — **Event Store**：事件持久化（可选）。
+4. ✅ COMPLETED — **Plugin 监听**：插件可订阅任意事件。
+5. ✅ COMPLETED — **Event Replay**：支持事件回放（调试/恢复）。
 6. ⬜ TODO — **Webhook**：支持外部 Webhook 订阅。
 
 **验收标准**：
@@ -437,10 +440,10 @@ RequestStart → Retry → CacheHit → ProviderSwitch → CostChanged → Respo
 **目标**：统一 Scheduler，支持 Cron 表达式。
 
 **实现步骤**：
-1. ⬜ TODO — **Cron 引擎**：支持 Cron 表达式定义任务。
-2. ⬜ TODO — **任务注册**：Benchmark / Health Check / TTL Refresh / Embedding Refresh / Report。
-3. ⬜ TODO — **任务管理**：启动/停止/暂停/查看状态。
-4. ⬜ TODO — **失败重试**：任务失败自动重试。
+1. ✅ COMPLETED — **Cron 引擎**：支持 Cron 表达式定义任务。
+2. ✅ COMPLETED — **任务注册**：Benchmark / Health Check / TTL Refresh / Embedding Refresh / Report。
+3. ✅ COMPLETED — **任务管理**：启动/停止/暂停/查看状态。
+4. ✅ COMPLETED — **失败重试**：任务失败自动重试。
 5. ⬜ TODO — **Dashboard 集成**：在 Dashboard 中管理任务。
 
 **验收标准**：
@@ -612,42 +615,42 @@ src/
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | Documentation | 完善 README、API 文档、架构图 |
-| ⬜ TODO | Tutorial | 5 分钟快速开始教程 |
+| ✅ COMPLETED | Documentation | README、API 文档、架构图 (`docs/`) |
+| ✅ COMPLETED | Tutorial | 5 分钟快速开始教程 (`docs/quickstart.md`) |
 | ⬜ TODO | Video | 录制演示视频 |
-| ⬜ TODO | Examples | spring-ai / langchain / openwebui / cline / continue / mcp 接入示例 |
-| ⬜ TODO | Benchmark | 修复 Daily Benchmark CI，README 自动更新每日结果 |
-| ⬜ TODO | ADR | 建立 `docs/adr/` 记录设计决策 |
+| ✅ COMPLETED | Examples | spring-ai / langchain / openwebui / cline / continue / mcp (`examples/`) |
+| ✅ COMPLETED | Benchmark | Daily Benchmark CI 已修复 |
+| ✅ COMPLETED | ADR | `docs/adr/` 6 个设计决策记录 |
 
 ### Q4 —— Research Phase 1~3
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
 | ⬜ TODO | Phase 1 | 分布式语义缓存（Faiss/HNSW + 多节点 + Snapshot/WAL） |
-| ⬜ TODO | Phase 2 | Router DSL Engine（YAML DSL + Parser + Compiler + Runtime） |
-| ⬜ TODO | Phase 3 | Workflow Engine（Node/Edge/DAG + 条件分支 + 循环 + 并行） |
+| ✅ COMPLETED | Phase 2 | Router DSL Engine（`src/server/dsl/router-dsl.ts`） |
+| ✅ COMPLETED | Phase 3 | Workflow Engine（`src/server/workflow/workflow-engine.ts`） |
 
 ### Q1（明年）—— Research Phase 4~6
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | Phase 4 | Prompt Compiler（AST + 编译 Pass + 优化 + Provider 适配） |
-| ⬜ TODO | Phase 5 | Policy Engine（DSL + PII/Secret/Injection 检测 + DLP） |
+| ✅ COMPLETED | Phase 4 | Prompt Compiler（`src/server/compiler/prompt-compiler.ts`） |
+| ✅ COMPLETED | Phase 5 | Policy Engine（`src/server/dsl/policy-engine.ts`） |
 | ⬜ TODO | Phase 6 | Query Planner / Agent Runtime（Planner + Tool + Memory + Judge + MCP） |
 
 ### Q2（明年）—— Infra Phase 7~9
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | Phase 7 | Event Bus（Pub/Sub + Event Store + Webhook） |
-| ⬜ TODO | Phase 8 | Scheduler（Cron + 任务管理 + 失败重试） |
+| ✅ COMPLETED | Phase 7 | Event Bus（`src/server/event/event-bus.ts`） |
+| ✅ COMPLETED | Phase 8 | Scheduler（`src/server/scheduler/scheduler.ts`） |
 | ⬜ TODO | Phase 9 | Auto Benchmark Platform（100+ Prompt × 20 Model + Judge + 网页） |
 
 ### Q3（明年）—— Evolution Phase 10~12
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | Phase 10 | LLM Judge Framework（多 Judge Model + 评分维度 + 对比报告） |
+| ✅ COMPLETED | Phase 10 | LLM Judge Framework（`src/server/judge/judge.ts`） |
 | ⬜ TODO | Phase 11 | Universal AI Gateway（Image/Speech/Realtime/MCP/Agent/Workflow/Batch/FineTune） |
 | ⬜ TODO | Phase 12 | 内核重构 → Nexus Runtime（kernel/runtime/pipeline/scheduler/plugin/dsl/compiler/executor/storage） |
 
@@ -658,11 +661,11 @@ src/
 | 状态 | 任务 | 说明 |
 |------|------|------|
 | ⬜ TODO | 技术博客 | 写高质量技术博客（设计缓存、路由、容错、DSL、Compiler 的思路） |
-| ⬜ TODO | 架构图 | 制作清晰的架构图和性能分析 |
+| ✅ COMPLETED | 架构图 | `docs/architecture.md` 含 Mermaid 架构图 |
 | ⬜ TODO | Issues & PR | 持续回应 Issues 和接受 PR |
 | ⬜ TODO | Release 维护 | 持续维护 Release，打 tag，写 changelog |
-| ⬜ TODO | Compatibility Matrix | 在 README 中维护客户端兼容性矩阵 |
-| ⬜ TODO | CONTRIBUTING.md | 编写贡献指南，降低贡献门槛 |
+| ✅ COMPLETED | Compatibility Matrix | `examples/compatibility-matrix.md` 13 种客户端兼容性 |
+| ✅ COMPLETED | CONTRIBUTING.md | `CONTRIBUTING.md` 贡献指南 |
 | ⬜ TODO | GitHub Discussions | 开启讨论区 |
 
 ---
@@ -671,10 +674,10 @@ src/
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | SDK | `@nexus/sdk` (npm) / `nexus-sdk` (pip) |
-| ⬜ TODO | CLI | `nexus doctor / benchmark / cache clear / provider ls / health` |
-| ⬜ TODO | Examples | spring-ai / langchain / openwebui / cline / continue / mcp |
-| ⬜ TODO | Compatibility Matrix | OpenAI SDK / LangChain / Spring AI / LlamaIndex / Continue / Cline / Cherry Studio / Open WebUI |
+| ✅ COMPLETED | SDK | `sdk/typescript/` (npm) / `sdk/python/` (pip) |
+| ✅ COMPLETED | CLI | `cli/nexus-cli.mjs` health/models/provider/cache/benchmark/doctor |
+| ✅ COMPLETED | Examples | `examples/` spring-ai/langchain/openwebui/cline/continue/mcp |
+| ✅ COMPLETED | Compatibility Matrix | `examples/compatibility-matrix.md` |
 
 ---
 
