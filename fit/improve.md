@@ -457,10 +457,11 @@ RequestStart → Retry → CacheHit → ProviderSwitch → CostChanged → Respo
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | P2 |
 | 预估工作量 | 3000+ 行，1~2 周 |
 | 依赖 | Phase 10（LLM Judge Framework） |
+| 源文件 | `benchmark/auto-benchmark.mjs` |
 
 **背景**：当前 Benchmark 只是简单的延迟测试，无法全面评估。
 
@@ -538,7 +539,7 @@ Prompt → OpenAI / Claude / Gemini → Judge → Score
 7. ⬜ TODO — **Agent**：支持 Agent Runtime。
 8. ⬜ TODO — **Workflow**：支持 Workflow Engine。
 9. ⬜ TODO — **Judge**：支持 LLM Judge。
-10. ⬜ TODO — **Batch**：支持批量请求。
+10. ✅ COMPLETED — **Batch**（`src/server/routes/batch.ts`）：支持批量请求 `/v1/batch`。
 11. ⬜ TODO — **FineTune**：支持微调任务管理。
 
 **验收标准**：

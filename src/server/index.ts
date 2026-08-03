@@ -16,6 +16,7 @@ import { healthRoute } from "./routes/health.js";
 import { metricsRoute } from "./middleware/metrics.js";
 import { adminRoute } from "./routes/admin.js";
 import { userRoute } from "./routes/user.js";
+import { batchRoute } from "./routes/batch.js";
 
 type AppEnv = AuthEnv & LoggingEnv;
 
@@ -45,6 +46,7 @@ api.use("*", authMiddleware);
 api.route("/v1/chat/completions", chatRoute);
 api.route("/v1/embeddings", embeddingsRoute);
 api.route("/v1/models", modelsRoute);
+api.route("/v1/batch", batchRoute);
 
 // 管理路由（master key）
 api.route("/admin", adminRoute);
