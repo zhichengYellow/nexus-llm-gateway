@@ -165,10 +165,11 @@ Redis Metadata
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | P0 |
 | 预估工作量 | 3000+ 行，1~2 周 |
 | 依赖 | 无 |
+| 源文件 | `src/server/dsl/router-dsl.ts` |
 
 **背景**：当前 Router 是硬编码的 if/weight/score 逻辑，无法灵活配置。
 
@@ -296,10 +297,11 @@ Compiled Prompt
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | P1 |
 | 预估工作量 | 2500+ 行，1~2 周 |
 | 依赖 | 无 |
+| 源文件 | `src/server/dsl/policy-engine.ts` |
 
 **背景**：当前安全检查是硬编码的 if 判断，无法灵活配置。
 
@@ -424,10 +426,11 @@ RequestStart → Retry → CacheHit → ProviderSwitch → CostChanged → Respo
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | P2 |
 | 预估工作量 | 1500+ 行，3~5 天 |
 | 依赖 | 无 |
+| 源文件 | `src/server/scheduler/scheduler.ts` |
 
 **背景**：后台任务（Benchmark/Health Check/TTL Refresh）散落各处，无统一管理。
 
@@ -481,10 +484,11 @@ RequestStart → Retry → CacheHit → ProviderSwitch → CostChanged → Respo
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | P2 |
 | 预估工作量 | 2000+ 行，1 周 |
 | 依赖 | 无 |
+| 源文件 | `src/server/judge/judge.ts` |
 
 **背景**：需要客观评估不同 LLM 的输出质量。
 
