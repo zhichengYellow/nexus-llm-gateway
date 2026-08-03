@@ -1,7 +1,7 @@
 # Nexus Runtime - 长远路线图
 
 > **愿景**：从 LLM Gateway 演进为 Universal AI Runtime —— 所有 AI App 跑在 Nexus Runtime 上。
-> **当前状态**：v1.3（Observability + Analytics + Memory），CI 全绿，206/206 测试通过。
+> **当前状态**：v1.4（DSL + Policy + Judge + Scheduler），CI 全绿，230/230 测试通过。
 > **原则**：不再以"新增功能"为单位，而是以"基础设施抽象"为单位。每个阶段是一个需要数周打磨的 Research/Infra 工程。
 
 ---
@@ -22,8 +22,8 @@
 
 ## 项目当前状态
 
-- **版本**：v1.3（Observability + Analytics + Memory）
-- **CI**：GitHub Actions 全绿，206/206 测试通过（21 个测试文件）
+- **版本**：v1.4（DSL + Policy + Judge + Scheduler）
+- **CI**：GitHub Actions 全绿，230/230 测试通过（25 个测试文件）
 - **lockfile**：自洽（esbuild 0.28.1 / @emnapi 2.0.0-alpha.3 齐全）
 - **时区**：pino-pretty 固定 Asia/Shanghai
 - **代理**：git 走 clash 代理 (127.0.0.1:7897)
@@ -195,10 +195,10 @@ routes:
 ```
 
 **实现步骤**：
-1. ⬜ TODO — **DSL 设计**：定义 YAML schema，支持条件表达式（intent/latency/cost/context_length/error_rate）。
-2. ⬜ TODO — **DSL Parser**：实现 YAML → AST 解析器。
-3. ⬜ TODO — **DSL Compiler**：AST → 可执行的路由规则。
-4. ⬜ TODO — **DSL Runtime**：运行时引擎，支持热加载 YAML。
+1. ✅ COMPLETED — **DSL 设计**：定义 YAML schema，支持条件表达式（intent/latency/cost/context_length/error_rate）。
+2. ✅ COMPLETED — **DSL Parser**：实现 YAML → AST 解析器。
+3. ✅ COMPLETED — **DSL Compiler**：AST → 可执行的路由规则。
+4. ✅ COMPLETED — **DSL Runtime**：运行时引擎，支持热加载 YAML。
 5. ⬜ TODO — **规则验证**：启动时校验 DSL 语法和逻辑。
 6. ⬜ TODO — **Dashboard 集成**：在 Dashboard 中可视化编辑 DSL。
 7. ⬜ TODO — **版本管理**：DSL 变更支持版本管理和回滚。
@@ -327,12 +327,12 @@ policies:
 ```
 
 **实现步骤**：
-1. ⬜ TODO — **Policy DSL**：定义 YAML schema，支持表达式。
-2. ⬜ TODO — **Policy Compiler**：DSL → 可执行规则。
-3. ⬜ TODO — **Policy Runtime**：运行时引擎，在请求链路中插入检查。
-4. ⬜ TODO — **PII 检测**：身份证/银行卡/手机号/邮箱。
-5. ⬜ TODO — **Secret 检测**：API Key/密码/Token。
-6. ⬜ TODO — **Injection 检测**：Prompt 注入攻击模式。
+1. ✅ COMPLETED — **Policy DSL**：定义 YAML schema，支持表达式。
+2. ✅ COMPLETED — **Policy Compiler**：DSL → 可执行规则。
+3. ✅ COMPLETED — **Policy Runtime**：运行时引擎，在请求链路中插入检查。
+4. ✅ COMPLETED — **PII 检测**：身份证/银行卡/手机号/邮箱。
+5. ✅ COMPLETED — **Secret 检测**：API Key/密码/Token。
+6. ✅ COMPLETED — **Injection 检测**：Prompt 注入攻击模式。
 7. ⬜ TODO — **DLP**：数据泄露防护（敏感数据不出域）。
 8. ⬜ TODO — **审计**：所有 Policy 触发记录审计日志。
 
@@ -498,9 +498,9 @@ Prompt → OpenAI / Claude / Gemini → Judge → Score
 ```
 
 **实现步骤**：
-1. ⬜ TODO — **Judge Model 集成**：支持 GPT-4 / Claude / Gemini 作为 Judge。
-2. ⬜ TODO — **评分维度**：相关性、准确性、流畅度、安全性、完整性。
-3. ⬜ TODO — **批量评估**：支持批量评估 100+ 响应。
+1. ✅ COMPLETED — **Judge Model 集成**：支持 GPT-4 / Claude / Gemini 作为 Judge。
+2. ✅ COMPLETED — **评分维度**：相关性、准确性、流畅度、安全性、完整性。
+3. ✅ COMPLETED — **批量评估**：支持批量评估 100+ 响应。
 4. ⬜ TODO — **对比报告**：多模型对比，输出排行榜。
 5. ⬜ TODO — **自定义评分**：支持自定义评分标准。
 6. ⬜ TODO — **API**：提供 `/api/judge` 接口。
@@ -706,4 +706,4 @@ src/
 
 ---
 
-> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿（206/206 测试通过）。Daily Benchmark CI 已修复（改用 Node.js 脚本）。后续按 Phase 1~12 逐步演进，每个 Phase 是一个独立的 Research/Infra 工程。
+> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿（230/230 测试通过）。Daily Benchmark CI 已修复（改用 Node.js 脚本）。后续按 Phase 1~12 逐步演进，每个 Phase 是一个独立的 Research/Infra 工程。
