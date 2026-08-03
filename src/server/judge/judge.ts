@@ -17,8 +17,6 @@
  * // → { relevance: 0.9, accuracy: 0.85, ... overall: 0.88 }
  * ```
  */
-import { logger } from "../../shared/logger.js";
-
 // ===== 类型定义 =====
 
 export interface JudgeScore {

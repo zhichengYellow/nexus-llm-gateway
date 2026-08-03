@@ -27,7 +27,7 @@ import { logger } from "../../shared/logger.js";
 
 // ===== Policy 类型 =====
 
-export type PolicyAction = "allow" | "reject" | "mask" | "log" | "sanitize";
+export type PolicyAction = "allow" | "reject" | "mask" | "log" | "sanitize" | "block";
 
 export interface PolicyRule {
   name: string;

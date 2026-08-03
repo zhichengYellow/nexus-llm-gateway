@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DslParser, DslCompiler, DslRuntime, resetDslRuntime } from "./router-dsl.js";
+import { DslParser, DslCompiler, DslRuntime } from "./router-dsl.js";
 
 const SAMPLE_YAML = `
 routes:

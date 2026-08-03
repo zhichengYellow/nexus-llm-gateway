@@ -52,22 +52,7 @@ function parseCron(expr: string): CronSchedule {
   };
 }
 
-function matchField(value: string, target: number): boolean {
-  if (value === "*") return true;
-  if (value.includes(",")) return value.split(",").some((v) => matchField(v.trim(), target));
-  if (value.includes("/")) {
-    const [base, step] = value.split("/");
-    const baseNum = base === "*" ? 0 : parseInt(base!, 10);
-    return (target - baseNum) % parseInt(step!, 10) === 0;
-  }
-  if (value.includes("-")) {
-    const [lo, hi] = value.split("-").map(Number);
-    return target >= lo! && target <= hi!;
-  }
-  return parseInt(value, 10) === target;
-}
-
-function nextRunTime(schedule: CronSchedule): number {
+function nextRunTime(_schedule: CronSchedule): number {
   const now = new Date();
   // 简单实现：返回下一秒（实际应计算下一次匹配时间）
   // 生产环境用 cron-parser 库

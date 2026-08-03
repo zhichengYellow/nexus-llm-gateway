@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { Scheduler, resetScheduler } from "./scheduler.js";
 
 beforeEach(() => resetScheduler());
