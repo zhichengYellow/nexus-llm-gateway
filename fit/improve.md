@@ -7,13 +7,15 @@
 
 ## 项目当前状态
 
-- **版本**：v1.1.2
-- **CI**：GitHub Actions 全绿，34/34 测试通过
+- **版本**：v1.2（AI Native Gateway）
+- **CI**：GitHub Actions 全绿，192/192 测试通过（19 个测试文件）
 - **lockfile**：自洽（esbuild 0.28.1 / @emnapi 2.0.0-alpha.3 齐全）
 - **时区**：pino-pretty 固定 Asia/Shanghai
 - **代理**：git 走 clash 代理 (127.0.0.1:7897)
 
 ### 已完成功能
+
+#### 基础能力（v1.0~v1.1.2）
 
 - [x] 工程级语义缓存（Canonical Key、SingleFlight、分类 TTL、防毒化）
 - [x] 容错三件套（Circuit Breaker、Weighted Router、Retry）
@@ -24,134 +26,46 @@
 - [x] CLI 工具、离线基准测试、性能压测
 - [x] CI 每日基准工作流
 - [x] 时区修复（Asia/Shanghai）
-- [x] **v1.2 AI Native Gateway**：Intent Router + Cost Optimizer + Quality Score + Adaptive TTL
+
+#### v1.2 AI Native Gateway
+
+- [x] **Intent Router**（`src/server/prompt/router.ts`）：Prompt → Intent Classifier → Best Provider，支持 `model=auto`
+- [x] **Cost Optimizer**（`src/server/prompt/cost-optimizer.ts`）：估算 token/预算/历史成功率/价格，自动选最便宜 provider
+- [x] **Quality Score Router**（`src/server/prompt/quality-score.ts`）：Score = 0.5×Quality + 0.3×Latency + 0.2×Cost
+- [x] **Adaptive TTL**（`src/server/prompt/adaptive-ttl.ts`）：按问题类型自动判断 TTL（天气 5min / 知识 30天）
+
+#### P1 架构
+
+- [x] **Middleware Pipeline**（`src/server/middleware/pipeline.ts`）：Auth → RateLimit → Cache → Router → Retry → Provider → Metrics → Logger，支持插拔
+- [x] **Plugin System**（`src/server/plugins/plugin-system.ts`）：Provider/Router/Cache/Auth/Metrics 插件化
+- [x] **Config Hot Reload**（`src/server/config/hot-reload.ts`）：Dashboard 修改权重/路由，无需重启
+
+#### P2 可靠性
+
+- [x] **Bulkhead**（`src/server/middleware/bulkhead.ts`）：Provider 连接池隔离，互不影响
+- [x] **Hedged Request**（`src/server/middleware/hedged-request.ts`）：超时未返回时同时发备用 provider，谁快用谁
+- [x] **Adaptive Retry**（`src/server/middleware/adaptive-retry.ts`）：429/500/503 不同退避策略
+
+#### P3 AI Native
+
+- [x] **Prompt Guard**（`src/server/prompt/guard.ts`）：PII 自动 Mask
+- [x] **Prompt Rewrite**（`src/server/prompt/rewrite.ts`）：System + Tenant + User Prompt 统一
+
+#### P6 性能
+
+- [x] **Streaming Buffer**（`src/server/middleware/streaming-buffer.ts`）：SSE 缓冲 32ms 后 flush
+- [x] **Memory Pool**（`src/server/middleware/memory-pool.ts`）：减少 JSON Parse / 对象创建
+- [x] **Compression**（`src/server/middleware/compression.ts`）：SSE Gzip
+
+#### P0 测试
+
+- [x] **Provider Mock**（`src/server/providers/mock-provider.ts`）：单元测试不依赖真实 API
+- [x] **Utils 测试**（`src/shared/utils.test.ts`）
+- [x] **Registry 测试**（`src/server/providers/registry.test.ts`）
 
 ---
 
-## 版本路线
-
-### v1.2 —— AI Native Gateway
-
-**主题**：让 Gateway 真正"懂"用户意图，自动选择最佳 Provider。
-
-#### 1. Intent Router
-
-**背景**：当前 Router 依赖用户指定 `model`，无法智能分发。
-
-**目标**：
-```
-Prompt
-    │
-    ▼
-Intent Classifier
-    │
-    ├── Code
-    ├── Math
-    ├── Translation
-    ├── Vision
-    ├── Long Context
-    └── Cheap Chat
-          │
-          ▼
-最佳 Provider
-```
-
-**实现步骤**：
-1. 定义 Intent 分类枚举（Code/Math/Translation/Vision/LongContext/CheapChat）。
-2. 实现 Intent Classifier：
-   - 简单规则：关键词匹配（如 "代码" → Code）。
-   - 进阶：调用本地小模型或 LLM 分类。
-3. 配置 Intent → Provider 映射表（可热更新）。
-4. 在 `src/server/routes/chat.ts` 中集成，替换当前的 `weightedPicker`。
-
-**示例**：
-```
-"帮我写 Spring Boot" → Code → Claude
-"解释线性代数" → Math → Qwen
-"识别图片" → Vision → Gemini
-```
-
-**验收标准**：
-- Intent 分类准确率 ≥ 90%。
-- 路由决策耗时 ≤ 50ms。
-
-#### 2. Cost Optimizer
-
-**背景**：`model=auto` 时，用户希望自动选择性价比最高的 Provider。
-
-**目标**：
-```
-估算 token
-    ↓
-预算
-    ↓
-历史成功率
-    ↓
-当前价格
-    ↓
-选择 Provider
-```
-
-**实现步骤**：
-1. 集成 Token 计算器（基于 tiktoken 或简单词数估算）。
-2. 配置 Provider 价格表（per 1k tokens）。
-3. 配置租户预算上限。
-4. 实现 Cost Optimizer：
-   - 过滤超预算 Provider。
-   - 按性价比（成功率 / 价格）排序。
-   - 自动选择最优。
-
-**示例**：
-```
-用户：model=auto
-Gateway：预计花费 ¥0.012 → 自动切 DeepSeek
-```
-
-**验收标准**：
-- 成本估算误差 ≤ 10%。
-- 自动路由成功率 ≥ 95%。
-
-#### 3. Quality Score Router
-
-**背景**：单纯权重路由无法反映 Provider 实时表现。
-
-**目标**：
-```
-Score = 0.5 × Quality + 0.3 × Latency + 0.2 × Cost
-```
-
-**实现步骤**：
-1. 记录每个 Provider 的历史指标：
-   - Quality：成功率 / 用户满意度。
-   - Latency：平均响应时间。
-   - Cost：平均每次消费。
-2. 实现 Score 计算函数。
-3. 在 Router 中按 Score 排序，选择最高分 Provider。
-4. 支持 Score 衰减（老数据权重降低）。
-
-**验收标准**：
-- Score 更新延迟 ≤ 5min。
-- 路由决策耗时 ≤ 100ms。
-
-#### 4. Adaptive TTL
-
-**背景**：当前缓存 TTL 固定，无法适应不同问题类型的时效性。
-
-**目标**：
-```
-天气 → TTL 5min
-Spring IOC → TTL 30天
-```
-
-**实现步骤**：
-1. 定义问题类型 → TTL 映射表。
-2. 在 Cache 层集成 Adaptive TTL 逻辑。
-3. 支持手动覆盖（用户指定 TTL）。
-
-**验收标准**：
-- TTL 自动判断准确率 ≥ 95%。
-
----
+## 待实现版本路线
 
 ### v1.3 —— LLMOps
 
@@ -550,35 +464,4 @@ nexus health
 
 ---
 
-> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿。
-</arg_value>
-<task_progress>
-- [x] 轮换 Master Key + 租户 Key（安全）
-- [x] v1.0 容错三件套（熔断/加权路由/重试）+ 13 测试
-- [x] v2 无 key 自动禁用（Capability Discovery）
-- [x] Health Probe 四态健底探测
-- [x] 34/34 测试全绿
-- [x] GitHub push（v1.1.1/v1.1.2 tags）
-- [x] 增强缓存权限模型修正（用户申请/管理员审核&取消）
-- [x] Prometheus /metrics + CI 工作流
-- [x] Provider 级代理支持（GEMINI_PROXY 走 clash）
-- [x] Gemini 通过网关调用成功（gemini-flash-lite）
-- [x] 代理配置写入 .env.example/production + README（去隐私化）
-- [x] 定位 CI npm ci 失败根因：lockfile 缺 esbuild 0.28/@emnapi 解析条目（自相矛）
-- [x] 删除 node_modules + lockfile，官方 registry 全新重建自洽 lockfile
-- [x] 本地验证 npm ci 成功（esbuild 0.28.1 / @emnapi 齐全）
-- [x] 本地验证 tsc + 34/34 通过
-- [x] 提交重建的 lockfile（c41903c），CI 的 npm ci 已通过
-- [x] 修复 flaky 测试：buildWeightedChain 用 mock Math.random 固定 picked
-- [x] 提交推送 flaky 测试修复（63ddf99）
-- [x] 确认 CI 变绿（run 30709007735 success）
-- [x] 修复日志时区：pino-pretty 加入 timeZone: Asia/Shanghai
-- [x] 编写 fit/improve.md 完善方向清单（按 P0~P6 优先级组织）
-- [x] 推送 improve.md + logger 时区修复到 GitHub（bd2cedf）
-- [x] 停止本地服务进程
-- [x] 从 GitHub 拉取同步项目到本地（3655616）
-- [x] 重写 fit/improve.md 为版本路线（v1.2 AI Native / v1.3 LLMOps / v1.4 Enterprise / v2.0 AI Infra）
-- [x] 推送重写后的 improve.md 到 GitHub（cd0e3ee）
-- [x] 重写 fit/improve.md 为详细开发路线图（含背景/目标/步骤/验收标准）
-</task_progress>
-</write_to_file>
+> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿（192/192 测试通过）。
