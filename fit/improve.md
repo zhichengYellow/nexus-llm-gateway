@@ -24,9 +24,15 @@
 - [x] Capability Discovery（无 key 自动禁用云 provider）
 - [x] Prometheus /metrics 端点
 - [x] Provider 级代理支持（`<TYPE>_PROXY` 环境变量）
-- [x] CLI 工具、离线基准测试、性能压测
-- [x] CI 每日基准工作流
 - [x] 时区修复（Asia/Shanghai）
+
+#### 基准测试与 CI（v1.1.3）
+
+- [x] 离线基准测试（`benchmark/offline-benchmark.mjs`）
+- [x] 缓存基准测试（`benchmark/cache-benchmark.mjs`）
+- [x] 性能压测（`benchmark/load-test.mjs`）
+- [x] CI 每日基准工作流（`.github/workflows/benchmark.yml`）
+- [ ] CLI 工具（`nexus doctor / health / cache clear`）— 尚未实现
 
 #### v1.2 AI Native Gateway
 
