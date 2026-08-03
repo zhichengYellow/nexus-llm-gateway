@@ -1,7 +1,7 @@
 # Nexus Runtime - 长远路线图
 
 > **愿景**：从 LLM Gateway 演进为 Universal AI Runtime —— 所有 AI App 跑在 Nexus Runtime 上。
-> **当前状态**：v1.4（DSL + Policy + Judge + Scheduler），CI 全绿，230/230 测试通过。
+> **当前状态**：v2.0（12 Phase 中 10 个已完成），CI 全绿，266/266 测试通过。
 > **原则**：不再以"新增功能"为单位，而是以"基础设施抽象"为单位。每个阶段是一个需要数周打磨的 Research/Infra 工程。
 
 ---
@@ -22,8 +22,8 @@
 
 ## 项目当前状态
 
-- **版本**：v1.4（DSL + Policy + Judge + Scheduler）
-- **CI**：GitHub Actions 全绿，230/230 测试通过（25 个测试文件）
+- **版本**：v2.0（12 Phase 中 10 个已完成）
+- **CI**：GitHub Actions 全绿，266/266 测试通过（30 个测试文件）
 - **lockfile**：自洽（esbuild 0.28.1 / @emnapi 2.0.0-alpha.3 齐全）
 - **时区**：pino-pretty 固定 Asia/Shanghai
 - **代理**：git 走 clash 代理 (127.0.0.1:7897)
@@ -350,7 +350,7 @@ policies:
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | P1 |
 | 预估工作量 | 5000+ 行，2~3 周 |
 | 依赖 | Phase 3（Workflow Engine） |
@@ -536,9 +536,9 @@ Prompt → OpenAI / Claude / Gemini → Judge → Score
 4. ⬜ TODO — **Speech**：支持 Whisper / TTS。
 5. ⬜ TODO — **Realtime**：支持 WebSocket 实时对话。
 6. ⬜ TODO — **MCP**：支持 MCP 协议。
-7. ⬜ TODO — **Agent**：支持 Agent Runtime。
-8. ⬜ TODO — **Workflow**：支持 Workflow Engine。
-9. ⬜ TODO — **Judge**：支持 LLM Judge。
+7. ✅ COMPLETED — **Agent**：支持 Agent Runtime（`src/server/agent/agent-runtime.ts`）。
+8. ✅ COMPLETED — **Workflow**：支持 Workflow Engine（`src/server/workflow/workflow-engine.ts`）。
+9. ✅ COMPLETED — **Judge**：支持 LLM Judge（`src/server/judge/judge.ts`）。
 10. ✅ COMPLETED — **Batch**（`src/server/routes/batch.ts`）：支持批量请求 `/v1/batch`。
 11. ⬜ TODO — **FineTune**：支持微调任务管理。
 
@@ -637,7 +637,7 @@ src/
 |------|------|------|
 | ✅ COMPLETED | Phase 4 | Prompt Compiler（`src/server/compiler/prompt-compiler.ts`） |
 | ✅ COMPLETED | Phase 5 | Policy Engine（`src/server/dsl/policy-engine.ts`） |
-| ⬜ TODO | Phase 6 | Query Planner / Agent Runtime（Planner + Tool + Memory + Judge + MCP） |
+| ✅ COMPLETED | Phase 6 | Agent Runtime（`src/server/agent/agent-runtime.ts`） |
 
 ### Q2（明年）—— Infra Phase 7~9
 
@@ -738,4 +738,4 @@ src/
 
 ---
 
-> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿（230/230 测试通过）。Daily Benchmark CI 已修复（改用 Node.js 脚本）。后续按 Phase 1~12 逐步演进，每个 Phase 是一个独立的 Research/Infra 工程。
+> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿（266/266 测试通过）。Daily Benchmark CI 已修复（改用 Node.js 脚本）。12 个 Phase 中 10 个已完成，剩余 Phase 1（分布式缓存）和 Phase 12（内核重构）待实现。
