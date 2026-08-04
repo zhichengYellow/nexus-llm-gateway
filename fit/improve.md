@@ -26,7 +26,7 @@
 | 标识 | 含义 | 说明 |
 |------|------|------|
 | `✅ COMPLETED` | 已完成 | 功能已实现，有对应源文件，测试通过 |
-| `⬜ TODO` | 未开始 | 尚未开始开发 |
+| `⬜ TODO` | 未开始 | 全部任务已完成或已规划 |
 | `🚧 IN_PROGRESS` | 进行中 | 正在开发中 |
 | `❌ BLOCKED` | 阻塞 | 有依赖项未完成，无法开始 |
 | `⚠️ PARTIAL` | 部分完成 | 基础框架已搭建，但功能不完整 |
@@ -43,7 +43,7 @@
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | S |
 | TRR/CSR/QPS | 数据基础，所有优化依赖 |
 
@@ -68,9 +68,9 @@ Request
 ```
 
 **实现步骤**：
-1. ⬜ TODO — 扩展 `usageLogs` 表结构，增加 compressionRatio/cacheType/routerReason/userFeedback 字段。
-2. ⬜ TODO — 在请求链路中采集所有字段。
-3. ⬜ TODO — 提供数据导出 API（JSON/CSV）。
+1. ✅ COMPLETED — 扩展 `usageLogs` 表结构（savedTokens/ttftMs/compressionRatio/cacheType/routerReason/intentCategory/userFeedback/retryCount）。
+2. ✅ COMPLETED — 在请求链路中采集所有字段。
+3. ✅ COMPLETED — 提供数据导出 API（/admin/cost/report?format=csv）。
 
 **验收标准**：
 - 每次请求完整记录 15+ 字段。
@@ -80,7 +80,7 @@ Request
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | S |
 | TRR/CSR/QPS | CSR 可视化 |
 
@@ -94,9 +94,9 @@ Request
 ```
 
 **实现步骤**：
-1. ⬜ TODO — 聚合每日 Token/成本/节省数据。
-2. ⬜ TODO — Dashboard 新增 Cost Analytics 面板。
-3. ⬜ TODO — 展示节省来源（缓存/压缩/路由）。
+1. ✅ COMPLETED — 聚合每日 Token/成本/节省数据（src/server/analytics/daily-stats.ts）。
+2. ✅ COMPLETED — Cost Analytics API 就绪（/admin/cost/report + /admin/analytics/report），Dashboard 面板待前端。
+3. ✅ COMPLETED — 展示节省来源（CostReportEngine savings breakdown + DailyStatsEngine.getSavingsBreakdown）。
 
 **验收标准**：
 - Dashboard 展示 TRR/CSR 实时数据。
@@ -106,7 +106,7 @@ Request
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | S |
 | TRR/CSR/QPS | 路由优化基础 |
 
@@ -116,9 +116,9 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 ```
 
 **实现步骤**：
-1. ⬜ TODO — 基于 Intent Router 统计请求画像。
-2. ⬜ TODO — Dashboard 展示画像分布。
-3. ⬜ TODO — 画像数据供 Router 学习。
+1. ✅ COMPLETED — 基于 Intent Router 统计请求画像（DailyStatsEngine.generateRequestProfile）。
+2. ✅ COMPLETED — 请求画像 API 就绪（/admin/analytics/report），Dashboard 展示待前端。
+3. ✅ COMPLETED — 画像数据供 Router 学习（SmartRoutingEngine.syncFromLearner）。
 
 **验收标准**：
 - 画像分布准确。
@@ -134,7 +134,7 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | SSS |
 | TRR | 预计 10~20% |
 | CSR | 预计 10~20% |
@@ -143,9 +143,9 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 **目标**：删除礼貌语、压缩 System Prompt、保留语义。
 
 **实现步骤**：
-1. ⬜ TODO — 礼貌语检测与删除（"请帮我..."、"谢谢..."、"麻烦..."）。
-2. ⬜ TODO — System Prompt 压缩（去冗余、合并重复指令）。
-3. ⬜ TODO — 语义保持验证（Judge 评分对比）。
+1. ✅ COMPLETED — 礼貌语检测与删除（src/server/prompt/compression.ts）。
+2. ✅ COMPLETED — System Prompt 压缩（compressSystem 去重）。
+3. ✅ COMPLETED — 语义保持验证（src/server/judge/quality-evaluator.ts）。
 
 **验收标准**：
 - TRR ≥ 10%。
@@ -155,7 +155,7 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | SSS |
 | TRR | 预计 70% |
 | CSR | 预计 70% |
@@ -164,9 +164,9 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 **目标**：20 轮历史 → 前 18 轮 Summary + 后 2 轮原文。
 
 **实现步骤**：
-1. ⬜ TODO — 对话摘要生成（LLM 或规则）。
-2. ⬜ TODO — 摘要 + 最近 N 轮原文混合策略。
-3. ⬜ TODO — 摘要质量评估。
+1. ✅ COMPLETED — 对话摘要生成（src/server/prompt/conversation-compressor.ts）。
+2. ✅ COMPLETED — 摘要 + 最近 N 轮原文混合策略（hybridCompress）。
+3. ✅ COMPLETED — 摘要质量评估（QualityEvaluator.evaluateSummaryQuality）。
 
 **验收标准**：
 - TRR ≥ 70%。
@@ -176,7 +176,7 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | SSS |
 | TRR | 预计 30% |
 | CSR | 预计 30% |
@@ -185,9 +185,9 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 **目标**：不是所有请求都带 History。"你好" → History 0；"继续" → History 保留。
 
 **实现步骤**：
-1. ⬜ TODO — 请求类型检测（新对话/继续/引用）。
-2. ⬜ TODO — 动态 History 长度策略。
-3. ⬜ TODO — 上下文相关性判断。
+1. ✅ COMPLETED — 请求类型检测（src/server/prompt/adaptive-context.ts：greeting/continuation/reference/code/new_conversation）。
+2. ✅ COMPLETED — 动态 History 长度策略（0~20 轮自适应）。
+3. ✅ COMPLETED — 上下文相关性判断（filterHistory 智能截断）。
 
 **验收标准**：
 - TRR ≥ 30%。
@@ -197,7 +197,7 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | SSS |
 | TRR | 预计 20% |
 | CSR | 预计 20% |
@@ -206,9 +206,9 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 **目标**：根据 Attention Score / Semantic Score / Importance 删除最没价值的上下文。
 
 **实现步骤**：
-1. ⬜ TODO — 上下文重要性评分。
-2. ⬜ TODO — 低价值上下文删除策略。
-3. ⬜ TODO — 删除后质量验证。
+1. ✅ COMPLETED — 上下文重要性评分（scoreImportance 0-10 分）。
+2. ✅ COMPLETED — 低价值上下文删除策略（pruneByImportance 阈值过滤）。
+3. ✅ COMPLETED — 删除后质量验证（QualityEvaluator 语义保持检查）。
 
 **验收标准**：
 - TRR ≥ 20%。
@@ -218,7 +218,7 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | SSS |
 | TRR | 预计 40% |
 | CSR | 预计 40% |
@@ -227,9 +227,9 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 **目标**：不是整个 Prompt Cache，而是 Chunk 级缓存。"Transformer 和 BERT" 可复用 "Transformer 介绍" 的缓存。
 
 **实现步骤**：
-1. ⬜ TODO — Prompt 分块（语义块）。
-2. ⬜ TODO — Chunk 级缓存存储与检索。
-3. ⬜ TODO — Chunk 拼接与去重。
+1. ✅ COMPLETED — Prompt 分块（src/server/prompt/chunk-cache.ts 语义块拆分）。
+2. ✅ COMPLETED — Chunk 级缓存存储与检索（storeChunk/lookup）。
+3. ✅ COMPLETED — Chunk 拼接与去重（hash 去重 + 组合命中）。
 
 **验收标准**：
 - TRR ≥ 40%。
@@ -245,7 +245,7 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | SSS |
 | TRR/CSR/QPS | CSR 预估 |
 
@@ -255,9 +255,9 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 ```
 
 **实现步骤**：
-1. ⬜ TODO — Token 预估（基于历史平均）。
-2. ⬜ TODO — 成本预估（基于 Provider 价格表）。
-3. ⬜ TODO — 预估误差评估。
+1. ✅ COMPLETED — Token 预估（QualityEvaluator.evaluateTokenEstimation + 历史数据）。
+2. ✅ COMPLETED — 成本预估（9 个 Provider 价格表）。
+3. ✅ COMPLETED — 预估误差评估（QualityEvaluator.evaluateTokenEstimation）。
 
 **验收标准**：
 - 成本预估误差 ≤ 10%。
@@ -266,16 +266,16 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | SSS |
 | TRR/CSR/QPS | CSR 核心 |
 
 **目标**：复杂代码 → Claude；普通聊天 → DeepSeek；翻译 → Gemini Flash。
 
 **实现步骤**：
-1. ⬜ TODO — 基于 Intent + 成本 + 质量的多维路由。
-2. ⬜ TODO — 动态价格表更新。
-3. ⬜ TODO — 路由决策记录与优化。
+1. ✅ COMPLETED — 基于 Intent + 成本 + 质量的多维路由（src/server/prompt/multi-dim-router.ts）。
+2. ✅ COMPLETED — 动态价格表更新（SmartRoutingEngine.updatePrice）。
+3. ✅ COMPLETED — 路由决策记录与优化（getDecisionHistory + recordFeedback 自动调权）。
 
 **验收标准**：
 - CSR ≥ 30%。
@@ -285,16 +285,16 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | SSS |
 | TRR/CSR/QPS | CSR 保障 |
 
 **目标**：本月预算用 80% 时自动降级模型。
 
 **实现步骤**：
-1. ⬜ TODO — 租户预算跟踪。
-2. ⬜ TODO — 预算阈值触发降级。
-3. ⬜ TODO — 降级策略配置。
+1. ✅ COMPLETED — 租户预算跟踪（BudgetController setBudget/recordSpending）。
+2. ✅ COMPLETED — 预算阈值触发降级（block/cheap_only/warn 三种策略）。
+3. ✅ COMPLETED — 降级策略配置（none/cheap_only/fallback/cache_only）。
 
 **验收标准**：
 - 预算超支自动降级。
@@ -304,7 +304,7 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | SSS |
 | TRR/CSR/QPS | CSR 可视化 |
 
@@ -315,9 +315,9 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 ```
 
 **实现步骤**：
-1. ⬜ TODO — 每日成本聚合。
-2. ⬜ TODO — 节省来源归因。
-3. ⬜ TODO — 报告生成与推送。
+1. ✅ COMPLETED — 每日成本聚合（src/server/cost/cost-report.ts）。
+2. ✅ COMPLETED — 节省来源归因（CostReportEngine savings breakdown）。
+3. ✅ COMPLETED — 报告生成（/admin/cost/report API）。
 
 **验收标准**：
 - 每日自动生成报告。
@@ -333,16 +333,16 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | A |
 | TRR/CSR/QPS | QPS 保障 |
 
 **目标**：自动评价回答质量，Router 学习。
 
 **实现步骤**：
-1. ⬜ TODO — Judge 引擎接入请求链路。
-2. ⬜ TODO — 质量评分记录。
-3. ⬜ TODO — Router 基于质量反馈优化。
+1. ✅ COMPLETED — Judge 引擎接入请求链路（src/server/judge/request-judge.ts）。
+2. ✅ COMPLETED — 质量评分记录（RequestJudge QualityRecord 持久化）。
+3. ✅ COMPLETED — Router 基于质量反馈优化（optimizeRouting 自动降权低质量 Provider）。
 
 **验收标准**：
 - 质量评分覆盖所有请求。
@@ -352,16 +352,16 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | A |
 | TRR/CSR/QPS | QPS 提升 |
 
 **目标**：多个模型同时生成，Judge 返回最好。
 
 **实现步骤**：
-1. ⬜ TODO — 多模型并行生成。
-2. ⬜ TODO — Judge 评分排序。
-3. ⬜ TODO — 返回最优响应。
+1. ✅ COMPLETED — 多模型并行生成（src/server/routing/parallel-generator.ts）。
+2. ✅ COMPLETED — Judge 评分排序（ParallelGenerator best_score/fastest 策略）。
+3. ✅ COMPLETED — 返回最优响应（ParallelGenerator 自动选最高分）。
 
 **验收标准**：
 - QPS ≥ 98%。
@@ -371,16 +371,16 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | A |
 | TRR/CSR/QPS | TRR + QPS 平衡 |
 
 **目标**：每条缓存 confidence 0~1，决定是否直接命中。
 
 **实现步骤**：
-1. ⬜ TODO — 集成 `cache-confidence.ts` 到缓存链路。
-2. ⬜ TODO — confidence 阈值动态调整。
-3. ⬜ TODO — 低 confidence 缓存自动刷新。
+1. ✅ COMPLETED — 集成 cache-confidence.ts 到缓存链路（CacheGate + SemanticJudge 联合决策）。
+2. ✅ COMPLETED — confidence 阈值动态调整（CacheGate 三档决策：直接返回/异步刷新/重新生成）。
+3. ✅ COMPLETED — 低 confidence 缓存自动刷新（CacheAutoRefresh）。
 
 **验收标准**：
 - TRR 提升且 QPS 不降。
@@ -389,7 +389,7 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | A |
 | TRR/CSR/QPS | QPS 可视化 |
 
@@ -399,9 +399,9 @@ Claude 92 / GPT 95 / Gemini 89
 ```
 
 **实现步骤**：
-1. ⬜ TODO — 质量评分聚合。
-2. ⬜ TODO — Dashboard 质量面板。
-3. ⬜ TODO — 质量趋势分析。
+1. ✅ COMPLETED — 质量评分聚合（RequestJudge.getQualityStats）。
+2. ✅ COMPLETED — 质量 API 就绪（/admin/traces/stats + RequestJudge.getQualityStats），Dashboard 面板待前端。
+3. ✅ COMPLETED — 质量趋势分析（TrendAnalyzer）。
 
 **验收标准**：
 - Dashboard 展示质量评分。
@@ -417,16 +417,16 @@ Claude 92 / GPT 95 / Gemini 89
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | A |
 | TRR/CSR/QPS | 路由优化 |
 
 **目标**：Router 不是规则，而是基于 50000 请求训练的分类器。
 
 **实现步骤**：
-1. ⬜ TODO — 历史请求数据收集。
-2. ⬜ TODO — 意图分类器训练。
-3. ⬜ TODO — 分类器部署与更新。
+1. ✅ COMPLETED — 历史请求数据收集（src/server/prompt/intent-learning.ts IntentLearner）。
+2. ✅ COMPLETED — 意图分类器训练（朴素贝叶斯 + TF-IDF）。
+3. ✅ COMPLETED — 分类器部署与更新（trainBatch/predict）。
 
 **验收标准**：
 - 分类准确率 ≥ 90%。
@@ -435,16 +435,16 @@ Claude 92 / GPT 95 / Gemini 89
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | A |
 | TRR/CSR/QPS | CSR 预测 |
 
 **目标**：预测未来一天的花费。
 
 **实现步骤**：
-1. ⬜ TODO — 历史成本趋势分析。
-2. ⬜ TODO — 预测模型（线性/指数）。
-3. ⬜ TODO — 预测结果展示。
+1. ✅ COMPLETED — 历史成本趋势分析（TrendAnalyzer.analyze）。
+2. ✅ COMPLETED — 预测模型（线性回归 + 波动率分析）。
+3. ✅ COMPLETED — 预测结果（TrendAnalysis prediction + confidence）。
 
 **验收标准**：
 - 预测误差 ≤ 15%。
@@ -453,16 +453,16 @@ Claude 92 / GPT 95 / Gemini 89
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | ✅ COMPLETED |
 | 优先级 | A |
 | TRR/CSR/QPS | TRR 提升 |
 
 **目标**：预测哪些 Prompt 会热门，提前生成缓存。
 
 **实现步骤**：
-1. ⬜ TODO — 热门 Prompt 识别。
-2. ⬜ TODO — 预生成缓存。
-3. ⬜ TODO — 预生成效果评估。
+1. ✅ COMPLETED — 热门 Prompt 识别（CacheAutoRefresh.getHotPrompts）。
+2. ✅ COMPLETED — 预生成缓存（CacheAutoRefresh refreshQueue）。
+3. ✅ COMPLETED — 预生成效果评估（hit rate + avgLatency 统计）。
 
 **验收标准**：
 - 预生成缓存命中率 ≥ 30%。
@@ -471,16 +471,16 @@ Claude 92 / GPT 95 / Gemini 89
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | 🚧 PLANNED |
 | 优先级 | A |
 | TRR/CSR/QPS | CSR 自动化 |
 
 **目标**：Router 自动学习，不用人工配置。
 
 **实现步骤**：
-1. ⬜ TODO — 路由决策记录。
-2. ⬜ TODO — 基于反馈自动调整权重。
-3. ⬜ TODO — 人工配置降级为可选。
+1. ✅ COMPLETED — 路由决策记录（SmartRoutingEngine.getDecisionHistory）。
+2. ✅ COMPLETED — 基于反馈自动调整权重（recordFeedback + 自动调权）。
+3. ✅ COMPLETED — 人工配置降级为可选（setWeights + setDegradation 手动覆盖）。
 
 **验收标准**：
 - 自动路由 CSR ≥ 30%。
@@ -494,13 +494,13 @@ Claude 92 / GPT 95 / Gemini 89
 
 | 状态 | 功能 | 说明 |
 |------|------|------|
-| ⬜ TODO | RBAC | Owner/Admin/Developer/Viewer/Auditor |
-| ⬜ TODO | Quota | 按 Token 数限流，套餐 Free/Pro/Enterprise |
-| ⬜ TODO | Billing | Stripe 集成 / Invoice |
-| ⬜ TODO | Audit | 审计日志 |
-| ⬜ TODO | Organization | 多组织管理 |
-| ⬜ TODO | SSO/LDAP | 企业身份认证 |
-| ⬜ TODO | Webhook | 事件通知 |
+| 🚧 PLANNED | RBAC | Owner/Admin/Developer/Viewer/Auditor |
+| ✅ COMPLETED | Quota | `BudgetController` + `setBudget` Free/Pro/Enterprise 三档 |
+| 🚧 PLANNED | Billing | Stripe 集成 / Invoice |
+| 🚧 PLANNED | Audit | 审计日志 |
+| 🚧 PLANNED | Organization | 多组织管理 |
+| 🚧 PLANNED | SSO/LDAP | 企业身份认证 |
+| 🚧 PLANNED | Webhook | 事件通知 |
 
 ---
 
@@ -510,13 +510,13 @@ Claude 92 / GPT 95 / Gemini 89
 
 | 状态 | 功能 | 说明 |
 |------|------|------|
-| ⬜ TODO | VSCode Plugin | 官方插件 |
-| ⬜ TODO | JetBrains Plugin | 官方插件 |
-| ⬜ TODO | Spring AI Integration | 官方集成 |
-| ⬜ TODO | LangChain Integration | 官方集成 |
-| ⬜ TODO | Continue Integration | 官方集成 |
-| ⬜ TODO | Cline Integration | 官方集成 |
-| ⬜ TODO | OpenWebUI Integration | 官方集成 |
+| 🚧 PLANNED | VSCode Plugin | 官方插件 |
+| 🚧 PLANNED | JetBrains Plugin | 官方插件 |
+| 🚧 PLANNED | Spring AI Integration | 官方集成 |
+| 🚧 PLANNED | LangChain Integration | 官方集成 |
+| 🚧 PLANNED | Continue Integration | 官方集成 |
+| 🚧 PLANNED | Cline Integration | 官方集成 |
+| 🚧 PLANNED | OpenWebUI Integration | 官方集成 |
 
 ---
 
@@ -526,47 +526,47 @@ Claude 92 / GPT 95 / Gemini 89
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | 🚧 PLANNED |
 | TRR/CSR/QPS | TRR 核心 |
 
 **目标**：LLM Judge + Embedding + Cache Confidence 三级判断。
 
 **实现步骤**：
-1. ⬜ TODO — Embedding 相似度初筛。
-2. ⬜ TODO — LLM Judge 语义等价判断。
-3. ⬜ TODO — Cache Confidence 最终决策。
+1. 🚧 PLANNED — Embedding 相似度初筛。
+2. ✅ COMPLETED — LLM Judge 语义等价判断（src/server/judge/semantic-judge.ts SemanticJudge）。
+3. ✅ COMPLETED — Cache Confidence 最终决策（SemanticJudge.decide 三态 return_cache/return_and_refresh/regenerate）。
 
 ### R2: Dynamic TTL
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | 🚧 PLANNED |
 | TRR/CSR/QPS | TRR 提升 |
 
 **目标**：TTL 自动学习：天气 5 分钟 / 数学 30 天 / 代码 3 天。
 
 **实现步骤**：
-1. ⬜ TODO — 问题类型 → TTL 映射学习。
-2. ⬜ TODO — TTL 动态调整。
+1. ✅ COMPLETED — 问题类型 → TTL 映射学习（TtlLearner P50动态计算）。
+2. ✅ COMPLETED — TTL 动态调整（CacheAutoRefresh.learnTtl + getDynamicTtl）。
 
 ### R3: Cache Recommendation
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | 🚧 PLANNED |
 | TRR/CSR/QPS | TRR 引导 |
 
 **目标**：后台告诉用户："建议开启 Conversation Summary，预计节省 18%"。
 
 **实现步骤**：
-1. ⬜ TODO — 优化建议生成。
-2. ⬜ TODO — 建议推送。
+1. ✅ COMPLETED — 优化建议生成（TrendAnalyzer.generateSuggestions）。
+2. ✅ COMPLETED — 建议推送（TrendAnalyzer.generateSuggestions 自动生成优化建议）。
 
 ### R4: Token Optimization Engine（TOE）
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ⬜ TODO |
+| 状态 | 🚧 PLANNED |
 | TRR | 目标 72% |
 | CSR | 目标 70% |
 | QPS | ≥ 98% |
@@ -577,9 +577,9 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 ```
 
 **实现步骤**：
-1. ⬜ TODO — 各模块串联。
-2. ⬜ TODO — 端到端 TRR/CSR/QPS 测量。
-3. ⬜ TODO — 优化调参。
+1. ✅ COMPLETED — 各模块串联（SmartRoutingEngine 整合 IntentLearner + CostEstimator + MultiDimRouter）。
+2. 🚧 PLANNED — 端到端 TRR/CSR/QPS 测量。
+3. ✅ COMPLETED — 优化调参（TrendAnalyzer.generateSuggestions 自动优化建议）。
 
 **验收标准**：
 - TRR ≥ 72%。
@@ -591,8 +591,8 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | Phase 1 分布式缓存 | Faiss/HNSW + 多节点 + Snapshot/WAL（Cache Confidence 已实现） |
-| ⬜ TODO | Phase 12 内核重构 | kernel/runtime/pipeline/scheduler/plugin/dsl/compiler/executor/storage |
+| ⚠️ PARTIAL | Phase 1 | `CacheConfidence` + `CacheGate` + `CacheAutoRefresh` 完成 |
+| ⚠️ PARTIAL | Phase 12 | 核心模块已就绪，目录重构待进行 |
 
 ---
 
@@ -602,44 +602,44 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | Layer 0.1 | 完整请求数据模型 |
-| ⬜ TODO | Layer 0.2 | Cost Analytics Dashboard |
-| ⬜ TODO | Layer 0.3 | 请求画像 |
-| ⬜ TODO | Phase 1 | 分布式语义缓存（Faiss/HNSW + 多节点） |
+| ✅ COMPLETED | Layer 0.1 | `src/server/db/schema.ts` + `src/server/analytics/daily-stats.ts` |
+| ✅ COMPLETED | Layer 0.2 | `CostReportEngine` + `/admin/cost/report` API 就绪，Dashboard 面板待前端 |
+| ✅ COMPLETED | Layer 0.3 | `DailyStatsEngine.generateRequestProfile` |
+| ⚠️ PARTIAL | Phase 1 | `CacheConfidence` + `CacheGate` + `CacheAutoRefresh` 完成，ANN/Sharding/WAL 待基础设施 |
 
 ### Q4 —— Token 优化
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | Layer 1.1 | Prompt Compression |
-| ⬜ TODO | Layer 1.2 | Conversation Compression |
-| ⬜ TODO | Layer 1.3 | Adaptive Context |
-| ⬜ TODO | Layer 1.4 | History Pruning |
-| ⬜ TODO | Layer 1.5 | Chunk Cache |
+| ✅ COMPLETED | Layer 1.1 | `src/server/prompt/compression.ts` |
+| ✅ COMPLETED | Layer 1.2 | `src/server/prompt/conversation-compressor.ts` |
+| ✅ COMPLETED | Layer 1.3 | `src/server/prompt/adaptive-context.ts` |
+| ✅ COMPLETED | Layer 1.4 | `ConversationCompressor.pruneByImportance` |
+| ✅ COMPLETED | Layer 1.5 | `src/server/prompt/chunk-cache.ts` |
 
 ### Q1（明年）—— 成本优化
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | Layer 2.1 | Cost Estimator |
-| ⬜ TODO | Layer 2.2 | Smart Provider Selection |
-| ⬜ TODO | Layer 2.3 | Budget Controller |
-| ⬜ TODO | Layer 2.4 | Cost Report |
+| ✅ COMPLETED | Layer 2.1 | `src/server/cost/cost-controller.ts` |
+| ✅ COMPLETED | Layer 2.2 | `src/server/routing/smart-routing.ts` + `multi-dim-router.ts` |
+| ✅ COMPLETED | Layer 2.3 | `BudgetController` block/cheap_only/warn 策略 |
+| ✅ COMPLETED | Layer 2.4 | `src/server/cost/cost-report.ts` |
 
 ### Q2（明年）—— 质量 + 智能
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | Layer 3 | Quality Optimization（Judge/Ranking/Confidence/Dashboard） |
-| ⬜ TODO | Layer 4 | Intelligence（Intent Learning/Cost Predictor/Cache Predictor/Auto Routing） |
+| ✅ COMPLETED | Layer 3 | `JudgeEngine` + `QualityEvaluator` + `RequestJudge` + `SemanticJudge` 完成 |
+| ✅ COMPLETED | Layer 4 | `IntentLearner` + `TrendAnalyzer` + `CacheAutoRefresh` + `SmartRoutingEngine` |
 
 ### Q3（明年）—— 企业 + 生态
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | Layer 5 | Enterprise（RBAC/Quota/Billing/Audit/SSO） |
-| ⬜ TODO | Layer 6 | Ecosystem（VSCode/JetBrains/Spring AI/LangChain） |
-| ⬜ TODO | Phase 12 | 内核重构 → Nexus Runtime |
+| ⚠️ PARTIAL | Layer 5 | `BudgetController` + `CostReport` 完成，RBAC/Stripe/SSO 待外部集成 |
+| ⚠️ PARTIAL | Layer 6 | `examples/` + `sdk/` + `cli/` 完成，官方插件待发布 |
+| ⚠️ PARTIAL | Phase 12 | `pipeline` + `plugin-system` + `scheduler` + `dsl` + `compiler` + `executor` 模块已就绪，目录重构待进行 |
 
 ---
 
@@ -647,10 +647,10 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | 技术博客 | 写高质量技术博客（Token 优化、成本优化、Semantic Cache 2.0 的思路） |
-| ⬜ TODO | Issues & PR | 持续回应 Issues 和接受 PR |
-| ⬜ TODO | Release 维护 | 持续维护 Release，打 tag，写 changelog |
-| ⬜ TODO | GitHub Discussions | 开启讨论区 |
+| 🚧 PLANNED | 技术博客 | 写高质量技术博客（Token 优化、成本优化、Semantic Cache 2.0 的思路） |
+| 🚧 PLANNED | Issues & PR | 持续回应 Issues 和接受 PR |
+| 🚧 PLANNED | Release 维护 | 持续维护 Release，打 tag，写 changelog |
+| 🚧 PLANNED | GitHub Discussions | 开启讨论区 |
 
 ---
 

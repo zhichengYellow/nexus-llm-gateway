@@ -70,16 +70,34 @@ export const usageLogs = pgTable(
     promptTokens: integer("prompt_tokens").notNull().default(0),
     completionTokens: integer("completion_tokens").notNull().default(0),
     totalTokens: integer("total_tokens").notNull().default(0),
+    /** 节省的 token 数（压缩 + 缓存） */
+    savedTokens: integer("saved_tokens").default(0),
     costMicro: integer("cost_micro").notNull().default(0),
     latencyMs: integer("latency_ms").notNull().default(0),
+    /** 首 token 延迟 (ms) */
+    ttftMs: integer("ttft_ms").default(0),
     cached: boolean("cached").notNull().default(false),
     stream: boolean("stream").notNull().default(false),
+    /** 压缩率 (0~1) */
+    compressionRatio: integer("compression_ratio").default(0),
+    /** 缓存类型：semantic / exact / none */
+    cacheType: text("cache_type").default("none"),
+    /** 路由决策原因 */
+    routerReason: text("router_reason"),
+    /** 意图类别 */
+    intentCategory: text("intent_category"),
+    /** 用户反馈 (0-5) */
+    userFeedback: integer("user_feedback"),
+    /** 重试次数 */
+    retryCount: integer("retry_count").default(0),
     status: integer("status").notNull().default(200),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     tenantTimeIdx: index("usage_logs_tenant_time_idx").on(t.tenantId, t.createdAt),
     modelTimeIdx: index("usage_logs_model_time_idx").on(t.model, t.createdAt),
+    intentIdx: index("usage_logs_intent_idx").on(t.intentCategory),
+    cacheTypeIdx: index("usage_logs_cache_type_idx").on(t.cacheType),
   }),
 );
 

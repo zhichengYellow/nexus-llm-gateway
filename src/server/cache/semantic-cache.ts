@@ -239,6 +239,27 @@ export class SemanticCache {
       return { totalEntries: 0, totalHits: 0, avgHits: 0, totalSavedTokens: 0 };
     }
   }
+
+  /** 获取缓存条目元信息（供 Cache Confidence 使用） */
+  async getEntry(hash: string): Promise<{ createdAt: unknown; lastAccessedAt: unknown; hits: number; ttl: number } | null> {
+    try {
+      const [row] = await db
+        .select({
+          createdAt: semanticCache.createdAt,
+          lastAccessedAt: semanticCache.lastAccessedAt,
+          hits: semanticCache.hits,
+          expiresAt: semanticCache.expiresAt,
+        })
+        .from(semanticCache)
+        .where(eq(semanticCache.keyHash, hash))
+        .limit(1);
+      if (!row) return null;
+      const ttl = Math.max(1, Math.ceil((new Date(row.expiresAt).getTime() - Date.now()) / 1000));
+      return { createdAt: row.createdAt, lastAccessedAt: row.lastAccessedAt, hits: row.hits ?? 0, ttl };
+    } catch {
+      return null;
+    }
+  }
 }
 
 function formatAge(ms: number): string {
