@@ -16,8 +16,22 @@ import { reloadRegistryFromDB, getHotReloadStatus } from "../config/hot-reload.j
 import { logger } from "../../shared/logger.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
+import { getAuditLogger } from "../audit/audit-logger.js";
+import { parseRole } from "../middleware/rbac.js";
 
 type AdminEnv = AuthEnv & LoggingEnv;
+
+function auditActor(c: any) {
+  const isMaster = c.get("isMaster");
+  const apiKey = c.get("apiKey");
+  const role = parseRole(c.get("role"));
+  return {
+    actor: isMaster ? "master" : (apiKey?.keyPrefix ?? "unknown"),
+    actorRole: role,
+    tenantId: apiKey?.tenantId ?? undefined,
+    ip: c.req.header("x-forwarded-for") ?? c.req.header("x-real-ip") ?? undefined,
+  };
+}
 
 export const adminRoute = new Hono<AdminEnv>();
 
@@ -44,6 +58,9 @@ adminRoute.post(
     const { name, monthlyTokenQuota } = c.req.valid("json");
     const [row] = await db.insert(tenants).values({ name, monthlyTokenQuota }).returning();
     if (!row) return c.json({ error: { message: "insert failed" } }, 500);
+    // audit
+    const aa = auditActor(c);
+    getAuditLogger().log({ ...aa, action: "create_tenant", resource: "tenants", resourceId: row.id, detail: name }).catch(() => {});
     return c.json({ tenant: { id: row.id, name: row.name, monthlyTokenQuota: row.monthlyTokenQuota } }, 201);
   },
 );
@@ -127,10 +144,11 @@ adminRoute.patch("/tenants/:id/reject-premium", async (c) => {
 const createKeySchema = z.object({
   tenantId: z.string().uuid(),
   name: z.string().min(1),
+  role: z.enum(["owner", "admin", "developer", "viewer", "auditor"]).optional().default("developer"),
 });
 
 adminRoute.post("/api-keys", zValidator("json", createKeySchema), async (c) => {
-  const { tenantId, name } = c.req.valid("json");
+  const { tenantId, name, role } = c.req.valid("json");
   // 校验租户存在
   const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
   if (!tenant) {
@@ -141,10 +159,13 @@ adminRoute.post("/api-keys", zValidator("json", createKeySchema), async (c) => {
   const keyHash = hashKey(rawKey);
   const keyPrefix = rawKey.slice(0, 12);
 
-  const [row] = await db.insert(apiKeys).values({ tenantId, name, keyHash, keyPrefix }).returning();
+  const [row] = await db.insert(apiKeys).values({ tenantId, name, keyHash, keyPrefix, role }).returning();
   if (!row) return c.json({ error: { message: "insert failed" } }, 500);
 
-  // 仅此一次返回完整 key
+  // audit
+  const aa = auditActor(c);
+  getAuditLogger().log({ ...aa, action: "create_api_key", resource: "api_keys", resourceId: row.id, detail: `${name} (${role})` }).catch(() => {});
+
   return c.json(
     {
       apiKey: {
@@ -152,6 +173,7 @@ adminRoute.post("/api-keys", zValidator("json", createKeySchema), async (c) => {
         tenantId: row.tenantId,
         name: row.name,
         keyPrefix: row.keyPrefix,
+        role: row.role,
         key: rawKey,
         enabled: row.enabled,
         createdAt: row.createdAt,
@@ -168,6 +190,7 @@ adminRoute.get("/api-keys", async (c) => {
       tenantId: apiKeys.tenantId,
       name: apiKeys.name,
       keyPrefix: apiKeys.keyPrefix,
+      role: apiKeys.role,
       enabled: apiKeys.enabled,
       createdAt: apiKeys.createdAt,
       lastUsedAt: apiKeys.lastUsedAt,
@@ -181,6 +204,9 @@ adminRoute.delete("/api-keys/:id", async (c) => {
   const [row] = await db.select({ id: apiKeys.id }).from(apiKeys).where(eq(apiKeys.id, id)).limit(1);
   if (!row) return c.json({ error: { message: "not found" } }, 404);
   await db.delete(apiKeys).where(eq(apiKeys.id, id));
+  // audit
+  const aa = auditActor(c);
+  getAuditLogger().log({ ...aa, action: "delete_api_key", resource: "api_keys", resourceId: id }).catch(() => {});
   return c.json({ ok: true });
 });
 
@@ -590,7 +616,6 @@ adminRoute.get("/memory/tenant/:id", async (c) => {
 
 // ===== C4: TRR/CSR/QPS 优化指标 =====
 adminRoute.get("/optimization/stats", async (c) => {
-  const { getTrendAnalyzer } = await import("../analytics/trend-analyzer.js");
   const { getDailyStatsEngine } = await import("../analytics/daily-stats.js");
   const dailyStats = getDailyStatsEngine();
   const stats = await dailyStats.generateDailyStats();
@@ -636,4 +661,15 @@ adminRoute.get("/cache/confidence", async (c) => {
     refreshQueueSize: refreshQueue.length,
     ttlMap: autoRefresh.getTtlMap(),
   });
+});
+
+// ===== Layer 5: 审计日志 =====
+adminRoute.get("/audit/logs", async (c) => {
+  const audit = getAuditLogger();
+  const limit = parseInt(c.req.query("limit") ?? "50", 10);
+  const offset = parseInt(c.req.query("offset") ?? "0", 10);
+  const action = c.req.query("action") ?? undefined;
+  const logs = await audit.query({ limit, offset });
+  const total = await audit.count();
+  return c.json({ logs, total, limit, offset });
 });

@@ -6,9 +6,10 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area,
 } from "recharts";
 import { format } from "date-fns";
+import AnalyticsDashboard from "./_analytics-dashboard";
 import {
   LayoutDashboard, KeyRound, Users, Route, Zap, Activity, Shield, Search, ChevronLeft, LogOut,
-  ArrowUpRight, Gauge, Timer, AlertTriangle, CheckCircle2, Server,
+  ArrowUpRight, Gauge, Timer, AlertTriangle, CheckCircle2, Server, BarChart3,
 } from "lucide-react";
 
 interface Props {
@@ -32,15 +33,17 @@ function formatBeijingFull(v: string): string {
 
 const NAV_ITEMS = [
   { id: "overview", label: "概览", icon: LayoutDashboard },
+  { id: "analytics", label: "运营分析", icon: BarChart3 },
   { id: "keys", label: "API Keys", icon: KeyRound },
   { id: "tenants", label: "租户管理", icon: Users },
   { id: "routes", label: "模型路由", icon: Route },
 ] as const;
 
+type TabId = (typeof NAV_ITEMS)[number]["id"];
 type RangeKey = "1h" | "24h" | "7d";
 
 export default function Dashboard({ client, onLogout }: Props) {
-  const [activeTab, setActiveTab] = useState<"overview" | "keys" | "tenants" | "routes">("overview");
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [collapsed, setCollapsed] = useState(false);
   const [summary, setSummary] = useState<any>(null);
   const [timeline, setTimeline] = useState<any>(null);
@@ -348,6 +351,10 @@ export default function Dashboard({ client, onLogout }: Props) {
                 </div>
               </div>
             </>
+          )}
+
+          {activeTab === "analytics" && (
+            <AnalyticsDashboard client={client} />
           )}
 
           {activeTab === "keys" && (

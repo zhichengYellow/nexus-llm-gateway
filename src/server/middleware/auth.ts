@@ -16,6 +16,7 @@ export interface AuthEnv {
     tenant: Tenant | null;
     apiKey: ApiKeyRow | null;
     isMaster: boolean;
+    role: string;
   };
 }
 
@@ -42,6 +43,7 @@ export const authMiddleware: MiddlewareHandler<AuthEnv> = async (c, next) => {
   // master key
   if (token === config.masterKey) {
     c.set("isMaster", true);
+    c.set("role", "owner");
     c.set("tenant", null);
     c.set("apiKey", null);
     await next();
@@ -70,6 +72,7 @@ export const authMiddleware: MiddlewareHandler<AuthEnv> = async (c, next) => {
     return c.json({ error: { message: "api key disabled", type: "auth_error" } }, 403);
   }
 
+  c.set("role", row.apiKey.role ?? "developer");
   c.set("tenant", {
     id: row.tenant.id,
     name: row.tenant.name,
@@ -80,7 +83,8 @@ export const authMiddleware: MiddlewareHandler<AuthEnv> = async (c, next) => {
     tenantId: row.apiKey.tenantId,
     name: row.apiKey.name,
     keyPrefix: row.apiKey.keyPrefix,
-  });
+    role: row.apiKey.role ?? "developer",
+  } as ApiKeyRow);
 
   // 异步更新 lastUsedAt（不阻塞请求）
   db.update(apiKeys)

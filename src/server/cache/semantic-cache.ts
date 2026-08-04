@@ -262,6 +262,61 @@ export class SemanticCache {
       return null;
     }
   }
+
+  /** 拉取最近 N 条有效缓存条目（供 EmbeddingScreener 初筛） */
+  async listRecent(
+    limit = 100,
+    model?: string,
+    _provider?: string,
+  ): Promise<Array<{
+    hash: string;
+    prompt: string;
+    canonical: string;
+    response: any;
+    createdAt: unknown;
+    lastAccessedAt: unknown;
+    hits: number;
+    expiresAt: unknown;
+    ttl: number;
+  }>> {
+    try {
+      const now = new Date();
+      const clauses: any[] = [gt(semanticCache.expiresAt, now)];
+      if (model) clauses.push(eq(semanticCache.model, model));
+
+      const rows = await db
+        .select({
+          keyHash: semanticCache.keyHash,
+          promptPreview: semanticCache.promptPreview,
+          request: semanticCache.request,
+          response: semanticCache.response,
+          createdAt: semanticCache.createdAt,
+          lastAccessedAt: semanticCache.lastAccessedAt,
+          hits: semanticCache.hits,
+          expiresAt: semanticCache.expiresAt,
+        })
+        .from(semanticCache)
+        .where(and(...clauses))
+        .orderBy(sql`${semanticCache.lastAccessedAt} desc nulls last`)
+        .limit(limit);
+
+      return rows.map((r: any) => ({
+        hash: r.keyHash ?? "",
+        prompt: (r.request as any)?.messages?.filter?.((m: any) => m.role === "user")?.map?.((m: any) => m.content)?.join?.(" ") ?? r.promptPreview ?? "",
+        canonical: canonicalText(
+          (r.request as any)?.messages?.filter?.((m: any) => m.role === "user")?.map?.((m: any) => m.content)?.join?.(" ") ?? r.promptPreview ?? "",
+        ),
+        response: r.response,
+        createdAt: r.createdAt,
+        lastAccessedAt: r.lastAccessedAt,
+        hits: r.hits ?? 0,
+        expiresAt: r.expiresAt,
+        ttl: Math.max(1, Math.ceil((new Date(r.expiresAt).getTime() - Date.now()) / 1000)),
+      }));
+    } catch {
+      return [];
+    }
+  }
 }
 
 function formatAge(ms: number): string {

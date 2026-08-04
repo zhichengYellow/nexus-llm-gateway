@@ -95,7 +95,7 @@ Request
 
 **实现步骤**：
 1. ✅ COMPLETED — 聚合每日 Token/成本/节省数据（src/server/analytics/daily-stats.ts）。
-2. ✅ COMPLETED — Cost Analytics API 就绪（/admin/cost/report + /admin/analytics/report），Dashboard 面板待前端。
+2. ✅ COMPLETED — Cost Analytics API 就绪（/admin/cost/report + /admin/analytics/report），Dashboard 面板已完成（运营分析标签页）。
 3. ✅ COMPLETED — 展示节省来源（CostReportEngine savings breakdown + DailyStatsEngine.getSavingsBreakdown）。
 
 **验收标准**：
@@ -117,7 +117,7 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 **实现步骤**：
 1. ✅ COMPLETED — 基于 Intent Router 统计请求画像（DailyStatsEngine.generateRequestProfile）。
-2. ✅ COMPLETED — 请求画像 API 就绪（/admin/analytics/report），Dashboard 展示待前端。
+2. ✅ COMPLETED — 请求画像 API 就绪（/admin/analytics/report），Dashboard 展示已完成（模型用量排行、租户用量一览、分析摘要）。
 3. ✅ COMPLETED — 画像数据供 Router 学习（SmartRoutingEngine.syncFromLearner）。
 
 **验收标准**：
@@ -400,7 +400,7 @@ Claude 92 / GPT 95 / Gemini 89
 
 **实现步骤**：
 1. ✅ COMPLETED — 质量评分聚合（RequestJudge.getQualityStats）。
-2. ✅ COMPLETED — 质量 API 就绪（/admin/traces/stats + RequestJudge.getQualityStats），Dashboard 面板待前端。
+2. ✅ COMPLETED — 质量 API 就绪（/admin/traces/stats + RequestJudge.getQualityStats），Dashboard 面板已完成（TRR/CSR/QPS 指标卡片、优化建议）。
 3. ✅ COMPLETED — 质量趋势分析（TrendAnalyzer）。
 
 **验收标准**：
@@ -471,7 +471,7 @@ Claude 92 / GPT 95 / Gemini 89
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | 🚧 PLANNED |
+| 状态 | ✅ COMPLETED |
 | 优先级 | A |
 | TRR/CSR/QPS | CSR 自动化 |
 
@@ -494,10 +494,10 @@ Claude 92 / GPT 95 / Gemini 89
 
 | 状态 | 功能 | 说明 |
 |------|------|------|
-| 🚧 PLANNED | RBAC | Owner/Admin/Developer/Viewer/Auditor |
+| ✅ COMPLETED | RBAC | Owner/Admin/Developer/Viewer/Auditor（src/server/middleware/rbac.ts，api_keys.role + requirePermission 中间件） |
 | ✅ COMPLETED | Quota | `BudgetController` + `setBudget` Free/Pro/Enterprise 三档 |
 | 🚧 PLANNED | Billing | Stripe 集成 / Invoice |
-| 🚧 PLANNED | Audit | 审计日志 |
+| ✅ COMPLETED | Audit | 审计日志（src/server/audit/audit-logger.ts，audit_logs 表，/admin/audit/logs API） |
 | 🚧 PLANNED | Organization | 多组织管理 |
 | 🚧 PLANNED | SSO/LDAP | 企业身份认证 |
 | 🚧 PLANNED | Webhook | 事件通知 |
@@ -526,13 +526,13 @@ Claude 92 / GPT 95 / Gemini 89
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | 🚧 PLANNED |
+| 状态 | ✅ COMPLETED |
 | TRR/CSR/QPS | TRR 核心 |
 
 **目标**：LLM Judge + Embedding + Cache Confidence 三级判断。
 
 **实现步骤**：
-1. 🚧 PLANNED — Embedding 相似度初筛。
+1. ✅ COMPLETED — Embedding 相似度初筛（src/server/cache/embedding-screener.ts，TF-IDF + Cosine 相似度）。
 2. ✅ COMPLETED — LLM Judge 语义等价判断（src/server/judge/semantic-judge.ts SemanticJudge）。
 3. ✅ COMPLETED — Cache Confidence 最终决策（SemanticJudge.decide 三态 return_cache/return_and_refresh/regenerate）。
 
@@ -540,7 +540,7 @@ Claude 92 / GPT 95 / Gemini 89
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | 🚧 PLANNED |
+| 状态 | ✅ COMPLETED |
 | TRR/CSR/QPS | TRR 提升 |
 
 **目标**：TTL 自动学习：天气 5 分钟 / 数学 30 天 / 代码 3 天。
@@ -553,7 +553,7 @@ Claude 92 / GPT 95 / Gemini 89
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | 🚧 PLANNED |
+| 状态 | ✅ COMPLETED |
 | TRR/CSR/QPS | TRR 引导 |
 
 **目标**：后台告诉用户："建议开启 Conversation Summary，预计节省 18%"。
@@ -566,7 +566,7 @@ Claude 92 / GPT 95 / Gemini 89
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | 🚧 PLANNED |
+| 状态 | ✅ COMPLETED |
 | TRR | 目标 72% |
 | CSR | 目标 70% |
 | QPS | ≥ 98% |
@@ -578,7 +578,7 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 **实现步骤**：
 1. ✅ COMPLETED — 各模块串联（SmartRoutingEngine 整合 IntentLearner + CostEstimator + MultiDimRouter）。
-2. 🚧 PLANNED — 端到端 TRR/CSR/QPS 测量。
+2. ✅ COMPLETED — 端到端 TRR/CSR/QPS 测量（src/server/analytics/e2e-metrics.ts，全链路 4 个测量点：entry → after_compress → after_response → after_judge）。
 3. ✅ COMPLETED — 优化调参（TrendAnalyzer.generateSuggestions 自动优化建议）。
 
 **验收标准**：
@@ -658,7 +658,7 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 | ✅ COMPLETED | `GET /admin/optimization/suggestions` | 优化建议（TrendAnalyzer.generateSuggestions） |
 | ✅ COMPLETED | `GET /admin/cost/report` | 成本报告（已存在 `/admin/cost/report`，补 Dashboard 面板） |
 | ✅ COMPLETED | `GET /admin/cache/confidence` | 缓存置信度分布（CacheGate） |
-| 🚧 PLANNED | Dashboard 面板 | API 已就绪（/admin/optimization/*），Vercel 深色面板待前端 |
+| ✅ COMPLETED | Dashboard 面板 | 运营分析标签页已实现（TRR/CSR/QPS 指标、成本趋势、节省来源、模型排行、Provider 分布、优化建议、热点缓存、租户用量） |
 
 **验收标准**：
 - 新端点鉴权走 master key
@@ -720,7 +720,7 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⚠️ PARTIAL | Layer 5 | `BudgetController` + `CostReport` 完成，RBAC/Stripe/SSO 待外部集成 |
+| ⚠️ PARTIAL | Layer 5 | `BudgetController` + `CostReport` + RBAC + Audit 完成，Billing/SSO 待外部集成 |
 | ⚠️ PARTIAL | Layer 6 | `examples/` + `sdk/` + `cli/` 完成，官方插件待发布 |
 | ⚠️ PARTIAL | Phase 12 | `pipeline` + `plugin-system` + `scheduler` + `dsl` + `compiler` + `executor` 模块已就绪，目录重构待进行 |
 

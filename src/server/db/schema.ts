@@ -35,6 +35,7 @@ export const apiKeys = pgTable(
     name: text("name").notNull(),
     keyHash: text("key_hash").notNull().unique(),
     keyPrefix: text("key_prefix").notNull(),
+    role: text("role").notNull().default("developer"),
     enabled: boolean("enabled").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
@@ -190,6 +191,25 @@ export const chatMemories = pgTable("chat_memories", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   sessionIdx: index("chat_memories_session_idx").on(t.tenantId, t.sessionId),
+}));
+
+// ===== Layer 5: 审计日志 =====
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actor: text("actor").notNull(),                    // 操作人（api key prefix 或 "master"）
+  actorRole: text("actor_role").notNull().default("developer"),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "set null" }),
+  action: text("action").notNull(),                  // 操作类型（create_key, delete_key, toggle_key, create_tenant, etc.）
+  resource: text("resource").notNull(),              // 目标资源（"api_keys", "tenants", "routes"）
+  resourceId: text("resource_id"),                   // 资源 ID
+  detail: text("detail"),                            // 操作详情
+  result: text("result").notNull().default("success"), // success / failure
+  ip: text("ip"),                                     // 请求 IP
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  actorIdx: index("audit_logs_actor_idx").on(t.actor),
+  resourceIdx: index("audit_logs_resource_idx").on(t.resource),
+  createdAtIdx: index("audit_logs_created_at_idx").on(t.createdAt),
 }));
 
 export { vector };

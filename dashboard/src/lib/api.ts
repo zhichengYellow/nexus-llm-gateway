@@ -214,6 +214,80 @@ export class ApiClient {
     return this.del<{ ok: boolean }>(`/admin/model-routes/${id}`);
   }
 
+  // ===== 运营分析 =====
+  async getCostReport(range: "day" | "week" | "month" = "month") {
+    return this.get<{
+      report: {
+        range: string;
+        since: string;
+        until: string;
+        totalCostMicro: number;
+        totalCostUsd: string;
+        rows: Array<{
+          date: string;
+          provider: string;
+          model: string;
+          requests: number;
+          promptTokens: number;
+          completionTokens: number;
+          totalTokens: number;
+          costMicro: number;
+          cacheHits: number;
+        }>;
+      };
+    }>(`/admin/cost/report?range=${range}`);
+  }
+
+  async getOptimizationStats() {
+    return this.get<{
+      today: {
+        trr: string;
+        csr: string;
+        qps: string;
+        totalTokens: number;
+        savedTokens: number;
+        totalCost: string;
+        savedCost: string;
+      };
+    }>("/admin/optimization/stats");
+  }
+
+  async getOptimizationSuggestions() {
+    return this.get<{
+      suggestions: Array<{
+        category: "cost" | "quality" | "latency" | "cache" | "routing";
+        priority: "high" | "medium" | "low";
+        suggestion: string;
+        expectedImpact: string;
+      }>;
+    }>("/admin/optimization/suggestions");
+  }
+
+  async getAnalyticsReport(range: "day" | "week" | "month" = "day") {
+    return this.get<{
+      period: { start: string; end: string };
+      summary: {
+        totalRequests: number;
+        totalTokens: number;
+        totalCostMicro: number;
+        cacheHitRate: string;
+        avgLatencyMs: number;
+      };
+      topModels: Array<{ model: string; requests: number; tokens: number }>;
+      topProviders: Array<{ provider: string; requests: number; cost: number }>;
+      dailyTrend: Array<{ date: string; requests: number; tokens: number }>;
+      tenantBreakdown: Array<{ tenant: string; requests: number; tokens: number }>;
+    }>(`/admin/analytics/report?range=${range}`);
+  }
+
+  async getCacheConfidence() {
+    return this.get<{
+      hotPrompts: Array<{ text: string; hits: number; avgLatency: number }>;
+      refreshQueueSize: number;
+      ttlMap: Record<string, number>;
+    }>("/admin/cache/confidence");
+  }
+
   // ===== Provider 测速 =====
   async speedTest() {
     return this.post<{

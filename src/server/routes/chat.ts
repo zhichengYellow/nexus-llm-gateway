@@ -19,6 +19,7 @@ import { getCacheAutoRefresh } from "../cache/cache-auto-refresh.js";
 import { getSmartRoutingEngine } from "../routing/smart-routing.js";
 import { getBudgetController } from "../cost/cost-controller.js";
 import { getRequestJudge } from "../judge/request-judge.js";
+import { getE2ECollector } from "../analytics/e2e-metrics.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
 import type { ChatCompletionRequest } from "../../shared/types.js";
@@ -48,6 +49,12 @@ function normalizeContent(content: unknown): string {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) return content.map((p: any) => (typeof p.text === "string" ? p.text : JSON.stringify(p))).join("\n");
   return String(content ?? "");
+}
+
+/** 粗略估算 tokens（中英文混合，~3.5 chars/token） */
+function estimateTokens(text: string): number {
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  return Math.max(1, Math.ceil(cleaned.length / 3.5));
 }
 
 function cacheToSSE(c: Context<ChatEnv>, response: any) {
@@ -81,6 +88,11 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   if (bypassOptimize) {
     logger.info({ requestId }, "optimization bypassed via x-nexus-no-optimize header");
   }
+
+  // ===== R4.2: E2E 测量 — 记录原始输入 tokens =====
+  const originalPrompt = raw.messages.map((m: any) => normalizeContent(m.content)).join("\n");
+  const entryTokens = estimateTokens(originalPrompt);
+  const e2e = bypassOptimize ? null : getE2ECollector();
 
   // ===== C1.1: Prompt Compression + Conversation Compression + Adaptive Context =====
   let messages = raw.messages.map((m) => ({ ...m, content: normalizeContent(m.content) }));
@@ -187,6 +199,7 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   const response = ctx.meta.providerResponse;
   if (response) {
     // ===== C1.5: 质量评估接入 =====
+    let qualityScore = 0.95; // 默认
     if (!bypassOptimize && !c.get("isMaster")) {
       const provider = response.nexus?.provider ?? "unknown";
       const modelName = response.model ?? model;
@@ -194,8 +207,35 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
       const content = response.choices?.[0]?.message?.content ?? "";
       const latency = Date.now() - ctx.startTime;
       try {
-        getRequestJudge().evaluate(requestId, provider as any, modelName, prompt, content, latency);
+        const judgeResult = getRequestJudge().evaluate(requestId, provider as any, modelName, prompt, content, latency);
+        qualityScore = judgeResult.score;
       } catch { /* non-critical */ }
+    }
+
+    // ===== R4.2: E2E 测量 — 记录全链路指标 =====
+    if (e2e) {
+      const optimizedPrompt = (messages as any[]).filter((m: any) => m.role === "user").map((m: any) => normalizeContent(m.content)).join("\n");
+      const optimizedTokens = estimateTokens(optimizedPrompt);
+      const outputContent = response.choices?.[0]?.message?.content ?? "";
+      const outputTokens = estimateTokens(outputContent);
+      const costMicro = (response.usage?.total_tokens ?? 0) * 0.02; // 估算成本
+      const savedTokenCount = Math.max(0, entryTokens - optimizedTokens);
+      e2e.record({
+        requestId,
+        timestamp: Date.now(),
+        entryTokens,
+        optimizedTokens,
+        outputTokens,
+        totalCostMicro: costMicro,
+        savedCostMicro: entryTokens > 0 ? Math.round(costMicro * (savedTokenCount / entryTokens)) : 0,
+        qualityScore,
+        latencyMs: Date.now() - ctx.startTime,
+        savingsBreakdown: {
+          compression: Math.round(savedTokenCount * 0.4),
+          cache: Math.round(savedTokenCount * 0.4),
+          routing: Math.round(savedTokenCount * 0.2),
+        },
+      });
     }
 
     if (ctx.stream) return handleStream(c, ctx);
