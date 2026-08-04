@@ -136,5 +136,61 @@ export const promptTemplates = pgTable("prompt_templates", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// ===== C2.1: 请求画像存储 =====
+export const requestProfiles = pgTable("request_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+  intentDistribution: jsonb("intent_distribution").$type<Record<string, number>>().default({}),
+  providerPreference: jsonb("provider_preference").$type<Record<string, number>>().default({}),
+  tokenTrend: jsonb("token_trend").$type<number[]>().default([]),
+  costTrend: jsonb("cost_trend").$type<number[]>().default([]),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ===== C2.2: 每日成本聚合 =====
+export const costReports = pgTable("cost_reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  date: text("date").notNull(),
+  totalCostMicro: integer("total_cost_micro").notNull().default(0),
+  savedCostMicro: integer("saved_cost_micro").default(0),
+  totalTokens: integer("total_tokens").notNull().default(0),
+  savedTokens: integer("saved_tokens").default(0),
+  totalRequests: integer("total_requests").notNull().default(0),
+  cacheHitRate: integer("cache_hit_rate").default(0),
+  avgLatencyMs: integer("avg_latency_ms").default(0),
+  breakdown: jsonb("breakdown").$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  dateUnique: uniqueIndex("cost_reports_date_unique").on(t.date),
+}));
+
+// ===== C2.3: TRR/CSR/QPS 指标快照 =====
+export const optimizationStats = pgTable("optimization_stats", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  date: text("date").notNull(),
+  trr: integer("trr").default(0),        // Token Reduction Rate * 100
+  csr: integer("csr").default(0),        // Cost Saving Rate * 100
+  qps: integer("qps").default(0),        // Quality Preservation Score * 100
+  totalRequests: integer("total_requests").default(0),
+  totalTokens: integer("total_tokens").default(0),
+  totalCostMicro: integer("total_cost_micro").default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  dateUnique: uniqueIndex("optimization_stats_date_unique").on(t.date),
+}));
+
+// ===== C2.4: Agent Memory 持久化 =====
+export const chatMemories = pgTable("chat_memories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+  sessionId: text("session_id").notNull(),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  timestamp: timestamp("timestamp", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  sessionIdx: index("chat_memories_session_idx").on(t.tenantId, t.sessionId),
+}));
+
 export { vector };
 export const enableVectorExtension = sql`CREATE EXTENSION IF NOT EXISTS vector`;

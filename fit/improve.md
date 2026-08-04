@@ -604,12 +604,12 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | C1.1 压缩接入 | 在 `src/server/routes/chat.ts` 请求进入时调用 `compression.ts`（Prompt Compression）+ `conversation-compressor.ts`（历史摘要）+ `adaptive-context.ts`（动态上下文） |
-| ⬜ TODO | C1.2 缓存门控接入 | 用 `cache-gate.ts`（CacheGate）替换当前 chat.ts 里的 `lookup` 直查，加入 confidence 决策（直接返回 / 返回+异步刷新 / 重新生成） |
-| ⬜ TODO | C1.3 智能路由接入 | 在 `model=auto` 分支调用 `smart-routing.ts`（SmartRoutingEngine）+ `multi-dim-router.ts`（质量评分）替代硬编码路由 |
-| ⬜ TODO | C1.4 成本控制接入 | 在每次请求前后调用 `cost-controller.ts`（BudgetController 预算检查/降级）与 `cost-optimizer.ts`（token 预估） |
-| ⬜ TODO | C1.5 质量评估接入 | 响应生成后调用 `judge/quality-evaluator.ts` 记录质量分，供 Router 学习 |
-| ⬜ TODO | C1.6 门控逃生开关 | 请求头 `x-nexus-no-optimize: 1` 强制跳过压缩/门控，保障异常恢复 |
+| ✅ COMPLETED | C1.1 压缩接入 | 在 `src/server/routes/chat.ts` 请求进入时调用 `compression.ts`（Prompt Compression）+ `conversation-compressor.ts`（历史摘要）+ `adaptive-context.ts`（动态上下文） |
+| ✅ COMPLETED | C1.2 缓存门控接入 | 用 `cache-gate.ts`（CacheGate）替换当前 chat.ts 里的 `lookup` 直查，加入 confidence 决策（直接返回 / 返回+异步刷新 / 重新生成） |
+| ✅ COMPLETED | C1.3 智能路由接入 | 在 `model=auto` 分支调用 `smart-routing.ts`（SmartRoutingEngine）+ `multi-dim-router.ts`（质量评分）替代硬编码路由 |
+| ✅ COMPLETED | C1.4 成本控制接入 | 在每次请求前后调用 `cost-controller.ts`（BudgetController 预算检查/降级）与 `cost-optimizer.ts`（token 预估） |
+| ✅ COMPLETED | C1.5 质量评估接入 | 响应生成后调用 `judge/quality-evaluator.ts` 记录质量分，供 Router 学习 |
+| ✅ COMPLETED | C1.6 门控逃生开关 | 请求头 `x-nexus-no-optimize: 1` 强制跳过压缩/门控，保障异常恢复 |
 
 **验收标准**：
 - 压缩/缓存门控/智能路由/成本控制/质量评估**全部执行**（通过日志或 metrics 可见）
@@ -619,11 +619,11 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | C2.1 requestProfiles 表 | 请求画像存储（intent 类型分布 / provider 偏好 / token 趋势），供 Layer 0.3 |
-| ⬜ TODO | C2.2 costReports 表 | 每日成本聚合结果存储（按 provider/model/intent），供 Layer 2.4 |
-| ⬜ TODO | C2.3 optimizationStats 表 | TRR/CSR/QPS 指标快照（每日），供趋势分析与 Dashboard |
-| ⬜ TODO | C2.4 chatMemories 表 | AgentMemory 持久化（当前纯内存，重启丢失） |
-| ⬜ TODO | C2.5 迁移脚本 | `drizzle-kit generate + push` 生成并应用新表迁移 |
+| ✅ COMPLETED | C2.1 requestProfiles 表 | 请求画像存储（intent 类型分布 / provider 偏好 / token 趋势），供 Layer 0.3 |
+| ✅ COMPLETED | C2.2 costReports 表 | 每日成本聚合结果存储（按 provider/model/intent），供 Layer 2.4 |
+| ✅ COMPLETED | C2.3 optimizationStats 表 | TRR/CSR/QPS 指标快照（每日），供趋势分析与 Dashboard |
+| ✅ COMPLETED | C2.4 chatMemories 表 | AgentMemory 持久化（当前纯内存，重启丢失） |
+| ✅ COMPLETED | C2.5 迁移脚本 | `drizzle-kit generate + push` 生成并应用新表迁移 |
 
 **验收标准**：
 - `npm run db:push` 成功后 schema 含 10+ 张表
@@ -633,18 +633,18 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | 变量 | 说明 | 默认值 |
 |------|------|------|--------|
-| ⬜ TODO | COMPRESSION_ENABLED | Prompt Compression 总开关 | true |
-| ⬜ TODO | CONVERSATION_COMPRESS_KEEP_RECENT | 对话压缩保留最近轮数 | 2 |
-| ⬜ TODO | CONVERSATION_COMPRESS_MAX_SUMMARY_ROUNDS | 摘要覆盖最大轮数 | 18 |
-| ⬜ TODO | ADAPTIVE_CONTEXT_ENABLED | 动态上下文开关 | true |
-| ⬜ TODO | CHUNK_CACHE_ENABLED | Chunk 级缓存开关 | true |
-| ⬜ TODO | CACHE_GATE_CONFIDENCE_HIGH | 缓存门控高置信度阈值 | 0.9 |
-| ⬜ TODO | CACHE_GATE_CONFIDENCE_LOW | 缓存门控低置信度阈值 | 0.7 |
-| ⬜ TODO | SMART_ROUTING_ENABLED | 智能路由开关（model=auto） | true |
-| ⬜ TODO | BUDGET_BLOCK_THRESHOLD | 预算封锁阈值（0~1，超则 block） | 1.0 |
-| ⬜ TODO | BUDGET_CHEAP_ONLY_THRESHOLD | 预算降级阈值（0~1，超则仅用便宜模型） | 0.8 |
-| ⬜ TODO | QUALITY_JUDGE_ENABLED | 响应质量评估开关 | false（避免额外延迟） |
-| ⬜ TODO | OPTIMIZE_METRICS_ENABLED | 采集 TRR/CSR/QPS 指标开关 | true |
+| ✅ COMPLETED | COMPRESSION_ENABLED | Prompt Compression 总开关 | true |
+| ✅ COMPLETED | CONVERSATION_COMPRESS_KEEP_RECENT | 对话压缩保留最近轮数 | 2 |
+| ✅ COMPLETED | CONVERSATION_COMPRESS_MAX_SUMMARY_ROUNDS | 摘要覆盖最大轮数 | 18 |
+| ✅ COMPLETED | ADAPTIVE_CONTEXT_ENABLED | 动态上下文开关 | true |
+| ✅ COMPLETED | CHUNK_CACHE_ENABLED | Chunk 级缓存开关 | true |
+| ✅ COMPLETED | CACHE_GATE_CONFIDENCE_HIGH | 缓存门控高置信度阈值 | 0.9 |
+| ✅ COMPLETED | CACHE_GATE_CONFIDENCE_LOW | 缓存门控低置信度阈值 | 0.7 |
+| ✅ COMPLETED | SMART_ROUTING_ENABLED | 智能路由开关（model=auto） | true |
+| ✅ COMPLETED | BUDGET_BLOCK_THRESHOLD | 预算封锁阈值（0~1，超则 block） | 1.0 |
+| ✅ COMPLETED | BUDGET_CHEAP_ONLY_THRESHOLD | 预算降级阈值（0~1，超则仅用便宜模型） | 0.8 |
+| ✅ COMPLETED | QUALITY_JUDGE_ENABLED | 响应质量评估开关 | false（避免额外延迟） |
+| ✅ COMPLETED | OPTIMIZE_METRICS_ENABLED | 采集 TRR/CSR/QPS 指标开关 | true |
 
 **验收标准**：
 - `config.ts` 新增配置项均可从环境变量读取，`.env.example` 同步补充
@@ -654,11 +654,11 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | 端点 | 说明 |
 |------|------|------|
-| ⬜ TODO | `GET /admin/optimization/stats` | TRR/CSR/QPS 指标（来自 optimizationStats 表） |
-| ⬜ TODO | `GET /admin/optimization/suggestions` | 优化建议（TrendAnalyzer.generateSuggestions） |
-| ⬜ TODO | `GET /admin/cost/report` | 成本报告（已存在 `/admin/cost/report`，补 Dashboard 面板） |
-| ⬜ TODO | `GET /admin/cache/confidence` | 缓存置信度分布（CacheGate） |
-| ⬜ TODO | Dashboard 面板 | Vercel 深色风格新增 Cost Optimization / TRR-CSR-QPS 面板 |
+| ✅ COMPLETED | `GET /admin/optimization/stats` | TRR/CSR/QPS 指标（来自 optimizationStats 表） |
+| ✅ COMPLETED | `GET /admin/optimization/suggestions` | 优化建议（TrendAnalyzer.generateSuggestions） |
+| ✅ COMPLETED | `GET /admin/cost/report` | 成本报告（已存在 `/admin/cost/report`，补 Dashboard 面板） |
+| ✅ COMPLETED | `GET /admin/cache/confidence` | 缓存置信度分布（CacheGate） |
+| 🚧 PLANNED | Dashboard 面板 | API 已就绪（/admin/optimization/*），Vercel 深色面板待前端 |
 
 **验收标准**：
 - 新端点鉴权走 master key
@@ -668,10 +668,10 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ⬜ TODO | C5.1 README 补充 | 新增配置项说明、opt-out 头、TRR/CSR/QPS 查看方式 |
-| ⬜ TODO | C5.2 `.env.example` 注释 | 每个新变量补充中文注释与建议值 |
-| ⬜ TODO | C5.3 端到端接入测试 | 新增 chat 链路集成测试，验证压缩→门控→路由→计费全链路 |
-| ⬜ TODO | C5.4 CI 覆盖 | 确保新 schema 迁移在 CI 可跑（若 CI 无需 DB 则跳过） |
+| ✅ COMPLETED | C5.1 README 补充 | 新增配置项说明、opt-out 头、TRR/CSR/QPS 查看方式 |
+| ✅ COMPLETED | C5.2 `.env.example` 注释 | 每个新变量补充中文注释与建议值 |
+| ✅ COMPLETED | C5.3 端到端接入测试 | 新增 chat 链路集成测试，验证压缩→门控→路由→计费全链路 |
+| ✅ COMPLETED | C5.4 CI 覆盖 | 确保新 schema 迁移在 CI 可跑（若 CI 无需 DB 则跳过） |
 
 **验收标准**：
 - CI 全绿（334/334 + 新增测试）
