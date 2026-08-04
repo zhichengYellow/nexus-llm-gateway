@@ -196,7 +196,7 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
     return c.json({ error: result.error }, (result.status ?? 500) as ContentfulStatusCode);
   }
 
-  const response = ctx.meta.providerResponse;
+  const response = ctx.meta.providerResponse as any;
   if (response) {
     // ===== C1.5: 质量评估接入 =====
     let qualityScore = 0.95; // 默认
