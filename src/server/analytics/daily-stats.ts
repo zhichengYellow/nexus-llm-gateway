@@ -6,7 +6,6 @@
 import { eq, gte, sql, and } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { usageLogs } from "../db/schema.js";
-import { logger } from "../../shared/logger.js";
 
 export interface DailyStats {
   date: string;

@@ -37,8 +37,8 @@ export class ConversationCompressor {
       return { summary: "", originalCount: 0, compressedTokens: 0, originalTokens: 0 };
     }
 
-    // 提取关键信息
-    const userMsgs = messages.filter((m) => m.role === "user");
+    // 提取关键信息（限制在前 maxSummaryRounds 轮）
+    const userMsgs = messages.filter((m) => m.role === "user").slice(-Math.max(maxSummaryRounds, 1));
     const topics: string[] = [];
     const questions: string[] = [];
 
@@ -79,7 +79,6 @@ export class ConversationCompressor {
    * 混合策略：前 N 轮摘要 + 后 M 轮原文
    */
   hybridCompress(messages: ChatMessage[], keepRecent = 2): { system: string; messages: ChatMessage[] } {
-    const systemMsgs = messages.filter((m) => m.role === "system");
     const otherMsgs = messages.filter((m) => m.role !== "system");
 
     // 分离历史（除最后 keepRecent 轮）

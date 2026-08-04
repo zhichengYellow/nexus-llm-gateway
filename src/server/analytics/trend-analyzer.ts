@@ -3,7 +3,6 @@
  *
  * 质量趋势分析 + 成本趋势分析 + 预测模型 + 优化建议生成
  */
-import { logger } from "../../shared/logger.js";
 
 export interface TrendPoint {
   timestamp: number;

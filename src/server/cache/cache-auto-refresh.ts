@@ -3,7 +3,6 @@
  *
  * 低 confidence 缓存自动刷新 + TTL 动态调整 + 热门 Prompt 预生成。
  */
-import { logger } from "../../shared/logger.js";
 
 export interface RefreshPolicy {
   /** 低 confidence 阈值 */

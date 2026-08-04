@@ -23,7 +23,6 @@ describe("MultiDimRouter", () => {
 
   it("recordFeedback 调整权重", () => {
     const router = new MultiDimRouter();
-    const w1 = router.getWeights();
     router.recordFeedback("deepseek", "chat", 0.9);
     router.recordFeedback("deepseek", "chat", 0.8);
     const w2 = router.getWeights();

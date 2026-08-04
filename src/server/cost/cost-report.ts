@@ -3,10 +3,9 @@
  *
  * Layer 2.4: 每日成本聚合 + 节省来源归因 + 报告生成
  */
-import { eq, gte, sql, and } from "drizzle-orm";
+import { gte, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { usageLogs } from "../db/schema.js";
-import { logger } from "../../shared/logger.js";
 
 export interface CostReport {
   period: { start: string; end: string };

@@ -8,7 +8,6 @@
  * - 每个 Chunk 独立缓存
  * - 请求时按 Chunk 组合命中
  */
-import { logger } from "../../shared/logger.js";
 
 export interface TextChunk {
   id: string;

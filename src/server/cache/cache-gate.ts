@@ -51,10 +51,12 @@ export class CacheGate {
       return { hit: false, asyncRefresh: false, confidence: 0, reason: "cache entry not found" };
     }
 
-    // 置信度评估
+    // 置信度评估（createdAt/lastAccessedAt 可能是 Date 或 string，统一转时间戳）
+    const createdAt = entry.createdAt ? new Date(entry.createdAt as any).getTime() : Date.now();
+    const lastAccessedAt = entry.lastAccessedAt ? new Date(entry.lastAccessedAt as any).getTime() : null;
     const evalResult = confidence.evaluate({
-      createdAt: entry.createdAt ? new Date(entry.createdAt).getTime() : Date.now(),
-      lastAccessedAt: entry.lastAccessedAt ? new Date(entry.lastAccessedAt).getTime() : null,
+      createdAt,
+      lastAccessedAt,
       hits: entry.hits ?? 0,
       ttl: entry.ttl ?? 86400,
     });

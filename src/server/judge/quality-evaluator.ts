@@ -3,7 +3,6 @@
  *
  * 语义保持验证 + 摘要质量评估 + Token 预估误差评估
  */
-import { logger } from "../../shared/logger.js";
 
 export interface SemanticPreservationResult {
   preserved: boolean;

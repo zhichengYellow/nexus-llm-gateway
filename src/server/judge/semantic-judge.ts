@@ -8,7 +8,6 @@
  *
  * 不依赖外部 LLM，使用规则引擎 + 关键术语匹配。
  */
-import { logger } from "../../shared/logger.js";
 
 export interface SemanticEquivalence {
   equivalent: boolean;

@@ -86,6 +86,8 @@ export function classifyTtl(canonical: string, defaultTtl: number): number {
 export interface CacheLookupResult {
   hit: boolean;
   response?: ChatCompletionResponse;
+  /** 缓存 key hash（用于关联缓存条目） */
+  hash?: string;
 }
 
 /** SingleFlight：并发缓存缺失只放行一个请求打上游，其余等待共享结果 */
@@ -171,7 +173,7 @@ export class SemanticCache {
           cacheAge: formatAge(ageMs),
         } as any;
         logger.info({ model, hash: hash.slice(0, 8), hits: row.hits + 1, preview: canonical.slice(0, 40) }, "cache HIT");
-        return { hit: true, response: r };
+        return { hit: true, response: r, hash };
       }
       return { hit: false };
     } catch (e) {
