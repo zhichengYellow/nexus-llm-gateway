@@ -590,7 +590,6 @@ adminRoute.get("/memory/tenant/:id", async (c) => {
 
 // ===== C4: TRR/CSR/QPS 优化指标 =====
 adminRoute.get("/optimization/stats", async (c) => {
-  const { getTrendAnalyzer } = await import("../analytics/trend-analyzer.js");
   const { getDailyStatsEngine } = await import("../analytics/daily-stats.js");
   const dailyStats = getDailyStatsEngine();
   const stats = await dailyStats.generateDailyStats();
