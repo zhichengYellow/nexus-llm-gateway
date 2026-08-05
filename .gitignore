@@ -39,3 +39,4 @@ dashboard/.next
 
 # caches / temp
 /tmp
+.aider*

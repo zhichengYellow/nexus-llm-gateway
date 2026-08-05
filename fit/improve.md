@@ -74,6 +74,64 @@
 
 ---
 
+## 产品方向建议对照评估（已执行，结论固化）
+
+> **背景**：外部产品建议（四类功能框架 / 8 个新方向 / TOE / 指标体系）已对照真实代码逐条核验。**结论：骨架全部已落地，真正未做的只有 3 项；但规划文档存在标注失实（标 ✅ 未接线），P0 必须先修正，否则持续误导后续 Agent。**
+> **对后续 Agent 的强制要求**：依赖本文档任何 ✅ COMPLETED 状态前，必须 grep 验证接线（`grep -rn "模块名" src --include="*.ts" | grep -v test`），不得直接信文档标注。
+
+### 建议 vs 现状对照
+
+| 建议 | 现状 | 结论 | 证据 |
+|---|---|---|---|
+| 产品减法（砍 RBAC/SSO/Billing 等） | 已落地且更彻底 | ✅ 无需再做 | 上方「主方向与拓展区（隔离）」+ Phase 1 清理残留 |
+| Optimization Pipeline（所有功能入链） | 已落地 | ✅ | `chat.ts:11-22` 接线 10 个核心优化模块 |
+| 四类功能分类（Token/Request/Cost/Quality） | 用 Layer 0-6 组织 | 🟡 实质等价，仅表述差异 | — |
+| TRR/CSR/QPS 指标 | 已落地为北极星 | ✅ | 「核心指标定义」+ `e2e-metrics.ts` |
+| 目录重构 `optimizer/` | 已规划执行中 | ✅ | 「v2.0 目录重构执行计划」 |
+| TOE | 名义完成（SmartRoutingEngine 整合） | 🟡 非全链路决策中枢 | R4 |
+| Prompt Compression + System Prompt 压缩 | 已落地 | ✅ | `compression.ts` + chat.ts:14 |
+| Selective Context（Embedding TopK 选轮次） | 规则版已落地（摘要/动态轮数/重要性剪枝），检索版未做 | 🟡 增量：要做就做「摘要+检索混合」，不做纯 TopK | conversation-compressor / adaptive-context / pruneByImportance |
+| Provider Recommendation（UI 告知「推荐 XX 便宜 73%」） | 服务端引擎有（CostEstimator），UI 无 | 🟡 增量 P2 | smart-routing + cost-controller；dashboard 无推荐文案 |
+| Cost Before Request（请求前预览成本） | 引擎已有，无预览端点 | 🟡 增量 P1 | CostEstimator 在 `cost-controller.ts` |
+| Prompt Fingerprint | 已被 Canonical Key + TF-IDF 初筛 + Judge 判定覆盖 | 🟡 **不建议做** | cache-gate.ts:16-17 |
+| Optimization Report（Dashboard 汇总） | 大部分落地 | ✅ | `/admin/optimization/stats` + suggestions |
+| Optimization Profile（Fast/Cheap 档位） | 未做 | ❌ 增量 P1 | BudgetController 是预算降级，非用户档位 |
+| Optimization Replay（调试重放） | 未做 | ❌ 增量 P2（开发工具价值，与北极星不挂钩） | — |
+
+### 标注失实清单（⚠️ P0：必须修正，防误导）
+
+> 以下模块文档标 ✅ COMPLETED / 声称已接入，**实测只被自身测试文件引用，未接入主链路**。修正后统一 ⚠️ PARTIAL；重新激活需走「拓展区重新激活流程」（评估 TRR/CSR/QPS 收益 → 接入 Pipeline → 更新状态）。
+
+| 模块 | 文档原标注 | 实测 |
+|---|---|---|
+| `prompt/cost-optimizer.ts` | C1.4 声称已接入 chat 链路 | 未接线；chat.ts 实际接线的是 `cost-controller.ts` 的 CostEstimator |
+| `prompt/chunk-cache.ts` | Layer 1.5 ✅ | 未接线（Layer 1.5 状态已改 ⚠️） |
+| `prompt/adaptive-ttl.ts` / `rewrite.ts` / `quality-score.ts` / `guard.ts` | 未接线（拓展区清单 66 行已标 ⏸；其余位置有 ✅ 残留需核对） | 维持 ⏸ |
+| `routing/parallel-generator.ts` | Layer 3.2 ✅ | 未接线 |
+| `cost/cost-report.ts` | Layer 2.4 ✅ | 未接线；`/admin/cost/report` 是 admin.ts 直接查库实现，未用该引擎 |
+| `judge/quality-evaluator.ts` | C1.5 声称已接入 | 未接线；实际接入的是 `judge/request-judge.ts` |
+
+> **例外（确实接线，勿改）**：`judge/semantic-judge.ts`（cache-gate.ts:17）、`cache/embedding-screener.ts`（cache-gate.ts:16）。admin 路由的 daily-stats / trend-analyzer 为**动态 import**（admin.ts:619/636），顶层 import grep 不可见，属正常接线。
+
+### 不做的方向（批判结论）
+
+1. **Prompt Fingerprint**：Canonical Key + TF-IDF 初筛 + LLM Judge 三级判定已覆盖其意图；SimHash 类指纹对中文短文本易误合并，收益低。
+2. **Selective Context 纯 Embedding TopK**：embedding 调用增加延迟与成本，与省钱目标矛盾；对话相关性顺序敏感，TopK 会切断因果链；个人开发者轮数 < 20 收益有限。
+3. **Optimization Replay**：开发工具价值 > 用户价值，需存原始 prompt（隐私+存储成本），与 TRR/CSR/QPS 不挂钩，放 later。
+
+### 增量任务清单（⬜ 全部 TODO，按优先级）
+
+| 状态 | 任务 | 说明 | 验证 |
+|---|---|---|---|
+| ⬜ TODO | P0：修正本文件失实标注（**已改**：C1.4 / C1.5 / Layer 1.5 表格 / Layer 2.4 表格 / Layer 3.2 表格 / 季度路线 Q4-Layer1.5 / Q1-Layer2.4 / Q2-Layer3；**待核对**：其余失实 ✅ 残留，失实清单 9 个模块统一 ⚠️ PARTIAL） | grep 确认无失实 ✅ 残留 |
+| ⬜ TODO | P1：Cost Before Request | 新增成本预估端点（复用 CostEstimator）+ dashboard 输入框预览 | `npx tsc --noEmit` + `npm test` + 手动 curl |
+| ⬜ TODO | P1：Optimization Profile | 定义 Fast/Balanced/Cheap/Maximum Saving 档位，联动压缩强度/缓存策略/路由目标/质量门槛 | `npx tsc --noEmit` + `npm test` |
+| ⬜ TODO | P2：Provider Recommendation | dashboard 展示推荐模型 + 预计节省；**上线前先修计价显示虚高 bug**（`daily-stats.ts:59` 的 `savedCost = totalCost × savedTokens/totalTokens` 比例估算：缓存命中多、真实请求少时 savedTokens≫totalTokens 导致虚高，且缓存命中路径不写 savedTokens） | `npx tsc --noEmit` + `npm test` |
+
+> **执行顺序强制**：P0 先行（防止后续 Agent 被误导）→ 每个 P1/P2 完成必须跑 CI 三步 → 更新本表状态。
+
+---
+
 ## v2.0 目录重构执行计划（⬜ 执行中）
 
 **执行方式**：由执行 Agent 逐步完成。**每完成一步**：运行该步验证命令 → 全部通过 → 单独提交（`refactor:` 前缀）→ 更新下方状态为 ✅。
@@ -360,7 +418,7 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ✅ COMPLETED |
+| 状态 | ⚠️ PARTIAL（实现未接线，归拓展区；激活需走重新激活流程） |
 | 优先级 | SSS |
 | TRR | 预计 40% |
 | CSR | 预计 40% |
@@ -446,7 +504,7 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ✅ COMPLETED |
+| 状态 | ⚠️ PARTIAL（引擎已实现未接线，`/admin/cost/report` 为 admin.ts 直接查库；激活需走重新激活流程） |
 | 优先级 | SSS |
 | TRR/CSR/QPS | CSR 可视化 |
 
@@ -494,7 +552,7 @@ Code 31% / Chat 22% / Translation 8% / Math 17% / Search 9% / Vision 13%
 
 | 属性 | 值 |
 |------|-----|
-| 状态 | ✅ COMPLETED |
+| 状态 | ⚠️ PARTIAL（`parallel-generator.ts` 已实现未接线，多模型并行未启用；激活需走重新激活流程） |
 | 优先级 | A |
 | TRR/CSR/QPS | QPS 提升 |
 
@@ -751,8 +809,8 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 | ✅ COMPLETED | C1.1 压缩接入 | 在 `src/server/routes/chat.ts` 请求进入时调用 `compression.ts`（Prompt Compression）+ `conversation-compressor.ts`（历史摘要）+ `adaptive-context.ts`（动态上下文） |
 | ✅ COMPLETED | C1.2 缓存门控接入 | 用 `cache-gate.ts`（CacheGate）替换当前 chat.ts 里的 `lookup` 直查，加入 confidence 决策（直接返回 / 返回+异步刷新 / 重新生成） |
 | ✅ COMPLETED | C1.3 智能路由接入 | 在 `model=auto` 分支调用 `smart-routing.ts`（SmartRoutingEngine）+ `multi-dim-router.ts`（质量评分）替代硬编码路由 |
-| ✅ COMPLETED | C1.4 成本控制接入 | 在每次请求前后调用 `cost-controller.ts`（BudgetController 预算检查/降级）与 `cost-optimizer.ts`（token 预估） |
-| ✅ COMPLETED | C1.5 质量评估接入 | 响应生成后调用 `judge/quality-evaluator.ts` 记录质量分，供 Router 学习 |
+| ⚠️ PARTIAL | C1.4 成本控制接入 | 实际仅接入 `cost-controller.ts`（BudgetController + CostEstimator）；`cost-optimizer.ts` **未接线**（只被自身测试引用），归拓展区待评估 |
+| ⚠️ PARTIAL | C1.5 质量评估接入 | 实际接入的是 `judge/request-judge.ts`；`quality-evaluator.ts` **未接线**（无任何非测试引用），归拓展区待评估 |
 | ✅ COMPLETED | C1.6 门控逃生开关 | 请求头 `x-nexus-no-optimize: 1` 强制跳过压缩/门控，保障异常恢复 |
 
 **验收标准**：
@@ -842,7 +900,7 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 | ✅ COMPLETED | Layer 1.2 | `src/server/prompt/conversation-compressor.ts` |
 | ✅ COMPLETED | Layer 1.3 | `src/server/prompt/adaptive-context.ts` |
 | ✅ COMPLETED | Layer 1.4 | `ConversationCompressor.pruneByImportance` |
-| ✅ COMPLETED | Layer 1.5 | `src/server/prompt/chunk-cache.ts` |
+| ✅ COMPLETED | Layer 1.5 | `src/server/prompt/chunk-cache.ts`（引擎已实现，**未接线**，见失实清单） |
 
 ### Q1（明年）—— 成本优化
 
@@ -851,13 +909,13 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 | ✅ COMPLETED | Layer 2.1 | `src/server/cost/cost-controller.ts` |
 | ✅ COMPLETED | Layer 2.2 | `src/server/routing/smart-routing.ts` + `multi-dim-router.ts` |
 | ✅ COMPLETED | Layer 2.3 | `BudgetController` block/cheap_only/warn 策略 |
-| ✅ COMPLETED | Layer 2.4 | `src/server/cost/cost-report.ts` |
+| ✅ COMPLETED | Layer 2.4 | `src/server/cost/cost-report.ts`（引擎已实现，**未接线**，见失实清单） |
 
 ### Q2（明年）—— 质量 + 智能
 
 | 状态 | 任务 | 说明 |
 |------|------|------|
-| ✅ COMPLETED | Layer 3 | `JudgeEngine` + `QualityEvaluator` + `RequestJudge` + `SemanticJudge` 完成 |
+| ✅ COMPLETED | Layer 3 | `JudgeEngine` + `QualityEvaluator` + `RequestJudge` + `SemanticJudge` 完成（**QualityEvaluator 未接线**，其余已接线） |
 | ✅ COMPLETED | Layer 4 | `IntentLearner` + `TrendAnalyzer` + `CacheAutoRefresh` + `SmartRoutingEngine` |
 
 ### Q3（明年）—— 企业 + 生态
@@ -885,6 +943,14 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 ### CI 测试要求（每个 Agent 完成功能后必须执行）
 
+> **⚠️ 远程 Agent 强制守则（最高优先级，2026-03 重申）**：
+> 1. **必须 Node 22**：本机默认 `node`/`npx` 是 v12，跑 `npx tsc`/`npm test` 必挂。执行前先 `source ~/.nvm/nvm.sh && nvm use 22`（或直接用 `~/.nvm/versions/node/v22.20.0/bin/node` 同版本工具链）。
+> 2. **三步命令不可跳过**：`npm ci` → `npx tsc --noEmit` → `npm test`。任何代码改动（哪怕一行）提交前必须跑完三步，全部通过才能标 ✅ COMPLETED / 把 ⬜ 改为 ✅。
+> 3. **只改文档也要验证**：仅改 `fit/improve.md` 等文档时，至少跑 `npx tsc --noEmit` + `npm test` 确认基线未破坏再提交。
+> 4. **标 ✅ 的前提**：功能已接入主链路（`src/server/routes/*` 或 `middleware/pipeline.ts` 有 import）。仅被自身测试引用的一律 ⚠️ PARTIAL，不得标 ✅（历史欠账见「产品方向建议对照评估」失实清单）。
+> 5. **基线以实测为准**：`npx tsc --noEmit` 0 错误 + `npm test` 全绿（数量见下方测试命令注释，每次全量跑完如有变化同步更新）。
+> 6. **TS 规范（strict 全开，未用即错）**：`tsconfig.json` 已开 `noUnusedLocals` + `noUnusedParameters`，**未使用的 import / 变量 / 参数 = 编译错误，不是警告**。远程提交最常见的返工就是残留未用 import（历史 `fix: resolve TS errors` 提交 6+ 次）。新增/修改代码后自查：① 删净未用 import（尤其从旧实现复制代码时带过来的）；② 未用变量、未用参数一律删除（参数可用 `_` 前缀豁免）；③ 相对路径 import 必须带 `.js` 后缀（项目既有约定，如 `from "../cache/cache-gate.js"`）。提交前跑 `npm run typecheck`（等价 `npx tsc --noEmit`）确认 0 错误——**TS 修复是提交者的责任，不是用户 pull 下来后的义务**。
+
 > **重要**：任何功能开发完成后，必须本地验证通过以下 3 步，并确保 GitHub Actions CI 变绿后才能标记为 ✅ COMPLETED。
 
 | 步骤 | 命令 | 说明 | 失败处理 |
@@ -901,7 +967,7 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 **提交前检查清单**：
 - [ ] `npm ci` 成功（无 EUSAGE 错误）
 - [ ] `npx tsc --noEmit` 通过（无 TS 错误）
-- [ ] `npm test` 全部通过（记录测试数，如 266/266）
+- [ ] `npm test` 全部通过（记录测试数，如 350/350）
 - [ ] `git push` 后 GitHub Actions CI 变绿
 - [ ] 更新 `fit/improve.md` 标记对应任务为 ✅ COMPLETED
 
@@ -910,9 +976,13 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 - `TS2322: Type '"block"' is not assignable to type 'PolicyAction'` → 在类型联合中添加缺失的字符串字面量
 - `TS2678: Type '"block"' is not comparable to type 'PolicyAction'` → 同上，扩展类型定义
 - `TS2774: This condition will always return true` → 检查是否误用函数引用而非调用
+- `TS6196: 'xxx' is declared but never used` / `TS6138: Parameter 'xxx' is declared but never used` → 删除未用变量；参数可用 `_` 前缀豁免（如 `_req`）
+- `TS2304: Cannot find name 'xxx'` → 检查 import 是否遗漏或路径拼写（本项目相对路径 import 必须带 `.js` 后缀）
 
 ### 代码规范
 - 使用 TypeScript + Hono。
+- **TS 严格模式**：`tsconfig.json` 已开 `strict` + `noUnusedLocals` + `noUnusedParameters`。未使用的 import/变量/参数视为**编译错误**，提交前 `npm run typecheck` 必须 0 错误（详见上方「远程 Agent 强制守则」第 6 条）。
+- **import 约定**：相对路径 import 必须带 `.js` 后缀（`import { x } from "../foo.js"`）；纯类型导入用 `import type`。
 - 使用 Drizzle ORM + PostgreSQL + Redis。
 - 使用 Vitest 进行测试。
 - 使用 ESLint + Prettier 格式化。
@@ -937,4 +1007,4 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 ---
 
-> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿（266/266 测试通过）。项目已重新定位为 AI Cost Optimization Platform，按 Layer0~Layer6 演进。已实现功能不在此文档中，请参考 README 和源码。
+> 备注：当前 `git config --local http.proxy` 已配置走 clash 代理，推送正常。CI 已全绿（350/350 测试通过，46 个测试文件）。项目已重新定位为 AI Cost Optimization Platform，按 Layer0~Layer6 演进。已实现功能不在此文档中，请参考 README 和源码。

@@ -260,7 +260,7 @@ const resp = await client.chat.completions.create({
 
 ```bash
 nvm use 22 && npm test
-# → 334 个测试全过（44 个测试文件：缓存/容错/路由/压缩/成本/质量/DSL/Agent/Workflow 等）
+# → 350 个测试全过（46 个测试文件：缓存/容错/路由/压缩/成本/质量/DSL/Agent/Workflow 等）
 ```
 
 ```bash
