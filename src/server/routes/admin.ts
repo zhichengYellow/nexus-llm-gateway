@@ -10,8 +10,8 @@ import { nanoid } from "nanoid";
 import { db } from "../db/client.js";
 import { apiKeys, tenants, usageLogs, modelRoutes } from "../db/schema.js";
 import { hashKey } from "../middleware/auth.js";
-import { getSemanticCache } from "../cache/semantic-cache.js";
-import { getRegistry } from "../providers/registry.js";
+import { getSemanticCache } from "../../optimizer/cache/semantic-cache.js";
+import { getRegistry } from "../../providers/registry.js";
 import { reloadRegistryFromDB, getHotReloadStatus } from "../config/hot-reload.js";
 import { logger } from "../../shared/logger.js";
 import type { AuthEnv } from "../middleware/auth.js";
@@ -529,7 +529,7 @@ adminRoute.get("/traces/:requestId", async (c) => {
 // ===== Analytics =====
 adminRoute.get("/analytics/report", async (c) => {
   const range = (c.req.query("range") as string) || "day";
-  const { getAnalyticsEngine } = await import("../analytics/analytics.js");
+  const { getAnalyticsEngine } = await import("../../analytics/analytics.js");
   const engine = getAnalyticsEngine();
   const report = await engine.generateReport(range as "day" | "week" | "month");
   return c.json(report);
@@ -538,7 +538,7 @@ adminRoute.get("/analytics/report", async (c) => {
 // ===== Gateway Memory =====
 adminRoute.get("/memory/tenant/:id", async (c) => {
   const tenantId = c.req.param("id");
-  const { getGatewayMemory } = await import("../prompt/gateway-memory.js");
+  const { getGatewayMemory } = await import("../../optimizer/prompt/gateway-memory.js");
   const memory = getGatewayMemory();
   const summary = memory.getSummary(tenantId);
   return c.json(summary);
@@ -546,7 +546,7 @@ adminRoute.get("/memory/tenant/:id", async (c) => {
 
 // ===== C4: TRR/CSR/QPS 优化指标 =====
 adminRoute.get("/optimization/stats", async (c) => {
-  const { getDailyStatsEngine } = await import("../analytics/daily-stats.js");
+  const { getDailyStatsEngine } = await import("../../analytics/daily-stats.js");
   const dailyStats = getDailyStatsEngine();
   const stats = await dailyStats.generateDailyStats();
   return c.json({
@@ -563,9 +563,9 @@ adminRoute.get("/optimization/stats", async (c) => {
 });
 
 adminRoute.get("/optimization/suggestions", async (c) => {
-  const { getTrendAnalyzer } = await import("../analytics/trend-analyzer.js");
-  const { getDailyStatsEngine } = await import("../analytics/daily-stats.js");
-  const { getRequestJudge } = await import("../judge/request-judge.js");
+  const { getTrendAnalyzer } = await import("../../analytics/trend-analyzer.js");
+  const { getDailyStatsEngine } = await import("../../analytics/daily-stats.js");
+  const { getRequestJudge } = await import("../../optimizer/judge/request-judge.js");
   const dailyStats = getDailyStatsEngine();
   const stats = await dailyStats.generateDailyStats();
   const qualityStats = getRequestJudge().getQualityStats();
@@ -582,7 +582,7 @@ adminRoute.get("/optimization/suggestions", async (c) => {
 
 // ===== C4: 缓存置信度分布 =====
 adminRoute.get("/cache/confidence", async (c) => {
-  const { getCacheAutoRefresh } = await import("../cache/cache-auto-refresh.js");
+  const { getCacheAutoRefresh } = await import("../../optimizer/cache/cache-auto-refresh.js");
   const autoRefresh = getCacheAutoRefresh();
   const hotPrompts = autoRefresh.getHotPrompts(10);
   const refreshQueue = autoRefresh.getRefreshQueue();

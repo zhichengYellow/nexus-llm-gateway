@@ -2,16 +2,16 @@
  * Nexus LLM Gateway - Provider 注册中心
  * 管理所有 provider 实例，提供按模型别名路由的能力。
  */
-import { getConfig } from "../../shared/config.js";
-import { logger } from "../../shared/logger.js";
+import { getConfig } from "../shared/config.js";
+import { logger } from "../shared/logger.js";
 import type {
   ChatProvider,
   EmbeddingProvider,
   ModelInfo,
   ProviderConfig,
   ProviderType,
-} from "../../shared/types.js";
-import { ProviderError } from "../../shared/types.js";
+} from "../shared/types.js";
+import { ProviderError } from "../shared/types.js";
 import { DeepSeekProvider } from "./deepseek.js";
 import { OpenAiProvider } from "./openai.js";
 import { OllamaProvider } from "./ollama.js";

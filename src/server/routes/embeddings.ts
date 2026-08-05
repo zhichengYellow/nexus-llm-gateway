@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { getRegistry } from "../providers/registry.js";
+import { getRegistry } from "../../providers/registry.js";
 import { ProviderError } from "../../shared/types.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";

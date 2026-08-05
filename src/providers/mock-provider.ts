@@ -13,9 +13,9 @@ import type {
   ModelInfo,
   ProviderType,
   Usage,
-} from "../../shared/types.js";
-import { ProviderError } from "../../shared/types.js";
-import { genCompletionId } from "../../shared/utils.js";
+} from "../shared/types.js";
+import { ProviderError } from "../shared/types.js";
+import { genCompletionId } from "../shared/utils.js";
 
 export interface MockProviderConfig {
   type: ProviderType;

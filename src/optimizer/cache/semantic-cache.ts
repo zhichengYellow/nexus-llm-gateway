@@ -10,8 +10,8 @@
  * 6. 参数分桶 + hit_count/last_accessed + 分类 TTL + Cache Metadata + 防毒化
  */
 import { eq, and, gt, sql } from "drizzle-orm";
-import { db } from "../db/client.js";
-import { semanticCache } from "../db/schema.js";
+import { db } from "../../server/db/client.js";
+import { semanticCache } from "../../server/db/schema.js";
 import { getConfig } from "../../shared/config.js";
 import { logger } from "../../shared/logger.js";
 import { createHash } from "node:crypto";

@@ -14,10 +14,10 @@ import type {
   ProviderConfig,
   ProviderType,
   Usage,
-} from "../../shared/types.js";
-import { ProviderError } from "../../shared/types.js";
-import { genCompletionId, parseSseLines, safeJsonParse } from "../../shared/utils.js";
-import { logger } from "../../shared/logger.js";
+} from "../shared/types.js";
+import { ProviderError } from "../shared/types.js";
+import { genCompletionId, parseSseLines, safeJsonParse } from "../shared/utils.js";
+import { logger } from "../shared/logger.js";
 import { ProxyAgent, fetch as ufetch } from "undici";
 
 interface OpenAiLikeChunk {

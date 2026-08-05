@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { ProviderRegistry } from "../providers/registry.js";
-import type { ProviderType, ProviderConfig } from "../../shared/types.js";
+import type { ProviderType, ProviderConfig } from "../shared/types.js";
 
 /** 构建测试用 ProviderConfig */
 function mkConfig(type: ProviderType, models: Record<string, string>, apiKey?: string): ProviderConfig {

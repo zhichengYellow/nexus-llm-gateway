@@ -14,9 +14,9 @@ import type {
   ModelInfo,
   ProviderConfig,
   Usage,
-} from "../../shared/types.js";
-import { ProviderError } from "../../shared/types.js";
-import { genCompletionId, estimateTokens, safeJsonParse } from "../../shared/utils.js";
+} from "../shared/types.js";
+import { ProviderError } from "../shared/types.js";
+import { genCompletionId, estimateTokens, safeJsonParse } from "../shared/utils.js";
 
 interface OllamaChatResponse {
   model: string;

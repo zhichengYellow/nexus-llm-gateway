@@ -12,7 +12,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { modelRoutes } from "../db/schema.js";
-import { getRegistry } from "../providers/registry.js";
+import { getRegistry } from "../../providers/registry.js";
 import { getConfig } from "../../shared/config.js";
 import { logger } from "../../shared/logger.js";
 import type { ProviderType } from "../../shared/types.js";

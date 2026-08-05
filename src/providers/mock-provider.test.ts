@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { MockProvider } from "../providers/mock-provider.js";
-import type { ChatCompletionRequest } from "../../shared/types.js";
+import type { ChatCompletionRequest } from "../shared/types.js";
 
 function mkReq(model = "mock-model"): ChatCompletionRequest {
   return {

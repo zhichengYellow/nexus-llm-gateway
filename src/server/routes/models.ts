@@ -3,7 +3,7 @@
  * OpenAI 兼容：GET /v1/models
  */
 import { Hono } from "hono";
-import { getRegistry } from "../providers/registry.js";
+import { getRegistry } from "../../providers/registry.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
 

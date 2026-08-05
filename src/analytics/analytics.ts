@@ -12,8 +12,8 @@
  * - 延迟趋势
  */
 import { eq, gte, sql } from "drizzle-orm";
-import { db } from "../db/client.js";
-import { usageLogs, tenants } from "../db/schema.js";
+import { db } from "../server/db/client.js";
+import { usageLogs, tenants } from "../server/db/schema.js";
 
 export interface AnalyticsReport {
   period: { start: string; end: string };

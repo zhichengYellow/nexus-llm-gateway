@@ -8,8 +8,8 @@
  */
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { getRegistry } from "../providers/registry.js";
-import { getSemanticCache } from "../cache/semantic-cache.js";
+import { getRegistry } from "../../providers/registry.js";
+import { getSemanticCache } from "../../optimizer/cache/semantic-cache.js";
 import { checkRateLimit, checkQuota } from "../quota/rate-limiter.js";
 import { getCircuitBreakerRegistry } from "../middleware/circuit-breaker.js";
 import { withRetry } from "../middleware/retry.js";

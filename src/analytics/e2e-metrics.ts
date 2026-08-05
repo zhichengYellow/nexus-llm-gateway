@@ -15,9 +15,9 @@
  * - QPS = avg quality score
  */
 
-import { db } from "../db/client.js";
-import { optimizationStats } from "../db/schema.js";
-import { logger } from "../../shared/logger.js";
+import { db } from "../server/db/client.js";
+import { optimizationStats } from "../server/db/schema.js";
+import { logger } from "../shared/logger.js";
 
 export interface MetricPoint {
   requestId: string;

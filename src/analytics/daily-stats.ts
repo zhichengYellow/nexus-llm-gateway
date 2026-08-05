@@ -4,8 +4,8 @@
  * Layer 0.2 + 0.3: 聚合每日 Token/成本/节省数据 + 请求画像统计。
  */
 import { eq, gte, sql, and } from "drizzle-orm";
-import { db } from "../db/client.js";
-import { usageLogs } from "../db/schema.js";
+import { db } from "../server/db/client.js";
+import { usageLogs } from "../server/db/schema.js";
 
 export interface DailyStats {
   date: string;
