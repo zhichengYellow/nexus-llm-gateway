@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { CircuitBreaker, CircuitBreakerRegistry } from "./circuit-breaker.js";
 import { withRetry, isRetryable } from "./retry.js";
-import { weightedPicker, buildWeightedChain } from "./weighted-router.js";
+import { weightedPicker, buildWeightedChain } from "../../extensions/middleware/weighted-router.js";
 
 describe("CircuitBreaker 三态机", () => {
   it("CLOSED 放行", () => {
@@ -123,7 +123,7 @@ describe("weightedPicker / buildWeightedChain", () => {
       const chain = buildWeightedChain(shards);
       expect(chain.length).toBe(3);
       // 三个 provider 全覆盖
-      expect(chain.map((n) => n.provider).sort()).toEqual(["deepseek", "openai", "qwen"]);
+      expect(chain.map((n) => n.provider as string).sort()).toEqual(["deepseek", "openai", "qwen"]);
       // 主分片 = 权重最高的 openai（r=0 ≤ 50 命中）
       expect(chain[0]!.provider).toBe("openai");
       // fallbacks 按权重降序：deepseek(30) → qwen(20)

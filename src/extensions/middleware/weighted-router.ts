@@ -12,7 +12,7 @@
  *   // → { provider: "openai", ... }（已跳过 OPEN 状态的）
  */
 import type { ProviderType } from "../../shared/types.js";
-import { getCircuitBreakerRegistry, type CircuitBreakerRegistry } from "./circuit-breaker.js";
+import { getCircuitBreakerRegistry, type CircuitBreakerRegistry } from "../../server/middleware/circuit-breaker.js";
 
 export interface WeightedShard {
   provider: ProviderType;
