@@ -237,37 +237,57 @@ router:
 
 ## 当前代码基础（已有，需整合）
 
-> 以下已实现模块是 v2.x 的构建基础，`⬜ 需接入` 表示已实现但未接入 Optimization Pipeline。
+> 以下已实现模块是 v2.x 的构建基础。**状态区分主方向与拓展区**：`✅ 已接入核心路径` 表示该模块已被 Optimization Pipeline（`chat.ts` 全链路 / `admin.ts` 监控）实际引用；`⏸ 暂缓（拓展区）` 表示当前 0 个核心文件引用，归入「拓展区（暂缓开发）」章节，主方向完善后再按需重新开发。
 
 | 模块 | 源码 | 状态 |
 |------|------|------|
-| Prompt Compression | `src/server/prompt/compression.ts` | ✅ 已实现，⬜ 需接入 |
-| Conversation Compression | `src/server/prompt/conversation-compressor.ts` | ✅ 已实现，⬜ 需接入 |
-| Adaptive Context | `src/server/prompt/adaptive-context.ts` | ✅ 已实现，⬜ 需接入 |
-| Chunk Cache | `src/server/prompt/chunk-cache.ts` | ✅ 已实现，⬜ 需接入 |
-| Cache Confidence | `src/server/cache/cache-confidence.ts` | ✅ 已实现，⬜ 需接入 |
-| Cache Gate | `src/server/cache/cache-gate.ts` | ✅ 已实现，⬜ 需接入 |
-| Cache Auto Refresh | `src/server/cache/cache-auto-refresh.ts` | ✅ 已实现 |
-| Smart Routing | `src/server/routing/smart-routing.ts` | ✅ 已实现，⬜ 需接入 |
-| Multi-Dim Router | `src/server/prompt/multi-dim-router.ts` | ✅ 已实现 |
-| Cost Controller | `src/server/cost/cost-controller.ts` | ✅ 已实现 |
-| Cost Report | `src/server/cost/cost-report.ts` | ✅ 已实现 |
-| Quality Evaluator | `src/server/judge/quality-evaluator.ts` | ✅ 已实现 |
-| Request Judge | `src/server/judge/request-judge.ts` | ✅ 已实现 |
-| Semantic Judge | `src/server/judge/semantic-judge.ts` | ✅ 已实现 |
-| Intent Learning | `src/server/prompt/intent-learning.ts` | ✅ 已实现 |
-| Trend Analyzer | `src/server/analytics/trend-analyzer.ts` | ✅ 已实现 |
-| Policy Engine | `src/server/dsl/policy-engine.ts` | ✅ 已实现 |
-| Router DSL | `src/server/dsl/router-dsl.ts` | ✅ 已实现 |
-| Workflow Engine | `src/server/workflow/workflow-engine.ts` | ✅ 已实现 |
-| Agent Runtime | `src/server/agent/agent-runtime.ts` | ✅ 已实现 |
-| Event Bus | `src/server/event/event-bus.ts` | ✅ 已实现 |
-| Scheduler | `src/server/scheduler/scheduler.ts` | ✅ 已实现 |
-| Prompt Compiler | `src/server/compiler/prompt-compiler.ts` | ✅ 已实现 |
-| Batch API | `src/server/routes/batch.ts` | ✅ 已实现 |
-| CLI | `cli/nexus-cli.mjs` | ✅ 已实现 |
-| SDK | `sdk/typescript/` + `sdk/python/` | ✅ 已实现 |
-| Auto Benchmark | `benchmark/auto-benchmark.mjs` | ✅ 已实现 |
+| Prompt Compression | `src/server/prompt/compression.ts` | ✅ 已接入核心路径（chat.ts） |
+| Conversation Compression | `src/server/prompt/conversation-compressor.ts` | ✅ 已接入核心路径（chat.ts） |
+| Adaptive Context | `src/server/prompt/adaptive-context.ts` | ✅ 已接入核心路径（chat.ts） |
+| Chunk Cache | `src/server/prompt/chunk-cache.ts` | ⏸ 暂缓（拓展区） |
+| Cache Confidence | `src/server/cache/cache-confidence.ts` | ✅ 已接入核心路径（cache-gate） |
+| Cache Gate | `src/server/cache/cache-gate.ts` | ✅ 已接入核心路径（chat.ts） |
+| Cache Auto Refresh | `src/server/cache/cache-auto-refresh.ts` | ✅ 已接入核心路径（chat.ts / admin） |
+| Smart Routing | `src/server/routing/smart-routing.ts` | ✅ 已接入核心路径（chat.ts） |
+| Multi-Dim Router | `src/server/prompt/multi-dim-router.ts` | ✅ 已接入核心路径（经 smart-routing） |
+| Cost Controller | `src/server/cost/cost-controller.ts` | ✅ 已接入核心路径（chat.ts） |
+| Cost Report | `src/server/cost/cost-report.ts` | ⏸ 暂缓（拓展区） |
+| Quality Evaluator | `src/server/judge/quality-evaluator.ts` | ⏸ 暂缓（拓展区） |
+| Request Judge | `src/server/judge/request-judge.ts` | ✅ 已接入核心路径（chat.ts / admin） |
+| Semantic Judge | `src/server/judge/semantic-judge.ts` | ⏸ 暂缓（拓展区） |
+| Intent Learning | `src/server/prompt/intent-learning.ts` | ✅ 已接入核心路径（经 smart-routing） |
+| Trend Analyzer | `src/server/analytics/trend-analyzer.ts` | ✅ 已接入核心路径（admin） |
+| Policy Engine | `src/server/dsl/policy-engine.ts` | ⏸ 暂缓（拓展区） |
+| Router DSL | `src/server/dsl/router-dsl.ts` | ⏸ 暂缓（拓展区） |
+| Workflow Engine | `src/server/workflow/workflow-engine.ts` | ⏸ 暂缓（拓展区） |
+| Agent Runtime | `src/server/agent/agent-runtime.ts` | ⏸ 暂缓（拓展区） |
+| Event Bus | `src/server/event/event-bus.ts` | ⏸ 暂缓（拓展区） |
+| Scheduler | `src/server/scheduler/scheduler.ts` | ⏸ 暂缓（拓展区） |
+| Prompt Compiler | `src/server/compiler/prompt-compiler.ts` | ⏸ 暂缓（拓展区） |
+| Batch API | `src/server/routes/batch.ts` | ✅ 已接入（路由 /v1/batch） |
+| CLI | `cli/nexus-cli.mjs` | ✅ 周边工具 |
+| SDK | `sdk/typescript/` + `sdk/python/` | ✅ 周边工具 |
+| Auto Benchmark | `benchmark/auto-benchmark.mjs` | ✅ 周边工具 |
+
+---
+
+## 🔌 拓展区（暂缓开发）
+
+> 原则：以下模块**不进入主开发方向**。它们是旧企业向 / 通用网关方向的产物，或未经验证的实验特性，当前 **0 个核心文件引用**（只被自身测试引用），个人开发者（BYOK）场景用不上。主方向（Optimization Pipeline，TRR/CSR/QPS）完善后再按需重新开发；届时逐模块评估价值，不承诺全部保留。
+>
+> 逻辑分区为 `src/extensions/`：当前暂缓模块**保留原位、不移动文件**，待 v2.0 目录重构时统一归入该目录；在此之前，文档层面即视为隔离。
+
+| 类别 | 模块（源码） | 状态 |
+|------|-------------|------|
+| 策略 / 工作流框架（企业向） | `dsl/router-dsl`、`dsl/policy-engine`、`workflow/workflow-engine`、`agent/agent-runtime`、`scheduler/scheduler`、`event/event-bus`、`plugins/plugin-system`、`compiler/prompt-compiler` | ⏸ 暂缓 |
+| 高负载 / 多租户中间件 | `middleware/bulkhead`、`hedged-request`、`memory-pool`、`streaming-buffer`、`adaptive-retry`、`weighted-router`、`compression`、`health-probe` | ⏸ 暂缓 |
+| 未接线优化实验 | `prompt/adaptive-ttl`、`prompt/chunk-cache`、`prompt/cost-optimizer`、`prompt/guard`、`prompt/quality-score`、`prompt/rewrite`、`judge/quality-evaluator`、`judge/semantic-judge`、`routing/parallel-generator`、`cost/cost-report` | ⏸ 暂缓 |
+
+**隔离约定**（防回归，可执行）：
+1. 暂缓模块不得被核心路径（`src/server/routes/*`、`src/server/middleware/pipeline.ts`）新增 import。
+2. 暂缓模块的测试保留（锁定其行为、防止后续回归），但不为暂缓模块新增功能。
+3. 重新激活流程：评估 TRR/CSR/QPS 收益 → 接入 Optimization Pipeline → 更新本表状态为 ✅。
+4. 新开发只围绕主方向：Compression → Cache → Router → Cost → Quality 一条链。
 
 **测试**：334/334 通过（44 个测试文件），CI 全绿。
 
