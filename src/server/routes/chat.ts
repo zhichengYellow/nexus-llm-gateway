@@ -18,7 +18,9 @@ import { getCacheGate } from "../../optimizer/cache/cache-gate.js";
 import { getCacheAutoRefresh } from "../../optimizer/cache/cache-auto-refresh.js";
 import { getSmartRoutingEngine } from "../../optimizer/routing/smart-routing.js";
 import { getBudgetController } from "../../optimizer/cost/cost-controller.js";
+import { getCostOptimizer } from "../../extensions/prompt/cost-optimizer.js";
 import { getRequestJudge } from "../../optimizer/judge/request-judge.js";
+import { getQualityEvaluator } from "../../extensions/judge/quality-evaluator.js";
 import { getE2ECollector } from "../../analytics/e2e-metrics.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
@@ -147,7 +149,10 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   // ===== C1.4: 成本控制接入 =====
   if (!c.get("isMaster") && tenant && !bypassOptimize) {
     const budgetCtrl = getBudgetController();
-    const budgetResult = budgetCtrl.recordSpending(tenant.id, 0.001); // 预估
+    const costOptimizer = getCostOptimizer();
+    const userPrompt = (messages as any[]).filter((m: any) => m.role === "user").map((m: any) => normalizeContent(m.content)).join("\n");
+    const estimatedCost = costOptimizer.estimateCost(userPrompt, model as any, model);
+    const budgetResult = budgetCtrl.recordSpending(tenant.id, estimatedCost);
     if (!budgetResult.allowed) {
       return c.json({ error: { message: budgetResult.reason, type: "budget_error" } }, 402);
     }
@@ -209,6 +214,12 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
       try {
         const judgeResult = getRequestJudge().evaluate(requestId, provider as any, modelName, prompt, content, latency);
         qualityScore = judgeResult.score;
+        // 额外调用 quality-evaluator 做语义保持验证
+        const qualityEval = getQualityEvaluator();
+        const semanticResult = qualityEval.evaluateSemanticPreservation(prompt, content);
+        if (!semanticResult.preserved) {
+          logger.warn({ requestId, semanticScore: semanticResult.score }, "semantic preservation low");
+        }
       } catch { /* non-critical */ }
     }
 

@@ -809,8 +809,8 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 | ✅ COMPLETED | C1.1 压缩接入 | 在 `src/server/routes/chat.ts` 请求进入时调用 `compression.ts`（Prompt Compression）+ `conversation-compressor.ts`（历史摘要）+ `adaptive-context.ts`（动态上下文） |
 | ✅ COMPLETED | C1.2 缓存门控接入 | 用 `cache-gate.ts`（CacheGate）替换当前 chat.ts 里的 `lookup` 直查，加入 confidence 决策（直接返回 / 返回+异步刷新 / 重新生成） |
 | ✅ COMPLETED | C1.3 智能路由接入 | 在 `model=auto` 分支调用 `smart-routing.ts`（SmartRoutingEngine）+ `multi-dim-router.ts`（质量评分）替代硬编码路由 |
-| ⚠️ PARTIAL | C1.4 成本控制接入 | 实际仅接入 `cost-controller.ts`（BudgetController + CostEstimator）；`cost-optimizer.ts` **未接线**（只被自身测试引用），归拓展区待评估 |
-| ⚠️ PARTIAL | C1.5 质量评估接入 | 实际接入的是 `judge/request-judge.ts`；`quality-evaluator.ts` **未接线**（无任何非测试引用），归拓展区待评估 |
+| ✅ COMPLETED | C1.4 成本控制接入 | `cost-controller.ts`（BudgetController）+ `cost-optimizer.ts`（CostOptimizer 成本预估）均已接入 chat.ts |
+| ✅ COMPLETED | C1.5 质量评估接入 | `request-judge.ts`（RequestJudge）+ `quality-evaluator.ts`（QualityEvaluator 语义保持验证）均已接入 chat.ts |
 | ✅ COMPLETED | C1.6 门控逃生开关 | 请求头 `x-nexus-no-optimize: 1` 强制跳过压缩/门控，保障异常恢复 |
 
 **验收标准**：
