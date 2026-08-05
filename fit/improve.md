@@ -153,10 +153,10 @@
 
 | 状态 | 任务 | 说明 | 验证 |
 |---|---|---|---|
-| ⬜ TODO | **R1：质量 Benchmark** | `benchmark/prompts/` 建真实 Prompt 数据集（分类：代码/翻译/数学/聊天/Agent/RAG，先 ≥300 条、目标 1000，可含从 usageLogs 采样的脱敏 prompt）；新增 `benchmark/quality-benchmark.mjs`：每条 prompt 跑「压缩 → 缓存 → 路由」优化前后对比，输出 Token / Latency / Cost / Quality 汇总表（Quality 先用 rule-based，如编辑距离/关键词命中；LLM Judge 版后续迭代，避免基准依赖 API 成本）；接入 `.github/workflows/benchmark.yml` | `node benchmark/quality-benchmark.mjs` 输出汇总 + CI 绿 |
-| ⬜ TODO | **R2：Request Analysis（Token 构成）** | 在 e2e-metrics entry 测量点统计逐段 Token 构成（system / history / user / tool / output 各占比），输出「哪里浪费最多」，供 R1 与后续优化决策；注意与 usageLogs 字段对齐 | `npx tsc --noEmit` + `npm test` + 手动请求观察构成输出 |
-| ⬜ TODO | R3：RFC 流程 | 新增 `docs/rfc/` + RFC 模板（目标 / 预计减 Token / 质量风险 / 方案 / Benchmark 依据）；新功能先 RFC 后开发，ADR 保留为决策记录 | 文档就绪 |
-| ⬜ TODO | R4：Optimization Lab 流程 | 本文件补充流程：实验代码 → `src/extensions/` → R1 Benchmark 量化 → 三问通过 → 接入 Core | 文档就绪 |
+| ✅ COMPLETED | **R1：质量 Benchmark** | `benchmark/prompts/` 建真实 Prompt 数据集（分类：代码/翻译/数学/聊天/Agent/RAG，先 ≥300 条、目标 1000，可含从 usageLogs 采样的脱敏 prompt）；新增 `benchmark/quality-benchmark.mjs`：每条 prompt 跑「压缩 → 缓存 → 路由」优化前后对比，输出 Token / Latency / Cost / Quality 汇总表（Quality 先用 rule-based，如编辑距离/关键词命中；LLM Judge 版后续迭代，避免基准依赖 API 成本）；接入 `.github/workflows/benchmark.yml` | `node benchmark/quality-benchmark.mjs` 输出汇总 + CI 绿 |
+| ✅ COMPLETED | **R2：Request Analysis（Token 构成）** | 在 e2e-metrics entry 测量点统计逐段 Token 构成（system / history / user / tool / output 各占比），输出「哪里浪费最多」，供 R1 与后续优化决策；注意与 usageLogs 字段对齐 | `npx tsc --noEmit` + `npm test` + 手动请求观察构成输出 |
+| ✅ COMPLETED | R3：RFC 流程 | 新增 `docs/rfc/` + RFC 模板（目标 / 预计减 Token / 质量风险 / 方案 / Benchmark 依据）；新功能先 RFC 后开发，ADR 保留为决策记录 | 文档就绪 |
+| ✅ COMPLETED | R4：Optimization Lab 流程 | 本文件补充流程：实验代码 → `src/extensions/` → R1 Benchmark 量化 → 三问通过 → 接入 Core | 文档就绪 |
 
 > **执行约定**：R1 先行（没有 Benchmark，后续优化无法量化验收）。每个 R 任务完成必须跑 CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22，见「远程 Agent 强制守则」）→ 更新本表状态为 ✅。R1 的 Quality 评测先 rule-based（编辑距离/关键词命中），LLM Judge 版后续迭代，避免基准依赖 API 成本。
 
