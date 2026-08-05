@@ -12,7 +12,7 @@
  */
 import type { ProviderType, ProviderConfig, ChatProvider, EmbeddingProvider } from "../../shared/types.js";
 import { logger } from "../../shared/logger.js";
-import type { MiddlewareHandler } from "../middleware/pipeline.js";
+import type { MiddlewareHandler } from "../../server/middleware/pipeline.js";
 
 // ===== 插件类型定义 =====
 
