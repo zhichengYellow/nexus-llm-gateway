@@ -60,6 +60,11 @@ export class CostEstimator {
     return inputCost + outputCost;
   }
 
+  /** 获取全部价格 */
+  getAllPrices(): ProviderPrice[] {
+    return [...this.prices];
+  }
+
   /** 获取价格 */
   getPrice(provider: ProviderType, model: string): ProviderPrice | undefined {
     return this.prices.find((p) => p.provider === provider && p.model === model);

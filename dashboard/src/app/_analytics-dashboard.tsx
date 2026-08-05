@@ -10,7 +10,7 @@ import {
 import { format } from "date-fns";
 import {
   TrendingUp, TrendingDown, DollarSign, Percent, Zap, Lightbulb,
-  BarChart3, PieChartIcon, Activity, ArrowUpRight,
+  BarChart3, PieChartIcon, Activity, ArrowUpRight, Calculator, Sliders,
 } from "lucide-react";
 
 interface Props {
@@ -57,6 +57,10 @@ export default function AnalyticsDashboard({ client }: Props) {
   const [cacheConf, setCacheConf] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [costPrompt, setCostPrompt] = useState("");
+  const [costEstimate, setCostEstimate] = useState<any>(null);
+  const [costEstimating, setCostEstimating] = useState(false);
+  const [profiles, setProfiles] = useState<any[]>([]);
 
   const loadData = async () => {
     try {
@@ -78,6 +82,18 @@ export default function AnalyticsDashboard({ client }: Props) {
     } finally {
       setLoading(false);
     }
+    // 异步加载 profiles（不阻塞）
+    client.getProfiles().then((p) => setProfiles(p.profiles || [])).catch(() => {});
+  };
+
+  const handleEstimateCost = async () => {
+    if (!costPrompt.trim()) return;
+    setCostEstimating(true);
+    try {
+      const result = await client.estimateCost(costPrompt);
+      setCostEstimate(result);
+    } catch {}
+    setCostEstimating(false);
   };
 
   useEffect(() => {
@@ -525,6 +541,80 @@ export default function AnalyticsDashboard({ client }: Props) {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* ═══ P1/P2: 成本预估 + 优化档位 + 推荐 ═══ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* 成本预估 */}
+        <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Calculator className="w-4 h-4 text-blue-400" />
+            <h3 className="font-semibold text-sm text-zinc-200">请求前成本预估</h3>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={costPrompt}
+              onChange={(e) => setCostPrompt(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleEstimateCost()}
+              placeholder="输入 Prompt 预览成本..."
+              className="flex-1 px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-blue-500/50"
+            />
+            <button
+              onClick={handleEstimateCost}
+              disabled={costEstimating || !costPrompt.trim()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-500 disabled:opacity-50 transition font-medium"
+            >
+              {costEstimating ? "计算中" : "预估"}
+            </button>
+          </div>
+          {costEstimate && (
+            <div className="mt-3 space-y-1.5">
+              <div className="text-xs text-zinc-500">
+                预估 {costEstimate.promptTokens} tokens · 最便宜：
+                <span className="text-emerald-400 font-mono ml-1">
+                  {costEstimate.cheapest?.provider}/{costEstimate.cheapest?.model} ${costEstimate.cheapest?.estimatedCost}
+                </span>
+              </div>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {(costEstimate.estimates || []).slice(0, 5).map((e: any) => (
+                  <div key={e.provider + e.model} className="flex items-center justify-between text-xs py-1 border-b border-zinc-800/50">
+                    <span className="text-zinc-400">{e.provider}/{e.model}</span>
+                    <span className="font-mono text-zinc-300">${e.estimatedCost}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 优化档位 */}
+        <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Sliders className="w-4 h-4 text-violet-400" />
+            <h3 className="font-semibold text-sm text-zinc-200">优化档位</h3>
+          </div>
+          {profiles.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2">
+              {profiles.map((p) => (
+                <div key={p.name} className="p-3 rounded-lg bg-zinc-800/40 border border-zinc-700/50 hover:border-zinc-600 transition">
+                  <div className="text-xs font-medium text-zinc-200">{p.label}</div>
+                  <div className="text-[10px] text-zinc-500 mt-0.5">{p.description}</div>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <span className="px-1.5 py-0.5 rounded bg-zinc-700/40 text-[10px] text-zinc-400">
+                      压缩 {Math.round(p.compressionStrength * 100)}%
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-zinc-700/40 text-[10px] text-zinc-400">
+                      质量 ≥ {Math.round(p.minQuality * 100)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-4 text-center text-zinc-600 text-sm">加载中...</div>
+          )}
         </div>
       </div>
     </div>

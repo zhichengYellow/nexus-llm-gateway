@@ -288,6 +288,50 @@ export class ApiClient {
     }>("/admin/cache/confidence");
   }
 
+  // ===== P1: Cost Before Request =====
+  async estimateCost(prompt: string) {
+    return this.post<{
+      prompt: string;
+      promptTokens: number;
+      estimates: Array<{
+        provider: string;
+        model: string;
+        inputPrice: number;
+        outputPrice: number;
+        estimatedCost: number;
+        estimatedTokens: number;
+      }>;
+      cheapest: { provider: string; model: string; estimatedCost: number };
+    }>("/admin/cost/estimate", { prompt });
+  }
+
+  // ===== P1: Optimization Profiles =====
+  async getProfiles() {
+    return this.get<{
+      profiles: Array<{
+        name: string;
+        label: string;
+        description: string;
+        compressionStrength: number;
+        cacheThreshold: number;
+        routingPreference: string;
+        minQuality: number;
+        maxLatencyMs: number;
+      }>;
+    }>("/admin/optimization/profiles");
+  }
+
+  // ===== P2: Provider Recommendation =====
+  async getRecommendation(prompt: string) {
+    return this.post<{
+      intent: string;
+      recommendations: Array<{ provider: string; model: string; estimatedCost: number }>;
+      cheapest: { provider: string; model: string; estimatedCost: number };
+      potentialSavings: string;
+      message: string;
+    }>("/admin/optimization/recommend", { prompt });
+  }
+
   // ===== Provider 测速 =====
   async speedTest() {
     return this.post<{

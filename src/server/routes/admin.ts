@@ -593,6 +593,81 @@ adminRoute.get("/cache/confidence", async (c) => {
   });
 });
 
+// ===== P1: Cost Before Request =====
+adminRoute.post("/cost/estimate", async (c) => {
+  const body = await c.req.json<{ prompt: string; model?: string }>();
+  const prompt = body?.prompt;
+  if (!prompt || prompt.trim().length === 0) {
+    return c.json({ error: { message: "prompt required" } }, 400);
+  }
+
+  const { CostEstimator } = await import("../../optimizer/cost/cost-controller.js");
+  const estimator = new CostEstimator();
+
+  const estimates = estimator.getAllPrices().map((p) => {
+    const cost = estimator.estimateCost(prompt, p.provider, p.model);
+    return {
+      provider: p.provider,
+      model: p.model,
+      inputPrice: p.inputPrice,
+      outputPrice: p.outputPrice,
+      estimatedCost: +(cost.toFixed(6)),
+      estimatedTokens: estimator.estimateTokens(prompt),
+    };
+  });
+
+  estimates.sort((a, b) => a.estimatedCost - b.estimatedCost);
+
+  return c.json({
+    prompt: prompt.slice(0, 100),
+    promptTokens: estimator.estimateTokens(prompt),
+    estimates,
+    cheapest: estimates[0] ?? null,
+  });
+});
+
+// ===== P1: Optimization Profiles =====
+adminRoute.get("/optimization/profiles", async (c) => {
+  const { listProfiles } = await import("../../optimizer/cost/optimization-profile.js");
+  return c.json({ profiles: listProfiles() });
+});
+
+// ===== P2: Provider Recommendation =====
+adminRoute.post("/optimization/recommend", async (c) => {
+  const body = await c.req.json<{ prompt: string }>();
+  const prompt = body?.prompt || "";
+
+  const { CostEstimator } = await import("../../optimizer/cost/cost-controller.js");
+  const { getPromptRouter } = await import("../../optimizer/prompt/router.js");
+  const estimator = new CostEstimator();
+
+  const router = getPromptRouter();
+  const classification = router.classify(prompt);
+
+  const estimates = estimator.getAllPrices().map((p) => {
+    const cost = estimator.estimateCost(prompt, p.provider, p.model);
+    return { provider: p.provider, model: p.model, estimatedCost: +(cost.toFixed(6)) };
+  });
+
+  estimates.sort((a, b) => a.estimatedCost - b.estimatedCost);
+  const cheapest = estimates[0];
+  const mostExpensive = estimates[estimates.length - 1];
+  const savingsPercent = cheapest && mostExpensive
+    ? ((mostExpensive.estimatedCost - cheapest.estimatedCost) / Math.max(0.000001, mostExpensive.estimatedCost) * 100).toFixed(0) + "%"
+    : "N/A";
+
+  return c.json({
+    intent: classification.category,
+    recommendations: estimates.slice(0, 3),
+    cheapest,
+    mostExpensive,
+    potentialSavings: savingsPercent,
+    message: cheapest
+      ? `推荐 ${cheapest.provider}/${cheapest.model}，预估 $${cheapest.estimatedCost}，相比最贵方案节省 ${savingsPercent}`
+      : "",
+  });
+});
+
 // ===== Layer 5: 审计日志 =====
 adminRoute.get("/audit/logs", async (c) => {
   const audit = getAuditLogger();

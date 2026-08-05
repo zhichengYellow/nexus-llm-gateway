@@ -54,9 +54,11 @@ export class DailyStatsEngine {
       .where(and(gte(usageLogs.createdAt, dayStart), sql`${usageLogs.createdAt} < ${dayEnd}`));
 
     const totalTokens = row?.totalTokens ?? 0;
-    const savedTokens = row?.savedTokens ?? 0;
+    const savedTokens = Math.min(row?.savedTokens ?? 0, totalTokens); // 防止缓存命中时 savedTokens > totalTokens
     const totalCost = row?.totalCostMicro ?? 0;
-    const savedCost = totalCost > 0 ? Math.round(totalCost * (savedTokens / Math.max(1, totalTokens))) : 0;
+    const savedCost = totalCost > 0 && totalTokens > 0
+      ? Math.round(totalCost * (savedTokens / totalTokens))
+      : 0;
 
     return {
       date: dayStart.toISOString().slice(0, 10),

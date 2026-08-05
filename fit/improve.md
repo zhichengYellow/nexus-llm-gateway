@@ -123,10 +123,10 @@
 
 | 状态 | 任务 | 说明 | 验证 |
 |---|---|---|---|
-| ⬜ TODO | P0：修正本文件失实标注（**已改**：C1.4 / C1.5 / Layer 1.5 表格 / Layer 2.4 表格 / Layer 3.2 表格 / 季度路线 Q4-Layer1.5 / Q1-Layer2.4 / Q2-Layer3；**待核对**：其余失实 ✅ 残留，失实清单 9 个模块统一 ⚠️ PARTIAL） | grep 确认无失实 ✅ 残留 |
-| ⬜ TODO | P1：Cost Before Request | 新增成本预估端点（复用 CostEstimator）+ dashboard 输入框预览 | `npx tsc --noEmit` + `npm test` + 手动 curl |
-| ⬜ TODO | P1：Optimization Profile | 定义 Fast/Balanced/Cheap/Maximum Saving 档位，联动压缩强度/缓存策略/路由目标/质量门槛 | `npx tsc --noEmit` + `npm test` |
-| ⬜ TODO | P2：Provider Recommendation | dashboard 展示推荐模型 + 预计节省；**上线前先修计价显示虚高 bug**（`daily-stats.ts:59` 的 `savedCost = totalCost × savedTokens/totalTokens` 比例估算：缓存命中多、真实请求少时 savedTokens≫totalTokens 导致虚高，且缓存命中路径不写 savedTokens） | `npx tsc --noEmit` + `npm test` |
+| ✅ COMPLETED | P0：修正本文件失实标注（**已改**：C1.4 / C1.5 / Layer 1.5 表格 / Layer 2.4 表格 / Layer 3.2 表格 / 季度路线 Q4-Layer1.5 / Q1-Layer2.4 / Q2-Layer3；**待核对**：其余失实 ✅ 残留，失实清单 9 个模块统一 ⚠️ PARTIAL） | grep 确认无失实 ✅ 残留 |
+| ✅ COMPLETED | P1：Cost Before Request | 新增成本预估端点（复用 CostEstimator）+ dashboard 输入框预览 | `npx tsc --noEmit` + `npm test` + 手动 curl |
+| ✅ COMPLETED | P1：Optimization Profile | 定义 Fast/Balanced/Cheap/Maximum Saving 档位，联动压缩强度/缓存策略/路由目标/质量门槛 | `npx tsc --noEmit` + `npm test` |
+| ✅ COMPLETED | P2：Provider Recommendation | dashboard 展示推荐模型 + 预计节省；**上线前先修计价显示虚高 bug**（`daily-stats.ts:59` 的 `savedCost = totalCost × savedTokens/totalTokens` 比例估算：缓存命中多、真实请求少时 savedTokens≫totalTokens 导致虚高，且缓存命中路径不写 savedTokens） | `npx tsc --noEmit` + `npm test` |
 
 > **执行顺序强制**：P0 先行（防止后续 Agent 被误导）→ 每个 P1/P2 完成必须跑 CI 三步 → 更新本表状态。
 
