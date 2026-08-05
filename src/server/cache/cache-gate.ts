@@ -14,7 +14,7 @@
 import { getCacheConfidence } from "../cache/cache-confidence.js";
 import { getSemanticCache } from "../cache/semantic-cache.js";
 import { getEmbeddingScreener } from "../cache/embedding-screener.js";
-import { getSemanticJudge } from "../judge/semantic-judge.js";
+import { getSemanticJudge } from "../../extensions/judge/semantic-judge.js";
 import { logger } from "../../shared/logger.js";
 import type { ChatCompletionRequest } from "../../shared/types.js";
 

@@ -4,8 +4,8 @@
  * Layer 2.4: 每日成本聚合 + 节省来源归因 + 报告生成
  */
 import { gte, sql } from "drizzle-orm";
-import { db } from "../db/client.js";
-import { usageLogs } from "../db/schema.js";
+import { db } from "../../server/db/client.js";
+import { usageLogs } from "../../server/db/schema.js";
 
 export interface CostReport {
   period: { start: string; end: string };
@@ -144,11 +144,11 @@ export class CostReportEngine {
         cache: { tokens: savedTokens, cost: savedCost },
         compression: { tokens: 0, cost: 0 },
       },
-      daily: dailyRows.map((r) => ({
+      daily: dailyRows.map((r: any) => ({
         date: r.date ?? "",
-        cost: (r.cost ?? 0) / 1_000_000,
-        tokens: r.tokens ?? 0,
-        requests: r.requests ?? 0,
+        cost: (Number(r.cost) || 0) / 1_000_000,
+        tokens: Number(r.tokens) || 0,
+        requests: Number(r.requests) || 0,
       })),
     };
   }

@@ -10,7 +10,7 @@
  * - 支持 fallback：部分失败不影响整体
  */
 import type { ProviderType } from "../../shared/types.js";
-import { getJudgeEngine } from "../judge/judge.js";
+import { getJudgeEngine } from "../../server/judge/judge.js";
 import { logger } from "../../shared/logger.js";
 
 export interface ParallelRequest {

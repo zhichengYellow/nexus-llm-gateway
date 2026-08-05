@@ -16,8 +16,8 @@ import { reloadRegistryFromDB, getHotReloadStatus } from "../config/hot-reload.j
 import { logger } from "../../shared/logger.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
-import { getAuditLogger } from "../audit/audit-logger.js";
-import { parseRole } from "../middleware/rbac.js";
+import { getAuditLogger } from "../../extensions/audit/audit-logger.js";
+import { parseRole } from "../../extensions/rbac/rbac.js";
 
 type AdminEnv = AuthEnv & LoggingEnv;
 

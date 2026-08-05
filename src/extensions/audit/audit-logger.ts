@@ -4,11 +4,11 @@
  * Layer 5: 记录所有管理操作的审计日志
  */
 
-import { db } from "../db/client.js";
-import { auditLogs } from "../db/schema.js";
+import { db } from "../../server/db/client.js";
+import { auditLogs } from "../../server/db/schema.js";
 import { sql } from "drizzle-orm";
 import { logger } from "../../shared/logger.js";
-import type { Role } from "../middleware/rbac.js";
+import type { Role } from "../rbac/rbac.js";
 
 export interface AuditEntry {
   actor: string;
