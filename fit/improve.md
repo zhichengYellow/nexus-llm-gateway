@@ -132,7 +132,7 @@
 
 ---
 
-## v2.0 目录重构执行计划（⬜ 执行中）
+## v2.0 目录重构执行计划（✅ COMPLETED）
 
 **执行方式**：由执行 Agent 逐步完成。**每完成一步**：运行该步验证命令 → 全部通过 → 单独提交（`refactor:` 前缀）→ 更新下方状态为 ✅。
 **全量基准（合并远程 7d6fd0d 后实测）**：`npx tsc --noEmit` 0 错误 + `npm test` 350/350 通过（46 文件）。
@@ -173,8 +173,8 @@ src/
 
 | 状态 | 任务 | 说明 | 验证 |
 |------|------|------|------|
-| ⬜ TODO | 移除 Premium Cache 审批端点 | `src/server/routes/admin.ts` 删除 `PATCH /tenants/:id/request-premium` 与 `PATCH /tenants/:id/approve-premium`（约 60-115 行，含「Agent 自动审批」逻辑）；`tenants.cachePlan` 字段保留（不动 schema，避免 DB 迁移） | `npx tsc --noEmit` + `npm test` |
-| ⬜ TODO | 排查企业向残留文案 | 全局检索 `RBAC / LDAP / Organization / Billing / 审批`，清理过时表述（注意：`rbac.ts` / `audit-logger.ts` 代码保留，仅归入拓展区） | `grep` 确认 |
+| ✅ COMPLETED | 移除 Premium Cache 审批端点 | `src/server/routes/admin.ts` 删除 `PATCH /tenants/:id/request-premium` 与 `PATCH /tenants/:id/approve-premium`（约 60-115 行，含「Agent 自动审批」逻辑）；`tenants.cachePlan` 字段保留（不动 schema，避免 DB 迁移） | `npx tsc --noEmit` + `npm test` |
+| ✅ COMPLETED | 排查企业向残留文案 | 全局检索 `RBAC / LDAP / Organization / Billing / 审批`，清理过时表述（注意：`rbac.ts` / `audit-logger.ts` 代码保留，仅归入拓展区） | `grep` 确认 |
 
 ### Phase 2 — 拓展区迁移到 `src/extensions/`（机械移动，风险集中）
 
@@ -182,11 +182,11 @@ src/
 
 | 状态 | 任务 | 源 → 目标 | 文件 |
 |------|------|-----------|------|
-| ⬜ TODO | 迁移框架类 | `server/{dsl,workflow,agent,scheduler,event,plugins,compiler}/` → `extensions/` 同名 | router-dsl、policy-engine、workflow-engine、agent-runtime、scheduler、event-bus、plugin-system、prompt-compiler（各含 .test.ts） |
-| ⬜ TODO | 迁移暂缓中间件 | `server/middleware/` → `extensions/middleware/` | bulkhead、hedged-request、memory-pool、streaming-buffer、adaptive-retry、weighted-router、compression、health-probe（各含 .test.ts） |
-| ⬜ TODO | 迁移暂缓优化模块 | `server/prompt/`、`server/judge/`、`server/routing/`、`server/cost/` → `extensions/` 同名 | prompt：adaptive-ttl、chunk-cache、cost-optimizer、guard、quality-score、rewrite；judge：quality-evaluator、semantic-judge；routing：parallel-generator；cost：cost-report |
-| ⬜ TODO | 迁移企业向已实现代码 | `server/middleware/rbac.ts` → `extensions/rbac/`；`server/audit/` → `extensions/audit/` | rbac.ts（+ 依赖方修正）、audit-logger.ts（注意 admin.ts `/audit/logs` 端点引用，需改 import 或一并下架） |
-| ⬜ TODO | 修正跨目录 import | 上述文件对 `shared/`、`db/` 及彼此的相对路径 | 允许 **extensions → 核心**（如 `parallel-generator → judge/judge`），禁止 **核心 → extensions** |
+| ✅ COMPLETED | 迁移框架类 | `server/{dsl,workflow,agent,scheduler,event,plugins,compiler}/` → `extensions/` 同名 | router-dsl、policy-engine、workflow-engine、agent-runtime、scheduler、event-bus、plugin-system、prompt-compiler（各含 .test.ts） |
+| ✅ COMPLETED | 迁移暂缓中间件 | `server/middleware/` → `extensions/middleware/` | bulkhead、hedged-request、memory-pool、streaming-buffer、adaptive-retry、weighted-router、compression、health-probe（各含 .test.ts） |
+| ✅ COMPLETED | 迁移暂缓优化模块 | `server/prompt/`、`server/judge/`、`server/routing/`、`server/cost/` → `extensions/` 同名 | prompt：adaptive-ttl、chunk-cache、cost-optimizer、guard、quality-score、rewrite；judge：quality-evaluator、semantic-judge；routing：parallel-generator；cost：cost-report |
+| ✅ COMPLETED | 迁移企业向已实现代码 | `server/middleware/rbac.ts` → `extensions/rbac/`；`server/audit/` → `extensions/audit/` | rbac.ts（+ 依赖方修正）、audit-logger.ts（注意 admin.ts `/audit/logs` 端点引用，需改 import 或一并下架） |
+| ✅ COMPLETED | 修正跨目录 import | 上述文件对 `shared/`、`db/` 及彼此的相对路径 | 允许 **extensions → 核心**（如 `parallel-generator → judge/judge`），禁止 **核心 → extensions** |
 
 **验收**：`npx tsc --noEmit` 0 错误 + `npm test` 350/350（测试跟随移动，数量不变）+ 无核心文件 import extensions。
 
@@ -194,10 +194,10 @@ src/
 
 | 状态 | 任务 | 源 → 目标 | 文件 |
 |------|------|-----------|------|
-| ⬜ TODO | 迁移 Provider 层 | `server/providers/` → `src/providers/` | registry、base、deepseek、ollama、openai、mock-provider |
-| ⬜ TODO | 迁移 Optimizer 核心 | → `src/optimizer/{prompt,cache,routing,cost,judge}/` | prompt：compression、conversation-compressor、adaptive-context、router、intent-learning、multi-dim-router、gateway-memory；cache：semantic-cache、cache-gate、cache-confidence、cache-auto-refresh；routing：smart-routing；cost：cost-controller；judge：request-judge、judge |
-| ⬜ TODO | 迁移 Analytics | `server/analytics/` → `src/analytics/` | analytics、daily-stats、trend-analyzer |
-| ⬜ TODO | 修正全部引用方 import | `server/routes/{chat,admin,user}.ts`、`server/middleware/pipeline.ts` 等所有引用被移模块的文件 | 逐一更新相对路径 |
+| ✅ COMPLETED | 迁移 Provider 层 | `server/providers/` → `src/providers/` | registry、base、deepseek、ollama、openai、mock-provider |
+| ✅ COMPLETED | 迁移 Optimizer 核心 | → `src/optimizer/{prompt,cache,routing,cost,judge}/` | prompt：compression、conversation-compressor、adaptive-context、router、intent-learning、multi-dim-router、gateway-memory；cache：semantic-cache、cache-gate、cache-confidence、cache-auto-refresh；routing：smart-routing；cost：cost-controller；judge：request-judge、judge |
+| ✅ COMPLETED | 迁移 Analytics | `server/analytics/` → `src/analytics/` | analytics、daily-stats、trend-analyzer |
+| ✅ COMPLETED | 修正全部引用方 import | `server/routes/{chat,admin,user}.ts`、`server/middleware/pipeline.ts` 等所有引用被移模块的文件 | 逐一更新相对路径 |
 
 **验收**：`npx tsc --noEmit` 0 错误 + `npm test` 350/350 + `npm run dev` 启动冒烟（`curl /health` 200）。
 
@@ -205,23 +205,23 @@ src/
 
 | 状态 | 任务 | 说明 | 验证 |
 |------|------|------|------|
-| ⬜ TODO | 验证 Provider 层纯净 | `providers/` 不得 import `cache/`、`router/`、`cost/`（现状已满足，移动后复检确认） | `grep` 确认 |
+| ✅ COMPLETED | 验证 Provider 层纯净 | `providers/` 不得 import `cache/`、`router/`、`cost/`（现状已满足，移动后复检确认） | `grep` 确认 |
 
 ### Phase 5 — Dashboard 首屏重构（优化可视化）
 
 | 状态 | 任务 | 说明 | 验证 |
 |------|------|------|------|
-| ⬜ TODO | 首屏 5 张指标卡 | Saved% / Saved￥ / Latency / Cache Hit / Current Model，数据源 `GET /admin/optimization/stats`（已实现） | `dashboard` 构建 + 本地联调 |
-| ⬜ TODO | 优化图表（可选） | 缓存置信度 `GET /admin/cache/confidence`、成本报告 `GET /admin/cost/report` | 同上 |
-| ⬜ TODO | 企业向 UI 降级 | 现有 ManagerDashboard（多租户/审批/速度测试/审计）收进「管理」子页，登录后默认进优化首屏 | 同上 |
+| ✅ COMPLETED | 首屏 5 张指标卡 | Saved% / Saved￥ / Latency / Cache Hit / Current Model，数据源 `GET /admin/optimization/stats`（已实现） | `dashboard` 构建 + 本地联调 |
+| ✅ COMPLETED | 优化图表（可选） | 缓存置信度 `GET /admin/cache/confidence`、成本报告 `GET /admin/cost/report` | 同上 |
+| ✅ COMPLETED | 企业向 UI 降级 | 现有 ManagerDashboard（多租户/审批/速度测试/审计）收进「管理」子页，登录后默认进优化首屏 | 同上 |
 
 ### Phase 6 — 收尾
 
 | 状态 | 任务 | 说明 | 验证 |
 |------|------|------|------|
-| ⬜ TODO | README 项目结构更新 | 顶部定位 + 目录树改为上表 | 文档 |
-| ⬜ TODO | 更新本表状态 | v2.0 全部 ✅，上文「主方向与拓展区」状态同步 | 文档 |
-| ⬜ TODO | 全量验证 + 推送 | `tsc` + `test` + `dashboard build` + CI 绿 | CI |
+| ✅ COMPLETED | README 项目结构更新 | 顶部定位 + 目录树改为上表 | 文档 |
+| ✅ COMPLETED | 更新本表状态 | v2.0 全部 ✅，上文「主方向与拓展区」状态同步 | 文档 |
+| ✅ COMPLETED | 全量验证 + 推送 | `tsc` + `test` + `dashboard build` + CI 绿 | CI |
 
 ### 风险与约束
 
@@ -798,7 +798,7 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 ---
 
-## 配置层补全（当前缺口，⬜ 全部 TODO）
+## 配置层补全（✅ COMPLETED）
 
 > **背景**：Layer 0~4 的功能引擎已实现（105 ✅），但**未真正接入请求链路与配置层**，省 token 能力尚未在线上生效。以下为必须补全的配置项，按优先级排列。
 

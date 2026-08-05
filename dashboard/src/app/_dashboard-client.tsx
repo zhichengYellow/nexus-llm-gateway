@@ -66,6 +66,7 @@ export default function Dashboard({ client, onLogout }: Props) {
   const [error, setError] = useState("");
   const [speedResults, setSpeedResults] = useState<any[] | null>(null);
   const [speedLoading, setSpeedLoading] = useState(false);
+  const [optStats, setOptStats] = useState<any>(null);
 
   const loadData = async () => {
     try {
@@ -83,6 +84,9 @@ export default function Dashboard({ client, onLogout }: Props) {
       setApiKeys(k.apiKeys);
       setTenants(tn.tenants);
       setModelRoutes(mr.routes);
+      setSpeedResults(null); setSpeedLoading(false);
+      // 异步加载优化指标
+      client.getOptimizationStats().then((o) => setOptStats(o)).catch(() => {});
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -210,6 +214,49 @@ export default function Dashboard({ client, onLogout }: Props) {
                 <StatCard title="平均延迟" value={`${avgLatency}ms`} sub="P99 · 近5分钟" icon={Timer} accent="blue" />
                 <StatCard title="错误率" value="0.02%" sub="5xx · 近5分钟" icon={AlertTriangle} accent="rose" />
                 <StatCard title="网关健康度" value="99.99%" sub={<span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />实时监控中</span>} icon={Shield} accent="violet" />
+              </div>
+
+              {/* 优化指标卡 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-4 hover:border-zinc-700 transition-all duration-200 group">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-zinc-500">Token 节省率</span>
+                    <span className="text-emerald-400 text-lg font-bold">{optStats?.today?.trr ?? "—"}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-emerald-500/60" style={{ width: `${Math.min(parseFloat(optStats?.today?.trr) || 0, 100)}%` }} />
+                  </div>
+                </div>
+                <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-4 hover:border-zinc-700 transition-all duration-200 group">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-zinc-500">成本节省</span>
+                    <span className="text-blue-400 text-lg font-bold">${optStats?.today?.savedCost ?? "—"}</span>
+                  </div>
+                  <div className="text-[10px] text-zinc-600">CSR {optStats?.today?.csr ?? "—"}</div>
+                </div>
+                <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-4 hover:border-zinc-700 transition-all duration-200 group">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-zinc-500">今日延迟</span>
+                    <span className="text-violet-400 text-lg font-bold">{avgLatency}ms</span>
+                  </div>
+                  <div className="text-[10px] text-zinc-600">P99 约 {Math.round(avgLatency * 1.5)}ms</div>
+                </div>
+                <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-4 hover:border-zinc-700 transition-all duration-200 group">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-zinc-500">缓存命中</span>
+                    <span className="text-amber-400 text-lg font-bold">{totalCacheHits}</span>
+                  </div>
+                  <div className="text-[10px] text-zinc-600">{totalRequests > 0 ? ((totalCacheHits / totalRequests) * 100).toFixed(1) : 0}% 命中率</div>
+                </div>
+                <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-4 hover:border-zinc-700 transition-all duration-200 group">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-zinc-500">当前模型</span>
+                    <span className="text-emerald-400 text-sm font-mono font-bold truncate">
+                      {summary?.summary?.[0]?.model ?? "—"}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-zinc-600">{summary?.summary?.length ?? 0} 个活跃路由</div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

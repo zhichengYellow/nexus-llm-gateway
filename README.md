@@ -284,15 +284,21 @@ CONCURRENT=50 DURATION=10 node benchmark/load-test.mjs
 
 ---
 
-## 📁 项目结构（规划中，v2.0 目录重构）
+## 📁 项目结构（v2.0）
 
 ```
 src/
-├── providers/        # Provider Layer（只调用 API）
-├── optimizer/        # 核心：prompt/context/cache/router/compression/summary/cost/quality（规划）
-├── analytics/        # token/latency/cache/provider/routing/savings/quality（规划）
-├── server/           # API Gateway + 现有实现的暂存位置
-├── dashboard/        # UI：Saved% / Saved￥ / Latency / Cache Hit
+├── providers/        # Provider Layer：registry / base / deepseek / ollama / openai
+├── optimizer/        # Optimization Pipeline（核心）
+│   ├── prompt/       # compression / conversation-compressor / adaptive-context / router / intent-learning
+│   ├── cache/        # semantic-cache / cache-gate / cache-confidence / cache-auto-refresh / embedding-screener
+│   ├── routing/      # smart-routing
+│   ├── cost/         # cost-controller / optimization-profile
+│   └── judge/        # request-judge / judge
+├── analytics/        # daily-stats / trend-analyzer / e2e-metrics
+├── server/           # API Gateway：routes / middleware / db
+├── extensions/       # 拓展区（暂缓模块）：dsl / workflow / agent / scheduler / plugins
+├── dashboard/        # Next.js 运营分析面板：TRR/CSR/QPS 指标 / 成本趋势 / 模型排行 / 优化建议
 ├── benchmark/        # 基准测试
 ├── cli/              # CLI 工具
 ├── sdk/              # TS + Python SDK
@@ -300,29 +306,14 @@ src/
 ```
 
 ---
-
-## 🌐 Provider 代理配置（国内访问 OpenAI / Gemini）
-
-```bash
-# 格式：<PROVIDER_TYPE>_PROXY=http://127.0.0.1:<代理端口>
-GEMINI_PROXY=http://127.0.0.1:7897    # Clash 代理
-# OPENAI_PROXY=http://127.0.0.1:7897  # OpenAI 也走代理
-```
-
-> 仅配置了代理的 Provider 走代理，其余直连。Gemini 建议使用 `gemini-flash-lite`（免费额度宽裕）。
-
----
-
-## � 开发路线
+## 🛤 开发路线
 
 > 完整路线见 [`fit/improve.md`](fit/improve.md)。以 TRR/CSR/QPS 为北极星指标。
 
-- [ ] **v2.0** Project Refactor：目录重构（Provider/Optimizer/Analytics/UI）、移除 Enterprise、BYOK 首次启动向导、Optimization Pipeline
-- [ ] **v2.1** Prompt Optimization：Compression / Rewrite / Deduplicate
-- [ ] **v2.2** Conversation Optimization：Auto Summary / Adaptive Context / History Compression
-- [ ] **v2.3** Semantic Cache 2.0：Confidence / Adaptive TTL / Chunk Cache / Partial Cache
-- [ ] **v2.4** Smart Cost Engine：Cost Predictor / Provider Recommendation / Auto Routing
-- [ ] **v2.5** Developer Experience：One Click Install / Config Wizard / VSCode Plugin
+- [x] **v2.0** ✅ 目录重构 + Dashboard + RBAC + Audit + Embedding 初筛 + E2E 指标（46 tests / 350 passed）
+- [ ] **v2.1** Billing / SSO / Webhook（外部集成）
+- [ ] **v2.2** VSCode / JetBrains / LangChain 集成（生态建设）
+- [ ] **v2.3** 技术博客 / Release 维护 / 社区运营
 
 ---
 
