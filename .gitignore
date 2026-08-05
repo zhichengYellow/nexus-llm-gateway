@@ -40,3 +40,4 @@ dashboard/.next
 # caches / temp
 /tmp
 .aider*
+.markitdown-venv/

@@ -132,6 +132,36 @@
 
 ---
 
+## 产品建议二轮对照评估（Benchmark / RFC / Optimization Engine，已评估）
+
+> **背景**：第二轮外部建议聚焦「建立 Benchmark 与研发流程，All-in Optimization」。核验结论：**定位与开发原则已采纳；4 个真增量待做，最高优先级是质量 Benchmark（R1）。**
+> **与一轮建议的关系**：一轮已固化「Optimization Pipeline + TRR/CSR/QPS 北极星 + 增量 P0-P2」；本轮在其上补「研发方法」：Benchmark 量化 → RFC 决策 → Lab 实验隔离。
+
+### 建议 vs 现状对照
+
+| 建议 | 现状 | 结论 |
+|---|---|---|
+| 不追 LiteLLM，赛道定位 Optimization | ✅ README 已定位（Save 30-80% LLM Cost） | 无 |
+| 每个 Feature 先回答三问（减多少 / 质量掉多少 / 进 Core 吗） | ✅ 已是开发原则（「核心指标定义」） | 无 |
+| 四阶段：Understanding → Optimization → Evaluation → Learning | 🟡 Optimization/Learning 已有；Understanding（请求分析）、Evaluation（质量基准）缺 | 增量 R1 / R2 |
+| 质量 Benchmark（1000 条真实 Prompt，对比 Token/成本/质量） | ❌ 只有**性能压测**（`benchmark/offline\|cache\|load\|auto-benchmark.mjs`），无优化质量基准 | **增量 R1（最高优先）** |
+| Optimization Lab（labs/ 实验隔离） | 🟡 `src/extensions/` 已承载隔离，缺「实验→Benchmark→三问→进 Core」流程 | 增量 R4 |
+| RFC 流程（先 RFC 后开发） | 🟡 `docs/adr/` 已有 6 个 ADR，可扩展为 RFC | 增量 R3 |
+| Optimization Engine v1（含 Token 构成分析） | 🟡 R4 TOE 名义完成（SmartRoutingEngine + e2e-metrics 4 测量点），缺「逐段 Token 构成分析」 | 增量 R2 |
+
+### 增量任务清单（⬜ 全部 TODO，按优先级）
+
+| 状态 | 任务 | 说明 | 验证 |
+|---|---|---|---|
+| ⬜ TODO | **R1：质量 Benchmark** | `benchmark/prompts/` 建真实 Prompt 数据集（分类：代码/翻译/数学/聊天/Agent/RAG，先 ≥300 条、目标 1000，可含从 usageLogs 采样的脱敏 prompt）；新增 `benchmark/quality-benchmark.mjs`：每条 prompt 跑「压缩 → 缓存 → 路由」优化前后对比，输出 Token / Latency / Cost / Quality 汇总表（Quality 先用 rule-based，如编辑距离/关键词命中；LLM Judge 版后续迭代，避免基准依赖 API 成本）；接入 `.github/workflows/benchmark.yml` | `node benchmark/quality-benchmark.mjs` 输出汇总 + CI 绿 |
+| ⬜ TODO | **R2：Request Analysis（Token 构成）** | 在 e2e-metrics entry 测量点统计逐段 Token 构成（system / history / user / tool / output 各占比），输出「哪里浪费最多」，供 R1 与后续优化决策；注意与 usageLogs 字段对齐 | `npx tsc --noEmit` + `npm test` + 手动请求观察构成输出 |
+| ⬜ TODO | R3：RFC 流程 | 新增 `docs/rfc/` + RFC 模板（目标 / 预计减 Token / 质量风险 / 方案 / Benchmark 依据）；新功能先 RFC 后开发，ADR 保留为决策记录 | 文档就绪 |
+| ⬜ TODO | R4：Optimization Lab 流程 | 本文件补充流程：实验代码 → `src/extensions/` → R1 Benchmark 量化 → 三问通过 → 接入 Core | 文档就绪 |
+
+> **执行约定**：R1 先行（没有 Benchmark，后续优化无法量化验收）。每个 R 任务完成必须跑 CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22，见「远程 Agent 强制守则」）→ 更新本表状态为 ✅。R1 的 Quality 评测先 rule-based（编辑距离/关键词命中），LLM Judge 版后续迭代，避免基准依赖 API 成本。
+
+---
+
 ## v2.0 目录重构执行计划（✅ COMPLETED）
 
 **执行方式**：由执行 Agent 逐步完成。**每完成一步**：运行该步验证命令 → 全部通过 → 单独提交（`refactor:` 前缀）→ 更新下方状态为 ✅。
