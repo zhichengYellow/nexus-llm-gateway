@@ -138,20 +138,102 @@ Current Model
 
 ## Feature Roadmap
 
-### v2.0 — Project Refactor（⬜ 全部 TODO）
+### v2.0 — Project Refactor（⬜ 执行中，见下方分阶段计划）
 
-**目标**：轻量化，完成产品定位改造。
+**目标**：轻量化，完成 BYOK 产品定位改造 —— 四层架构落地、拓展区（暂缓模块）物理隔离、移除企业向残留、Dashboard 首屏改为优化可视化。
 
-| 状态 | 任务 | 说明 |
-|------|------|------|
-| ⬜ TODO | 目录重构 | 按四层架构重构：`src/providers/` → `src/optimizer/` → `src/analytics/` → dashboard |
-| ⬜ TODO | 移除 Enterprise | 移除 RBAC/审批/LDAP/Billing/Organization 相关规划与代码 |
-| ⬜ TODO | Analytics 重构 | `analytics/token/latency/cache/provider/routing/savings/quality` |
-| ⬜ TODO | Dashboard 重构 | 第一屏：Saved % / Saved ￥ / Latency / Cache Hit / Current Model |
-| ⬜ TODO | Provider 解耦 | Provider 只负责调用 API，剥离缓存/Router |
-| ⬜ TODO | Optimization Pipeline | 独立核心流水线：Prompt→Context→Cache→Router→Provider→Judge |
-| ⬜ TODO | BYOK 首次启动 | Welcome 向导：选择 Provider + 输入 API Key → 自动生成配置文件 |
-| ⬜ TODO | README 重构 | 第一屏改为本文件顶部定位 |
+**执行方式**：本计划由远程执行者逐步执行。**每完成一步**：运行该步验证命令 → 全部通过 → 单独提交（`refactor:` 前缀）→ 更新下方状态为 ✅。**全量基准**：`npx tsc --noEmit` 0 错误 + `npm test` 334/334 通过（44 文件）。
+
+#### 目标目录结构（重构终点）
+
+```
+src/
+├── shared/                 # 共享层：config / logger / types / utils（不动）
+├── providers/              # Provider Layer：registry / base / deepseek / ollama / openai / mock
+├── optimizer/              # 核心 Optimization Pipeline（唯一主方向）
+│   ├── prompt/             # compression / conversation-compressor / adaptive-context / router
+│   │                       # intent-learning / multi-dim-router / gateway-memory
+│   ├── cache/              # semantic-cache / cache-gate / cache-confidence / cache-auto-refresh
+│   ├── routing/            # smart-routing
+│   ├── cost/               # cost-controller
+│   └── judge/              # request-judge / judge
+├── analytics/              # analytics / daily-stats / trend-analyzer
+├── server/                 # API Gateway 层（保留现状，只留网关职责）
+│   ├── routes/             # chat / models / embeddings / health / admin / user / batch
+│   ├── middleware/         # auth / logging / metrics / pipeline / circuit-breaker / retry / types
+│   ├── db/  ├── quota/  ├── billing/  └── config/   # + index.ts
+└── extensions/             # 🔌 拓展区（暂缓，物理隔离）
+    ├── dsl/  workflow/  agent/  scheduler/  event/  plugins/  compiler/
+    ├── middleware/         # bulkhead / hedged-request / memory-pool / streaming-buffer
+    │                       # adaptive-retry / weighted-router / compression / health-probe
+    ├── prompt/             # adaptive-ttl / chunk-cache / cost-optimizer / guard / quality-score / rewrite
+    ├── judge/              # quality-evaluator / semantic-judge
+    ├── routing/            # parallel-generator
+    └── cost/               # cost-report
+```
+
+> tsconfig（`include: ["src/**/*.ts"]`）与 vitest（`include: ["src/**/*.test.ts"]`）均为 `src/` 通配，**移动文件无需改任何构建配置**；测试文件跟随源码移动。
+
+#### Phase 1 — 清理企业向残留（低风险）
+
+| 状态 | 任务 | 说明 | 验证 |
+|------|------|------|------|
+| ⬜ TODO | 移除 Premium Cache 审批端点 | `src/server/routes/admin.ts` 删除 `PATCH /tenants/:id/request-premium` 与 `PATCH /tenants/:id/approve-premium`（约 60-100 行，含「Agent 自动审批」逻辑）；`tenants.cachePlan` 字段保留（不动 schema，避免 DB 迁移） | `npx tsc --noEmit` + `npm test` |
+| ⬜ TODO | 排查企业向残留文案 | 全局检索 `RBAC / LDAP / Organization / Billing / 审批`，清理 `fit/improve.md`、`README.md`、代码注释中的过时表述 | `grep` 确认无残留 |
+
+#### Phase 2 — 拓展区迁移到 `src/extensions/`（机械移动，风险集中）
+
+> 这些文件当前 **0 个核心文件引用**（只被自身测试引用），移动只需修正文件自身及其测试的 import 路径。**建议每移一个子目录跑一次 `npx tsc --noEmit` 快速定位遗漏**。
+
+| 状态 | 任务 | 源 → 目标 | 文件 |
+|------|------|-----------|------|
+| ⬜ TODO | 迁移框架类 | `server/{dsl,workflow,agent,scheduler,event,plugins,compiler}/` → `extensions/` 同名 | router-dsl、policy-engine、workflow-engine、agent-runtime、scheduler、event-bus、plugin-system、prompt-compiler（各含 .test.ts） |
+| ⬜ TODO | 迁移暂缓中间件 | `server/middleware/` → `extensions/middleware/` | bulkhead、hedged-request、memory-pool、streaming-buffer、adaptive-retry、weighted-router、compression、health-probe（各含 .test.ts） |
+| ⬜ TODO | 迁移暂缓优化模块 | `server/prompt/`、`server/judge/`、`server/routing/`、`server/cost/` → `extensions/` 同名 | prompt：adaptive-ttl、chunk-cache、cost-optimizer、guard、quality-score、rewrite；judge：quality-evaluator、semantic-judge；routing：parallel-generator；cost：cost-report |
+| ⬜ TODO | 修正跨目录 import | 上述文件对 `shared/` 及彼此的相对路径 | 允许 **extensions → 核心**（如 `parallel-generator → judge/judge`），禁止 **核心 → extensions** |
+
+**验收**：`npx tsc --noEmit` 0 错误 + `npm test` 334/334（测试跟随移动，数量不变）+ 无核心文件 import extensions。
+
+#### Phase 3 — 核心模块目录重构（providers / optimizer / analytics）
+
+| 状态 | 任务 | 源 → 目标 | 文件 |
+|------|------|-----------|------|
+| ⬜ TODO | 迁移 Provider 层 | `server/providers/` → `src/providers/` | registry、base、deepseek、ollama、openai、mock-provider |
+| ⬜ TODO | 迁移 Optimizer 核心 | → `src/optimizer/{prompt,cache,routing,cost,judge}/` | prompt：compression、conversation-compressor、adaptive-context、router、intent-learning、multi-dim-router、gateway-memory；cache：semantic-cache、cache-gate、cache-confidence、cache-auto-refresh；routing：smart-routing；cost：cost-controller；judge：request-judge、judge |
+| ⬜ TODO | 迁移 Analytics | `server/analytics/` → `src/analytics/` | analytics、daily-stats、trend-analyzer |
+| ⬜ TODO | 修正全部引用方 import | `server/routes/{chat,admin,user}.ts`、`server/middleware/pipeline.ts` 等所有引用被移模块的文件 | 逐一更新相对路径 |
+
+**验收**：`npx tsc --noEmit` 0 错误 + `npm test` 334/334 + `npm run dev` 启动冒烟（`curl /health` 200）。
+
+#### Phase 4 — Provider 解耦验证
+
+| 状态 | 任务 | 说明 | 验证 |
+|------|------|------|------|
+| ⬜ TODO | 验证 Provider 层纯净 | `providers/` 不得 import `cache/`、`router/`、`cost/`（现状已满足，移动后复检确认） | `grep` 确认 |
+
+#### Phase 5 — Dashboard 首屏重构（优化可视化）
+
+| 状态 | 任务 | 说明 | 验证 |
+|------|------|------|------|
+| ⬜ TODO | 首屏 5 张指标卡 | Saved% / Saved￥ / Latency / Cache Hit / Current Model，数据源 `GET /admin/optimization/stats`（已实现） | `dashboard` 构建 + 本地联调 |
+| ⬜ TODO | 优化图表（可选） | 缓存置信度 `GET /admin/cache/confidence`、成本报告 `GET /admin/cost/report` | 同上 |
+| ⬜ TODO | 企业向 UI 降级 | 现有 ManagerDashboard（多租户/审批/速度测试）收进「管理」子页，登录后默认进优化首屏 | 同上 |
+
+#### Phase 6 — 收尾
+
+| 状态 | 任务 | 说明 | 验证 |
+|------|------|------|------|
+| ⬜ TODO | README 项目结构更新 | 顶部定位 + 目录树改为上表 | 文档 |
+| ⬜ TODO | 更新本表状态 | v2.0 全部 ✅，`fit/improve.md`「当前代码基础」状态同步 | 文档 |
+| ⬜ TODO | 全量验证 + 推送 | `tsc` + `test` + `dashboard build` + CI 绿 | CI |
+
+#### 风险与约束
+
+1. **import 路径是最大风险**：移动后所有相对路径失效。策略 = 每移一个子目录立即跑 `tsc --noEmit`，按报错逐个修，避免一次性大爆炸。
+2. **依赖方向**：核心 → extensions 为禁止项（重构完成后的 CI 检查项）；extensions → 核心、shared 允许。
+3. **构建配置零改动**：tsconfig / vitest 均为 `src/**` 通配，只移动文件不改配置。
+4. **每步一个提交**：`refactor: move X to src/extensions/` 粒度，便于回滚与 review。
+5. **不引入新功能**：本计划纯结构重构，行为零变化（334/334 是行为不变的硬证据）。
 
 ### v2.1 — Prompt Optimization Engine
 
