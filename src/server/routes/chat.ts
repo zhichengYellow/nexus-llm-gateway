@@ -9,6 +9,8 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { createDefaultPipeline, type PipelineContext } from "../middleware/pipeline.js";
+import { getRegistry } from "../../providers/registry.js";
+import type { ProviderType } from "../../shared/types.js";
 import { logger } from "../../shared/logger.js";
 import { getPromptRouter } from "../../optimizer/prompt/router.js";
 import { getPromptCompressor } from "../../optimizer/prompt/compression.js";
@@ -130,20 +132,28 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
 
   // ===== model=auto 智能路由 =====
   let model = req.model;
+  let cacheProvider = "unknown";
   let intentResult = null;
   if (model === "auto" && !bypassOptimize) {
     const smartRouting = getSmartRoutingEngine();
     const userPrompt = (messages as any[]).filter((m: any) => m.role === "user").map((m: any) => normalizeContent(m.content)).join("\n");
     const promptRouter = getPromptRouter();
     intentResult = promptRouter.classify(userPrompt);
-    const decision = smartRouting.decide(intentResult.category);
+    const available = new Set<ProviderType>(getRegistry().registeredProviders());
+    const decision = smartRouting.decide(intentResult.category, undefined, available);
     model = decision.model ?? intentResult.model ?? intentResult.provider;
+    cacheProvider = decision.provider;
     logger.info({ requestId, intent: intentResult.category, provider: decision.provider, model, degraded: decision.degraded }, "smart-routed");
   } else if (model === "auto") {
     const userPrompt = (messages as any[]).filter((m: any) => m.role === "user").map((m: any) => normalizeContent(m.content)).join("\n");
     const router = getPromptRouter();
     intentResult = router.classify(userPrompt);
     model = intentResult.model ?? intentResult.provider;
+  } else {
+    // 显式模型：反查 provider（与 pipeline store 的 providerType 对齐）
+    try {
+      cacheProvider = getRegistry().resolve(model).providerType;
+    } catch { /* 无效模型会走 404,缓存键用 unknown 兜底 */ }
   }
 
   // ===== C1.4: 成本控制接入 =====
@@ -170,7 +180,7 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   // ===== C1.2: 缓存门控接入 =====
   if (!bypassOptimize && !c.req.header("x-nexus-no-cache")) {
     const cacheGate = getCacheGate();
-    const gateResult = await cacheGate.evaluate(req as ChatCompletionRequest, model, "auto");
+    const gateResult = await cacheGate.evaluate(req as ChatCompletionRequest, model, cacheProvider);
     if (gateResult.hit && gateResult.response) {
       const latencyMs = Date.now() - ctx.startTime;
       const autoRefresh = getCacheAutoRefresh();

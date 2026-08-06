@@ -156,6 +156,11 @@ export class ProviderRegistry {
   listAllAliases(): string[] {
     return Array.from(this.modelMap.keys());
   }
+
+  /** 已注册（有 key）的 provider 类型集合 */
+  registeredProviders(): ProviderType[] {
+    return Array.from(new Set(Array.from(this.modelMap.values()).map((m) => m.providerType)));
+  }
 }
 
 let _registry: ProviderRegistry | null = null;

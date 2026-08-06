@@ -75,13 +75,15 @@ export class SmartRoutingEngine {
   /**
    * 智能路由决策
    */
-  decide(intent: string, budget?: number): RoutingDecision {
+  decide(intent: string, budget?: number, available?: Set<ProviderType>): RoutingDecision {
     const router = getMultiDimRouter();
     const estimator = getCostEstimator();
 
-    // 构建候选列表
+    // 构建候选列表（仅保留可用 provider；available 缺省时不过滤，保持兼容）
     const prices = estimator.getPrices();
-    const candidates: RouteOption[] = prices.map((p) => {
+    const candidates: RouteOption[] = prices
+      .filter((p) => !available || available.has(p.provider))
+      .map((p) => {
       // 意图匹配度（基于画像）
       const intentMatch = this.profile.intentDistribution[intent] ?? 0.3;
       // Provider 偏好

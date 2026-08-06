@@ -38,4 +38,10 @@ describe("SmartRoutingEngine", () => {
     const stats = engine.getStats();
     expect(stats.totalDecisions).toBeGreaterThan(0);
   });
+
+  it("available 过滤: 只选可用 provider", () => {
+    const engine = new SmartRoutingEngine();
+    const d = engine.decide("code", undefined, new Set(["deepseek"]));
+    expect(d.provider).toBe("deepseek");
+  });
 });
