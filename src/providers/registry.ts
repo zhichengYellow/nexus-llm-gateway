@@ -152,6 +152,21 @@ export class ProviderRegistry {
     this.modelMap.set(alias, { providerType, upstreamModel });
   }
 
+  /** 从 config 重建全部 provider(config 内置模型,可带 DB key 覆盖);用于热加载前重置 */
+  rebuildFromConfig(
+    providers: Partial<Record<ProviderType, ProviderConfig>>,
+    keyOverrides?: Map<string, string>,
+  ): void {
+    this.modelMap.clear();
+    this.fallbackMap.clear();
+    this.chatProviders.clear();
+    this.embedProviders.clear();
+    for (const [type, cfg] of Object.entries(providers) as Array<[ProviderType, ProviderConfig]>) {
+      const apiKey = keyOverrides?.get(type) ?? cfg.apiKey;
+      this.registerProvider(type, { ...cfg, apiKey });
+    }
+  }
+
   /** 热更新 Provider API Key(UI 配置):用新 key 重建 provider 实例,立即生效 */
   updateProviderKey(type: ProviderType, apiKey: string): void {
     const cfg = getConfig().providers[type];

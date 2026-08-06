@@ -11,7 +11,7 @@
  */
 import { eq } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { modelRoutes } from "../db/schema.js";
+import { modelRoutes, providerConfigs } from "../db/schema.js";
 import { getRegistry } from "../../providers/registry.js";
 import { getConfig } from "../../shared/config.js";
 import { logger } from "../../shared/logger.js";
@@ -27,11 +27,18 @@ export async function reloadRegistryFromDB(): Promise<{
     const config = getConfig();
     const registry = getRegistry();
 
-    // 读取数据库中的模型路由
-    const dbRoutes = await db.select().from(modelRoutes).where(eq(modelRoutes.enabled, true));
+    // 读取 UI 配置的 Provider Key(DB 优先于 .env)
+    let keyOverrides: Map<string, string> | undefined;
+    try {
+      const dbKeys = await db.select().from(providerConfigs);
+      keyOverrides = new Map(dbKeys.map((r) => [r.provider, r.apiKey]));
+    } catch { /* DB 不可用则只用 .env */ }
 
-    // 清除旧的路由映射
-    registry.clearRoutes();
+    // 重建 config 内置 provider(含内置模型,如 deepseek-v4-flash / gemini-flash-lite)
+    registry.rebuildFromConfig(config.providers, keyOverrides);
+
+    // 读取数据库中的模型路由(自定义路由,叠加在内置模型之上)
+    const dbRoutes = await db.select().from(modelRoutes).where(eq(modelRoutes.enabled, true));
 
     // 重新注册
     for (const route of dbRoutes) {
