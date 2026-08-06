@@ -12,7 +12,6 @@
  * - compressed: 压缩节省的 Token
  * - cached: 缓存节省的 Token
  */
-import { logger } from "../../shared/logger.js";
 
 export interface TokenBreakdown {
   system: number;
@@ -76,10 +75,10 @@ export class TokenAnalyzer {
     // 识别浪费来源
     const wasteSources: Array<{ source: string; tokens: number; suggestion: string }> = [];
     if (breakdown.history > breakdown.user * 3) {
-      wasteSources.push({ source: "history", tokens: breakdown.history, suggestion: `历史占比过高 (${(ratios.history * 100).toFixed(0)}%)，建议启用 Adaptive Context 自动截断` });
+      wasteSources.push({ source: "history", tokens: breakdown.history, suggestion: `历史占比过高 (${((ratios.history ?? 0) * 100).toFixed(0)}%)，建议启用 Adaptive Context 自动截断` });
     }
     if (breakdown.system > breakdown.user) {
-      wasteSources.push({ source: "system", tokens: breakdown.system, suggestion: `System Prompt 过长 (${(ratios.system * 100).toFixed(0)}%)，建议启用 Prompt Compression` });
+      wasteSources.push({ source: "system", tokens: breakdown.system, suggestion: `System Prompt 过长 (${((ratios.system ?? 0) * 100).toFixed(0)}%)，建议启用 Prompt Compression` });
     }
     if (breakdown.compressed === 0 && breakdown.total > 500) {
       wasteSources.push({ source: "compression", tokens: 0, suggestion: "未启用压缩，预计可节省 10-20% Token" });
