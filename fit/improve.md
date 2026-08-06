@@ -176,6 +176,42 @@
 | ✅ COMPLETED | R3：RFC 流程 | 新增 `docs/rfc/` + RFC 模板（目标 / 预计减 Token / 质量风险 / 方案 / Benchmark 依据）；新功能先 RFC 后开发，ADR 保留为决策记录 | 文档就绪 |
 | ✅ COMPLETED | R4：Optimization Lab 流程 | 本文件补充流程：实验代码 → `src/extensions/` → R1 Benchmark 量化 → 三问通过 → 接入 Core | 文档就绪 |
 | ✅ COMPLETED | **R5：租户端隔离 + master 端个人化重构** | **方向决策（见 docs/SPEC.md 1.3.1）**：产品为个人单租户工作台。① 登录统一为 Master Key 单视角（page.tsx，移除 manager/user 双分支）；② 导航移除「租户管理」，API Keys 改「个人 Key」，创建 Key 不再选租户（固定个人默认租户）；③ `_user-dashboard.tsx` 保留并标注未来方向（多租户用户端），不接入主流程；④ 后端 user 路由与 DB schema 未动 | `npx tsc --noEmit`（dashboard）+ 浏览器实测（登录后单视角、无租户管理） |
+| ⬜ TODO | **R6：Dashboard 价值展示中心重构** | **原则（见下方方案）**：首页不做监控(Grafana 式)，做「价值展示」——第一眼看到"今天省了多少钱"。核心 13 项任务见下方「R6 详细方案」，最高优先：Hero 节省 + 指标卡 + 时间线改 Savings + 优化报告 + Why 归因 + 菜单重分类；新增 Optimization Explorer / Savings 页；HTTP 状态与 Live Log 移出首页；颜色语义绿=Saving/蓝=Optimization/红=Error。**前置：先修计价虚高 bug（见 memory: cost-calculation-investigation，daily-stats.ts:59 比例估算），否则 Hero 金额虚高** | `npx tsc --noEmit`（dashboard）+ `npm test` + 浏览器实测（首页 Hero 显示真实节省数据、无 500） |
+
+## R6 详细方案（Dashboard 价值展示中心，供执行 agent）
+
+> **产品原则**：Dashboard 不是"监控后台"，是"价值展示中心"。首页每个组件回答同一个问题——"Gateway 帮我省了什么？" 数据缺失时显示 "—"，不得崩溃。
+
+### 数据源（真实存在，勿新造）
+
+| 数据 | 来源 |
+|---|---|
+| today 节省（Token/金额/TRR/CSR） | `GET /admin/optimization/stats`（daily-stats） |
+| 逐请求优化字段（savedTokens / compressionRatio / cacheType / routerReason / intentCategory） | `usageLogs` 表（chat.ts 已写入） |
+| 节省归因（compression/cache/routing 占比） | e2e-metrics `savingsBreakdown`（chat.ts:249）→ 需聚合端点 |
+| 小时级 Saved Token | `GET /admin/usage/timeline`（admin.ts:174，需扩展加 `savedTokens` 聚合列） |
+
+### 任务（编号按实现顺序，核心先行）
+
+1. **前置 P0：修计价虚高**——`daily-stats.ts:59` 的 `savedCost = totalCost × savedTokens/totalTokens` 比例估算：缓存命中多、真实请求少时 savedTokens≫totalTokens 导致金额虚高；且缓存命中路径不写 savedTokens。修复口径后再做 Hero，否则金额不可信。
+2. **Hero 区**：首页顶部大数字「Today You Saved」——节省金额（$）+ 节省 Token（如 326K）+ 节省率（%），替代现有「总请求/延迟/错误率/健康度」四个系统状态卡。
+3. **指标卡 4 枚**（替代原卡片）：Cache Hit % / Average Token Reduction % / Average Response Time / Active Provider。
+4. **请求时间线改 Savings**：折线从「Token」改为「Saved Token / Saved Cost」——扩展 `/admin/usage/timeline` 返回 `savedTokens` 小时聚合，前端改 dataKey。
+5. **Optimization Report 卡**：展示示例/最近请求的优化链路（Original → Compression -18% → History -46% → Cache Hit → Provider → Final Saving 63%），数据从 usageLogs 取最近一条真实请求。
+6. **Why? 节省归因卡**：Cache X% / Compression Y% / Router Z% / Cheap Model W%——基于 savingsBreakdown 聚合；无数据时显示「数据积累中」。
+7. **Provider 占比卡**：用量或成本分布（DeepSeek 42% / Gemini 37%…），数据从运营分析 provider 排行上移复用。
+8. **移除**：首页 HTTP 状态卡与 Live Log（可保留后端日志；如需可后续加独立「监控」页）。
+9. **左侧菜单重分类**：Overview（价值首页）/ Optimization（Explorer）/ Analytics / Providers（含 Provider 配置 + 模型路由）/ Cache / Settings（个人 Key 等）。
+10. **新增页 Optimization Explorer**：逐请求优化链路列表（usageLogs 每行：Original → Compressed → Cache → Provider → Saved%），可筛选/排序。
+11. **新增页 Savings**：Today / This Week / This Month / Lifetime 累计（Token / Cost / Latency）。
+12. **请求列表/表格加「优化收益」列**：Saved % / Cache 命中 / 本次节省金额。
+13. **颜色语义统一**：绿=Saving、蓝=Optimization、红=Error（替换现有"绿=成功"的监控语义）。
+
+### 验收
+
+- `npx tsc --noEmit`（dashboard）+ `npm test` 全绿。
+- 浏览器实测：首页第一屏是 Hero 节省数字；无 500；时间线显示 Saved Token；数据缺失显示 "—"。
+- 不做的：Request Replay（已判不做，见 docs/SPEC.md 6.3）。
 
 > **执行约定**：R1 先行（没有 Benchmark，后续优化无法量化验收）。每个 R 任务完成必须跑 CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22，见「远程 Agent 强制守则」）→ 更新本表状态为 ✅。R1 的 Quality 评测先 rule-based（编辑距离/关键词命中），LLM Judge 版后续迭代，避免基准依赖 API 成本。
 

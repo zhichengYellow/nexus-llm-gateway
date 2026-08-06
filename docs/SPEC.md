@@ -52,6 +52,7 @@ Nexus 不追求"支持最多 Provider"(LiteLLM 的赛道),不追求"API 管理�
 - **P3 引擎唯一核心**: Optimization Engine 是唯一核心,其余一切是插件/外围。
 - **P4 优化可度量**: 没有 Benchmark 就没有优化。任何优化必须能量化前后差异。
 - **P5 架构整洁**: 无巨型类、无功能耦合、核心路径依赖方向单向(server/routes → optimizer → providers)。
+- **P6 价值展示**: Dashboard 是「价值展示中心」不是监控后台——首页围绕「今天省了多少 Token/钱、省在哪、若不用 Nexus 会花多少」设计;HTTP/延迟等系统状态移出首页。
 
 ## 1.5 北极星指标(North Star)
 
