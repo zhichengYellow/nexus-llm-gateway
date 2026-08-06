@@ -41,3 +41,4 @@ dashboard/.next
 /tmp
 .aider*
 .markitdown-venv/
+benchmark-results-*.json
