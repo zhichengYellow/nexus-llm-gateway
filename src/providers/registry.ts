@@ -152,6 +152,17 @@ export class ProviderRegistry {
     this.modelMap.set(alias, { providerType, upstreamModel });
   }
 
+  /** 热更新 Provider API Key(UI 配置):用新 key 重建 provider 实例,立即生效 */
+  updateProviderKey(type: ProviderType, apiKey: string): void {
+    const cfg = getConfig().providers[type];
+    if (!cfg) {
+      logger.warn({ providerType: type }, "provider not found in config, cannot update key");
+      return;
+    }
+    this.registerProvider(type, { ...cfg, apiKey });
+    logger.info({ providerType: type, configured: Boolean(apiKey) }, "provider api key updated (hot reload)");
+  }
+
   /** 获取所有模型别名列表 */
   listAllAliases(): string[] {
     return Array.from(this.modelMap.keys());

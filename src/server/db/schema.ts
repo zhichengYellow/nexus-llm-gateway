@@ -212,5 +212,11 @@ export const auditLogs = pgTable("audit_logs", {
   createdAtIdx: index("audit_logs_created_at_idx").on(t.createdAt),
 }));
 
+export const providerConfigs = pgTable("provider_configs", {
+  provider: text("provider").primaryKey(),       // ProviderType: deepseek / openai / gemini / ...
+  apiKey: text("api_key").notNull(),             // UI 配置的 Provider API Key
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export { vector };
 export const enableVectorExtension = sql`CREATE EXTENSION IF NOT EXISTS vector`;

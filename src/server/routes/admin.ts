@@ -8,11 +8,13 @@ import { zValidator } from "@hono/zod-validator";
 import { eq, sql, and, gte } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "../db/client.js";
-import { apiKeys, tenants, usageLogs, modelRoutes } from "../db/schema.js";
+import { apiKeys, tenants, usageLogs, modelRoutes, providerConfigs } from "../db/schema.js";
 import { hashKey } from "../middleware/auth.js";
 import { getSemanticCache } from "../../optimizer/cache/semantic-cache.js";
 import { getRegistry } from "../../providers/registry.js";
 import { reloadRegistryFromDB, getHotReloadStatus } from "../config/hot-reload.js";
+import { saveProviderKey, deleteProviderKey } from "../config/provider-keys.js";
+import { getConfig } from "../../shared/config.js";
 import { logger } from "../../shared/logger.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
@@ -287,6 +289,34 @@ adminRoute.post("/speed-test", async (c) => {
 });
 
 // ===== 缓存统计 =====
+// ===== Provider API Key 配置(个人友好:UI 配置,存 DB 热生效) =====
+adminRoute.get("/providers/keys", async (c) => {
+  const cfg = getConfig();
+  const rows = await db.select().from(providerConfigs);
+  const dbKeys = new Map(rows.map((r) => [r.provider, r.apiKey]));
+  const providers = Object.entries(cfg.providers).map(([type, p]) => ({
+    provider: type,
+    configured: Boolean(dbKeys.get(type) ?? p.apiKey),
+    source: dbKeys.has(type) ? "db" : "env",
+  }));
+  return c.json({ providers });
+});
+
+adminRoute.post("/providers/:type/key", async (c) => {
+  const type = c.req.param("type") as string;
+  const body = await c.req.json().catch(() => ({}));
+  const apiKey = (body?.apiKey ?? "").trim();
+  if (!apiKey) return c.json({ error: { message: "apiKey required", type: "validation_error" } }, 400);
+  await saveProviderKey(type as any, apiKey);
+  return c.json({ ok: true, provider: type, source: "db", configured: true });
+});
+
+adminRoute.delete("/providers/:type/key", async (c) => {
+  const type = c.req.param("type") as string;
+  await deleteProviderKey(type as any);
+  return c.json({ ok: true, provider: type, source: "env" });
+});
+
 adminRoute.get("/cache/stats", async (c) => {
   const cache = getSemanticCache();
   const stats = await cache.stats();

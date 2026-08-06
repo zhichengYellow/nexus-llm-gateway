@@ -4,6 +4,7 @@
  */
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
+import { loadProviderKeysFromDB } from "./config/provider-keys.js";
 import { cors } from "hono/cors";
 import { logger } from "../shared/logger.js";
 import { getConfig } from "../shared/config.js";
@@ -58,6 +59,7 @@ app.route("/", api);
 
 // 启动
 const config = getConfig();
+void loadProviderKeysFromDB(); // 启动时从 DB 加载 UI 配置的 Provider Key
 
 serve(
   {

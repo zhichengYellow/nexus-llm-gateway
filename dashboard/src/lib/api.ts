@@ -338,4 +338,19 @@ export class ApiClient {
       results: Array<{ model: string; status: "ok" | "error"; latencyMs: number; error?: string }>;
     }>("/admin/speed-test", {});
   }
+
+  // ===== Provider API Key 配置(UI 配置,热生效) =====
+  async getProviderKeys() {
+    return this.get<{
+      providers: Array<{ provider: string; configured: boolean; source: string }>;
+    }>("/admin/providers/keys");
+  }
+
+  async setProviderKey(provider: string, apiKey: string) {
+    return this.post<{ ok: boolean; provider: string; source: string }>(`/admin/providers/${provider}/key`, { apiKey });
+  }
+
+  async deleteProviderKey(provider: string) {
+    return this.del<{ ok: boolean; provider: string; source: string }>(`/admin/providers/${provider}/key`);
+  }
 }

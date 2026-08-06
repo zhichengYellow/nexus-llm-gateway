@@ -35,6 +35,7 @@ const NAV_ITEMS = [
   { id: "overview", label: "概览", icon: LayoutDashboard },
   { id: "analytics", label: "运营分析", icon: BarChart3 },
   { id: "keys", label: "个人 Key", icon: KeyRound },
+  { id: "providers", label: "Provider", icon: Server },
   { id: "routes", label: "模型路由", icon: Route },
 ] as const;
 
@@ -54,6 +55,9 @@ export default function Dashboard({ client, onLogout }: Props) {
   const [range, setRange] = useState<RangeKey>("24h");
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyResult, setNewKeyResult] = useState<any>(null);
+  const [providersKeys, setProvidersKeys] = useState<Array<{ provider: string; configured: boolean; source: string }>>([]);
+  const [keyInputs, setKeyInputs] = useState<Record<string, string>>({});
+  const [keySaving, setKeySaving] = useState<Record<string, boolean>>({});
   const [newRouteAlias, setNewRouteAlias] = useState("");
   const [newRouteProvider, setNewRouteProvider] = useState("");
   const [newRouteUpstream, setNewRouteUpstream] = useState("");
@@ -66,13 +70,14 @@ export default function Dashboard({ client, onLogout }: Props) {
 
   const loadData = async () => {
     try {
-      const [s, t, c, k, tn, mr] = await Promise.all([
+      const [s, t, c, k, tn, mr, pk] = await Promise.all([
         client.getUsageSummary(),
         client.getUsageTimeline(range),
         client.getCacheStats(),
         client.getApiKeys(),
         client.getTenants(),
         client.getModelRoutes(),
+        client.getProviderKeys(),
       ]);
       setSummary(s);
       setTimeline(t);
@@ -80,6 +85,7 @@ export default function Dashboard({ client, onLogout }: Props) {
       setApiKeys(k.apiKeys);
       setTenants(tn.tenants);
       setModelRoutes(mr.routes);
+      setProvidersKeys(pk.providers);
       setSpeedResults(null); setSpeedLoading(false);
       // 异步加载优化指标
       client.getOptimizationStats().then((o) => setOptStats(o)).catch(() => {});
@@ -447,6 +453,55 @@ export default function Dashboard({ client, onLogout }: Props) {
                       </button>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "providers" && (
+            <div className="space-y-6">
+              <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
+                <h3 className="font-semibold text-sm text-zinc-200 mb-1">Provider API Key</h3>
+                <p className="text-xs text-zinc-500 mb-4">无需修改 .env —— 在此填写 Provider 的 API Key,保存立即生效(存数据库,重启保留)。留空保存可恢复 .env 配置。</p>
+                <div className="space-y-3">
+                  {providersKeys.map((p) => {
+                    const saving = keySaving[p.provider];
+                    return (
+                      <div key={p.provider} className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/40 border border-zinc-800/60">
+                        <div className="w-28 shrink-0">
+                          <div className="text-sm text-zinc-200 font-medium capitalize">{p.provider}</div>
+                          <div className="text-[10px] mt-0.5">
+                            {p.configured
+                              ? <span className={p.source === "db" ? "text-emerald-400" : "text-blue-400"}>已配置 · {p.source === "db" ? "控制台" : ".env"}</span>
+                              : <span className="text-zinc-500">未配置</span>}
+                          </div>
+                        </div>
+                        <input
+                          type="password"
+                          value={keyInputs[p.provider] ?? ""}
+                          onChange={(e) => setKeyInputs((s) => ({ ...s, [p.provider]: e.target.value }))}
+                          className="flex-1 px-3 py-2 bg-zinc-950/60 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm font-mono focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30"
+                          placeholder={p.configured ? "输入新 Key 覆盖(留空则删除/恢复 .env)" : "输入 API Key"}
+                        />
+                        <button
+                          onClick={async () => {
+                            const val = (keyInputs[p.provider] ?? "").trim();
+                            setKeySaving((s) => ({ ...s, [p.provider]: true }));
+                            try {
+                              if (val) await client.setProviderKey(p.provider, val);
+                              else await client.deleteProviderKey(p.provider);
+                              setKeyInputs((s) => ({ ...s, [p.provider]: "" }));
+                              loadData();
+                            } catch (e) { setError((e as Error).message); }
+                            finally { setKeySaving((s) => ({ ...s, [p.provider]: false })); }
+                          }}
+                          disabled={saving}
+                          className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-500 transition font-medium disabled:opacity-50 shrink-0">
+                          {saving ? "保存中..." : "保存"}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
