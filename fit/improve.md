@@ -21,7 +21,7 @@
 
 **接线事实提醒（强制）**：`docs/SPEC.md` 2.4 表是接线状态快照，但**接线状态会随提交变化**——开工前必须当场 `grep -rn "模块名" src --include="*.ts" | grep -v test` 验证，不要直接信文档或旧结论（曾因旧结论把已接线的 cost-optimizer / quality-evaluator 误写成未接线）。
 
-**文档欠账（⬜ TODO）**：SPEC 6.2 RFC 索引中 RFC-0001/0004/0005/0006/0007 为「实现 ✅ / 文档 ⬜」，需按 `docs/rfc/0000-template.md` 补写 RFC 正文。
+**文档欠账**：SPEC 6.2 RFC 索引中 RFC-0001/0004/0005/0006/0007 已按 `docs/rfc/0000-template.md` 补写 RFC 正文 ✅。
 
 ---
 
