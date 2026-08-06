@@ -86,7 +86,7 @@ export default function Dashboard({ client, onLogout }: Props) {
       setTenants(tn.tenants);
       setModelRoutes(mr.routes);
       setProvidersKeys(pk.providers);
-      setSpeedResults(null); setSpeedLoading(false);
+      setSpeedLoading(false);
       // 异步加载优化指标
       client.getOptimizationStats().then((o) => setOptStats(o)).catch(() => {});
     } catch (e) {

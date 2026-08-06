@@ -263,28 +263,36 @@ adminRoute.delete("/model-routes/:id", async (c) => {
 adminRoute.post("/speed-test", async (c) => {
   const registry = getRegistry();
   const allModels = registry.listAllModels();
-  const results: Array<{ model: string; status: "ok" | "error"; latencyMs: number; error?: string }> = [];
-
-  for (const model of allModels) {
-    const start = Date.now();
-    try {
-      const resolved = registry.resolve(model.id);
-      // 发送一个最简单的请求测速
-      await resolved.provider.chat(
-        { model: model.id, messages: [{ role: "user", content: "hi" }], max_tokens: 1 },
-        resolved.upstreamModel,
-      );
-      results.push({ model: model.id, status: "ok", latencyMs: Date.now() - start });
-    } catch (e) {
-      results.push({
-        model: model.id,
-        status: "error",
-        latencyMs: Date.now() - start,
-        error: (e as Error).message.slice(0, 100),
-      });
-    }
-  }
-
+  // 并行测速 + 8s 超时(避免无 key/挂起的 provider 串行拖死整个请求)
+  const settled = await Promise.allSettled(
+    allModels.map(async (model) => {
+      const start = Date.now();
+      try {
+        const resolved = registry.resolve(model.id);
+        const timeout = new Promise<never>((_, rej) =>
+          setTimeout(() => rej(new Error("timeout (8s)")), 8000),
+        );
+        await Promise.race([
+          resolved.provider.chat(
+            { model: model.id, messages: [{ role: "user", content: "hi" }], max_tokens: 1 },
+            resolved.upstreamModel,
+          ),
+          timeout,
+        ]);
+        return { model: model.id, status: "ok" as const, latencyMs: Date.now() - start };
+      } catch (e) {
+        return {
+          model: model.id,
+          status: "error" as const,
+          latencyMs: Date.now() - start,
+          error: (e as Error).message.slice(0, 100),
+        };
+      }
+    }),
+  );
+  const results = settled.map((r) =>
+    r.status === "fulfilled" ? r.value : { model: "unknown", status: "error", latencyMs: 0, error: "测速失败" },
+  );
   return c.json({ results });
 });
 
