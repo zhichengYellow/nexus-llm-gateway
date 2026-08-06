@@ -34,8 +34,7 @@ function formatBeijingFull(v: string): string {
 const NAV_ITEMS = [
   { id: "overview", label: "概览", icon: LayoutDashboard },
   { id: "analytics", label: "运营分析", icon: BarChart3 },
-  { id: "keys", label: "API Keys", icon: KeyRound },
-  { id: "tenants", label: "租户管理", icon: Users },
+  { id: "keys", label: "个人 Key", icon: KeyRound },
   { id: "routes", label: "模型路由", icon: Route },
 ] as const;
 
@@ -54,10 +53,7 @@ export default function Dashboard({ client, onLogout }: Props) {
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<RangeKey>("24h");
   const [newKeyName, setNewKeyName] = useState("");
-  const [newKeyTenant, setNewKeyTenant] = useState("");
   const [newKeyResult, setNewKeyResult] = useState<any>(null);
-  const [newTenantName, setNewTenantName] = useState("");
-  const [newTenantQuota, setNewTenantQuota] = useState("");
   const [newRouteAlias, setNewRouteAlias] = useState("");
   const [newRouteProvider, setNewRouteProvider] = useState("");
   const [newRouteUpstream, setNewRouteUpstream] = useState("");
@@ -415,15 +411,7 @@ export default function Dashboard({ client, onLogout }: Props) {
                       className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition"
                       placeholder="例如: dev-key" />
                   </div>
-                  <div className="flex-1 min-w-[160px]">
-                    <label className="block text-xs text-zinc-500 mb-1">租户</label>
-                    <select value={newKeyTenant} onChange={(e) => setNewKeyTenant(e.target.value)}
-                      className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30">
-                      <option value="">选择租户</option>
-                      {tenants.map((t) => <option key={t.id} value={t.id} className="bg-zinc-900">{t.name}</option>)}
-                    </select>
-                  </div>
-                  <button onClick={async () => { if (!newKeyName || !newKeyTenant) return; try { const res = await client.createApiKey(newKeyTenant, newKeyName); setNewKeyResult(res.apiKey); setNewKeyName(""); loadData(); } catch (e) { setError((e as Error).message); } }}
+                  <button onClick={async () => { const tenantId = tenants[0]?.id ?? ""; if (!newKeyName || !tenantId) return; try { const res = await client.createApiKey(tenantId, newKeyName); setNewKeyResult(res.apiKey); setNewKeyName(""); loadData(); } catch (e) { setError((e as Error).message); } }}
                     className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-500 transition font-medium">
                     创建
                   </button>
@@ -457,62 +445,6 @@ export default function Dashboard({ client, onLogout }: Props) {
                         className="text-xs px-2 py-1 rounded-md text-zinc-500 border border-zinc-700/50 hover:text-rose-400 hover:border-rose-500/20 hover:bg-rose-500/10 transition">
                         删除
                       </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "tenants" && (
-            <div className="space-y-6">
-              <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
-                <h3 className="font-semibold text-sm text-zinc-200 mb-4">创建租户</h3>
-                <div className="flex gap-3 items-end flex-wrap">
-                  <div className="flex-1 min-w-[160px]">
-                    <label className="block text-xs text-zinc-500 mb-1">名称</label>
-                    <input type="text" value={newTenantName} onChange={(e) => setNewTenantName(e.target.value)}
-                      className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30"
-                      placeholder="例如: 开发团队" />
-                  </div>
-                  <div className="flex-1 min-w-[160px]">
-                    <label className="block text-xs text-zinc-500 mb-1">月度 Token 配额（可选）</label>
-                    <input type="number" value={newTenantQuota} onChange={(e) => setNewTenantQuota(e.target.value)}
-                      className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30"
-                      placeholder="留空不限" />
-                  </div>
-                  <button onClick={async () => { if (!newTenantName) return; try { await client.createTenant(newTenantName, newTenantQuota ? Number(newTenantQuota) : undefined); setNewTenantName(""); setNewTenantQuota(""); loadData(); } catch (e) { setError((e as Error).message); } }}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-500 transition font-medium">
-                    创建
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
-                <h3 className="font-semibold text-sm text-zinc-200 mb-4">租户列表</h3>
-                <div className="space-y-2">
-                  {tenants.map((t: any) => (
-                    <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/40 border border-zinc-800/60 hover:border-zinc-700 transition-all duration-150">
-                      <div className="flex-1">
-                        <div className="text-sm text-zinc-200 font-medium">{t.name}</div>
-                        <div className="text-xs text-zinc-500">{t.monthlyTokenQuota ? `${t.monthlyTokenQuota.toLocaleString()} tokens/月` : "不限配额"}</div>
-                      </div>
-                      {t.cachePlan === "premium_approved" && (
-                        <>
-                          <span className="px-2.5 py-0.5 rounded-full text-xs bg-violet-500/10 text-violet-400 border border-violet-500/20">🔮 增强缓存</span>
-                          <button onClick={async () => { if (confirm(`确定取消租户 "${t.name}" 的增强缓存？`)) { await client.revokePremium(t.id); loadData(); } }}
-                            className="text-xs px-2.5 py-1 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition">取消</button>
-                        </>
-                      )}
-                      {t.cachePlan === "premium_pending" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20">⏳ 审核中</span>}
-                      {t.cachePlan === "premium_rejected" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-rose-500/10 text-rose-400 border border-rose-500/20">❌ 已拒绝</span>}
-                      {t.cachePlan === "free" && <span className="px-2.5 py-0.5 rounded-full text-xs bg-zinc-800 text-zinc-500 border border-zinc-700/50">免费</span>}
-                      {t.cachePlan === "premium_pending" && (
-                        <div className="flex gap-1.5">
-                          <button onClick={async () => { await client.approvePremium(t.id); loadData(); }} className="text-xs px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition">通过</button>
-                          <button onClick={async () => { await client.rejectPremium(t.id); loadData(); }} className="text-xs px-2.5 py-1 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition">拒绝</button>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>

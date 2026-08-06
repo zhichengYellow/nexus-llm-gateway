@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * ⚠️ 未来方向:多租户用户端(见 docs/SPEC.md 1.3.1)
+ * 当前产品为个人单租户工作台,登录统一走 Master Key → 个人控制台(_dashboard-client)。
+ * 本组件保留作为多租户(用户端视角)的参考实现,不接入主流程。
+ */
 import { useEffect, useState } from "react";
 import { ApiClient } from "@/lib/api";
 import {

@@ -38,6 +38,13 @@ Nexus 不追求"支持最多 Provider"(LiteLLM 的赛道),不追求"API 管理�
 
 **明确不做**: 企业级多租户管理、RBAC 治理、Billing 结算、SSO 集成。这些归 `src/extensions/`,不进 Core(见 Principle 2)。
 
+## 1.3.1 产品形态(2026-08 决策): 个人单租户
+
+- **现状**: master 管理端 + API Key 用户端双视图(dashboard 双套组件、page.tsx 按角色分流),为历史继承的多租户形态。
+- **目标形态**: **个人单租户工作台**。master 端即个人控制台,集成自己的 Key 管理、用量、成本、优化报告、路由配置;API Key 仅作为**接入凭证**(服务自己的应用),不再有"租户/多用户"概念。
+- **租户端隔离**: 多租户(用户端 dashboard、租户管理、API Keys 管理页)隔离进**未来方向**,不进入当前主线;代码保留(tenants/apiKeys 表与 user 路由不动),不做新功能。
+- **执行任务**: 见 `fit/improve.md` R5。
+
 ## 1.4 产品原则(最高优先级,违反即 reject)
 
 - **P1 指标门槛**: 每个功能必须至少改善一个指标(Token / Cost / Latency / Quality),否则拒绝。

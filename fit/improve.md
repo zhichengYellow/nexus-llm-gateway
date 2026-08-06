@@ -175,6 +175,7 @@
 | ✅ COMPLETED | **R2：Request Analysis（Token 构成）** | 在 e2e-metrics entry 测量点统计逐段 Token 构成（system / history / user / tool / output 各占比），输出「哪里浪费最多」，供 R1 与后续优化决策；注意与 usageLogs 字段对齐 | `npx tsc --noEmit` + `npm test` + 手动请求观察构成输出 |
 | ✅ COMPLETED | R3：RFC 流程 | 新增 `docs/rfc/` + RFC 模板（目标 / 预计减 Token / 质量风险 / 方案 / Benchmark 依据）；新功能先 RFC 后开发，ADR 保留为决策记录 | 文档就绪 |
 | ✅ COMPLETED | R4：Optimization Lab 流程 | 本文件补充流程：实验代码 → `src/extensions/` → R1 Benchmark 量化 → 三问通过 → 接入 Core | 文档就绪 |
+| ✅ COMPLETED | **R5：租户端隔离 + master 端个人化重构** | **方向决策（见 docs/SPEC.md 1.3.1）**：产品为个人单租户工作台。① 登录统一为 Master Key 单视角（page.tsx，移除 manager/user 双分支）；② 导航移除「租户管理」，API Keys 改「个人 Key」，创建 Key 不再选租户（固定个人默认租户）；③ `_user-dashboard.tsx` 保留并标注未来方向（多租户用户端），不接入主流程；④ 后端 user 路由与 DB schema 未动 | `npx tsc --noEmit`（dashboard）+ 浏览器实测（登录后单视角、无租户管理） |
 
 > **执行约定**：R1 先行（没有 Benchmark，后续优化无法量化验收）。每个 R 任务完成必须跑 CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22，见「远程 Agent 强制守则」）→ 更新本表状态为 ✅。R1 的 Quality 评测先 rule-based（编辑距离/关键词命中），LLM Judge 版后续迭代，避免基准依赖 API 成本。
 

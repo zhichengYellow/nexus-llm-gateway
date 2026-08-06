@@ -3,15 +3,13 @@
 import { useEffect, useState } from "react";
 import { ApiClient } from "@/lib/api";
 import ManagerDashboard from "./_dashboard-client";
-import UserDashboard from "./_user-dashboard";
-import { KeyRound, Zap, Shield, Users, Server } from "lucide-react";
+import { KeyRound, Zap, Shield, Server } from "lucide-react";
 
 export default function Home() {
   const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [client, setClient] = useState<ApiClient | null>(null);
-  const [role, setRole] = useState<"manager" | "user" | null>(null);
 
   useEffect(() => {
     const savedKey = localStorage.getItem("nexus_api_key");
@@ -24,30 +22,34 @@ export default function Home() {
   const autoLogin = async (key: string) => {
     try {
       const c = new ApiClient(key);
-      try { await c.getTenants(); setClient(c); setRole("manager"); localStorage.setItem("nexus_api_key", key); return; } catch {}
-      try { await c.get("/user/overview"); setClient(c); setRole("user"); localStorage.setItem("nexus_api_key", key); return; } catch {}
+      await c.getTenants(); // 仅 Master Key 可访问 → 个人控制台
+      setClient(c);
+      localStorage.setItem("nexus_api_key", key);
     } catch {}
   };
 
   const handleLogin = async () => {
-    if (!apiKey.trim()) { setError("请输入 API Key"); return; }
+    if (!apiKey.trim()) { setError("请输入 Master Key"); return; }
     setLoading(true); setError("");
     try {
       const c = new ApiClient(apiKey.trim());
-      try { await c.getTenants(); setClient(c); setRole("manager"); localStorage.setItem("nexus_api_key", apiKey.trim()); return; } catch {}
-      try { await c.get("/user/overview"); setClient(c); setRole("user"); localStorage.setItem("nexus_api_key", apiKey.trim()); return; }
-      catch { setError("API Key 无效，请检查后重试"); }
+      try {
+        await c.getTenants();
+        setClient(c);
+        localStorage.setItem("nexus_api_key", apiKey.trim());
+      } catch {
+        setError("Master Key 无效，请检查后重试");
+      }
     } catch (e) { setError((e as Error).message || "认证失败"); }
     finally { setLoading(false); }
   };
 
   const handleLogout = () => {
     localStorage.removeItem("nexus_api_key");
-    setClient(null); setRole(null); setApiKey("");
+    setClient(null); setApiKey("");
   };
 
-  if (client && role === "manager") return <ManagerDashboard client={client} onLogout={handleLogout} />;
-  if (client && role === "user") return <UserDashboard client={client} onLogout={handleLogout} />;
+  if (client) return <ManagerDashboard client={client} onLogout={handleLogout} />;
 
   return (
     <div className="min-h-screen bg-[#0A0D14] relative overflow-hidden flex items-center justify-center p-4 text-zinc-100">
@@ -76,7 +78,7 @@ export default function Home() {
                 onChange={(e) => setApiKey(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                 className="w-full px-4 py-2.5 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition"
-                placeholder="输入 Master Key 或 API Key"
+                placeholder="输入 Master Key（个人控制台）"
               />
             </div>
             {error && (
@@ -93,8 +95,8 @@ export default function Home() {
 
           <div className="mt-6 pt-5 border-t border-zinc-800/60">
             <div className="flex justify-center gap-6 text-xs text-zinc-500">
-              <span className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5 text-emerald-400" />Master Key → 管理端</span>
-              <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-blue-400" />API Key → 用户端</span>
+              <span className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5 text-emerald-400" />Master Key → 个人控制台</span>
+              <span className="flex items-center gap-1.5"><KeyRound className="w-3.5 h-3.5 text-blue-400" />API Key 仅供应用接入</span>
             </div>
             <div className="flex items-center justify-center gap-1.5 text-[10px] text-zinc-600 mt-3">
               <Server className="w-3 h-3" /> gateway running · live monitoring
