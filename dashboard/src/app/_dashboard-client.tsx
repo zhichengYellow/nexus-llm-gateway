@@ -5,7 +5,7 @@ import { ApiClient } from "@/lib/api";
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area,
 } from "recharts";
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import AnalyticsDashboard from "./_analytics-dashboard";
 import {
   LayoutDashboard, KeyRound, Users, Route, Zap, Activity, Shield, Search, ChevronLeft, LogOut,
@@ -21,14 +21,14 @@ interface Props {
 function formatBeijing(v: string): string {
   const d = new Date(v);
   if (isNaN(d.getTime())) return v;
-  return format(new Date(d.getTime() + 8 * 3600 * 1000), "HH:mm");
+  return formatInTimeZone(d, "Asia/Shanghai", "HH:mm");
 }
 
 /** 北京时间完整 yyyy-MM-dd HH:mm（Tooltip 用） */
 function formatBeijingFull(v: string): string {
   const d = new Date(v);
   if (isNaN(d.getTime())) return v;
-  return format(new Date(d.getTime() + 8 * 3600 * 1000), "yyyy-MM-dd HH:mm");
+  return formatInTimeZone(d, "Asia/Shanghai", "yyyy-MM-dd HH:mm");
 }
 
 const NAV_ITEMS = [

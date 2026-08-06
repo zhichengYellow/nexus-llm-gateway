@@ -51,7 +51,7 @@ export class DailyStatsEngine {
         avgTtftMs: sql<number>`coalesce(avg(${usageLogs.ttftMs}), 0)::int`,
       })
       .from(usageLogs)
-      .where(and(gte(usageLogs.createdAt, dayStart), sql`${usageLogs.createdAt} < ${dayEnd}`));
+      .where(and(gte(usageLogs.createdAt, dayStart), sql`${usageLogs.createdAt} < ${dayEnd.toISOString()}`));
 
     const totalTokens = row?.totalTokens ?? 0;
     const savedTokens = Math.min(row?.savedTokens ?? 0, totalTokens); // 防止缓存命中时 savedTokens > totalTokens
@@ -61,7 +61,7 @@ export class DailyStatsEngine {
       : 0;
 
     return {
-      date: dayStart.toISOString().slice(0, 10),
+      date: `${dayStart.getFullYear()}-${String(dayStart.getMonth() + 1).padStart(2, "0")}-${String(dayStart.getDate()).padStart(2, "0")}`,
       totalRequests: row?.totalRequests ?? 0,
       totalTokens,
       savedTokens,

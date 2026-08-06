@@ -7,7 +7,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
   Legend,
 } from "recharts";
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import {
   TrendingUp, TrendingDown, DollarSign, Percent, Zap, Lightbulb,
   BarChart3, PieChartIcon, Activity, ArrowUpRight, Calculator, Sliders,
@@ -20,13 +20,13 @@ interface Props {
 function formatBeijing(v: string): string {
   const d = new Date(v);
   if (isNaN(d.getTime())) return v;
-  return format(new Date(d.getTime() + 8 * 3600 * 1000), "MM-dd");
+  return formatInTimeZone(d, "Asia/Shanghai", "MM-dd");
 }
 
 function formatBeijingFull(v: string): string {
   const d = new Date(v);
   if (isNaN(d.getTime())) return v;
-  return format(new Date(d.getTime() + 8 * 3600 * 1000), "yyyy-MM-dd HH:mm");
+  return formatInTimeZone(d, "Asia/Shanghai", "yyyy-MM-dd HH:mm");
 }
 
 const COLORS = ["#10B981", "#3B82F6", "#8B5CF6", "#F59E0B", "#EF4444", "#EC4899", "#06B6D4", "#84CC16"];
