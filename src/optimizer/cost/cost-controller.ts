@@ -22,9 +22,9 @@ export interface ProviderPrice {
 }
 
 const PRICE_TABLE: ProviderPrice[] = [
-  { provider: "deepseek", model: "deepseek-chat", inputPrice: 0.27, outputPrice: 1.10 },
-  { provider: "deepseek", model: "deepseek-reasoner", inputPrice: 0.55, outputPrice: 2.19 },
-  { provider: "gemini", model: "gemini-flash-lite-latest", inputPrice: 0.075, outputPrice: 0.30 },
+  { provider: "deepseek", model: "deepseek-v4-flash", inputPrice: 0.27, outputPrice: 1.10 },
+  { provider: "deepseek", model: "deepseek-v4-pro", inputPrice: 0.55, outputPrice: 2.19 },
+  { provider: "gemini", model: "gemini-flash-lite", inputPrice: 0.075, outputPrice: 0.30 },
   { provider: "gemini", model: "gemini-2.0-flash", inputPrice: 0.10, outputPrice: 0.40 },
   { provider: "openai", model: "gpt-4o-mini", inputPrice: 0.15, outputPrice: 0.60 },
   { provider: "openai", model: "gpt-4o", inputPrice: 2.50, outputPrice: 10.00 },

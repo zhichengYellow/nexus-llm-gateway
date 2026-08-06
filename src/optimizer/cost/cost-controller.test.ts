@@ -12,22 +12,22 @@ describe("CostEstimator", () => {
 
   it("estimateCost 估算成本", () => {
     const e = new CostEstimator();
-    const cost = e.estimateCost("hello world test", "deepseek", "deepseek-chat");
+    const cost = e.estimateCost("hello world test", "deepseek", "deepseek-v4-flash");
     expect(cost).toBeGreaterThan(0);
     expect(cost).toBeLessThan(0.001);
   });
 
   it("getPrice 查找价格", () => {
     const e = new CostEstimator();
-    const p = e.getPrice("deepseek", "deepseek-chat");
+    const p = e.getPrice("deepseek", "deepseek-v4-flash");
     expect(p).toBeDefined();
     expect(p!.inputPrice).toBe(0.27);
   });
 
   it("updatePrice 更新价格", () => {
     const e = new CostEstimator();
-    e.updatePrice({ provider: "deepseek", model: "deepseek-chat", inputPrice: 0.01, outputPrice: 0.01 });
-    const p = e.getPrice("deepseek", "deepseek-chat");
+    e.updatePrice({ provider: "deepseek", model: "deepseek-v4-flash", inputPrice: 0.01, outputPrice: 0.01 });
+    const p = e.getPrice("deepseek", "deepseek-v4-flash");
     expect(p!.inputPrice).toBe(0.01);
   });
 });

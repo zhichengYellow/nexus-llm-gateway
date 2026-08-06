@@ -12,8 +12,8 @@ describe("CostOptimizer", () => {
 
   it("estimateCost 估算成本", () => {
     const opt = new CostOptimizer();
-    // deepseek-chat: input $0.27/M, output $1.10/M
-    const cost = opt.estimateCost("hello world test", "deepseek", "deepseek-chat");
+    // deepseek-v4-flash: input $0.27/M, output $1.10/M
+    const cost = opt.estimateCost("hello world test", "deepseek", "deepseek-v4-flash");
     expect(cost).toBeGreaterThan(0);
     expect(cost).toBeLessThan(0.01);
   });
@@ -21,8 +21,8 @@ describe("CostOptimizer", () => {
   it("optimize 选择最优 Provider", () => {
     const opt = new CostOptimizer();
     const result = opt.optimize("hello", [
-      { provider: "deepseek", model: "deepseek-chat" },
-      { provider: "gemini", model: "gemini-flash-lite-latest" },
+      { provider: "deepseek", model: "deepseek-v4-flash" },
+      { provider: "gemini", model: "gemini-flash-lite" },
     ]);
     expect(result).not.toBeNull();
     // Gemini 更便宜
@@ -34,7 +34,7 @@ describe("CostOptimizer", () => {
     const opt = new CostOptimizer();
     const result = opt.optimize(
       "a very long prompt ".repeat(100),
-      [{ provider: "deepseek", model: "deepseek-chat" }],
+      [{ provider: "deepseek", model: "deepseek-v4-flash" }],
       0.0001, // 极小预算
     );
     expect(result).toBeNull();
@@ -47,20 +47,20 @@ describe("CostOptimizer", () => {
 
   it("updatePrice 更新价格表", () => {
     const opt = new CostOptimizer();
-    opt.updatePrice({ provider: "deepseek", model: "deepseek-chat", inputPrice: 0.01, outputPrice: 0.01 });
-    const result = opt.optimize("hello", [{ provider: "deepseek", model: "deepseek-chat" }]);
+    opt.updatePrice({ provider: "deepseek", model: "deepseek-v4-flash", inputPrice: 0.01, outputPrice: 0.01 });
+    const result = opt.optimize("hello", [{ provider: "deepseek", model: "deepseek-v4-flash" }]);
     expect(result).not.toBeNull();
     expect(result!.estimatedCost).toBeLessThan(0.0001);
   });
 
   it("updateMetrics 影响评分", () => {
     const opt = new CostOptimizer();
-    opt.updateMetrics("deepseek", "deepseek-chat", 0.5, 3000); // 低成功率，高延迟
-    opt.updateMetrics("gemini", "gemini-flash-lite-latest", 0.99, 200); // 高成功率，低延迟
+    opt.updateMetrics("deepseek", "deepseek-v4-flash", 0.5, 3000); // 低成功率，高延迟
+    opt.updateMetrics("gemini", "gemini-flash-lite", 0.99, 200); // 高成功率，低延迟
 
     const result = opt.optimize("hello", [
-      { provider: "deepseek", model: "deepseek-chat" },
-      { provider: "gemini", model: "gemini-flash-lite-latest" },
+      { provider: "deepseek", model: "deepseek-v4-flash" },
+      { provider: "gemini", model: "gemini-flash-lite" },
     ]);
     expect(result!.provider).toBe("gemini");
   });
