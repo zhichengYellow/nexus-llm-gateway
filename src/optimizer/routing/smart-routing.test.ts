@@ -55,4 +55,28 @@ describe("SmartRoutingEngine", () => {
     expect(d.provider).toBeDefined();
     expect(d.degraded).toBe(true);
   });
+
+  // R10: cheap_only 过滤空 → 选 cost 最低候选（不选超 maxCost 的、不静默回退全量）
+  it("R10: cheap_only 全过滤时选 cheapest 候选", () => {
+    const engine = new SmartRoutingEngine();
+    // vitest 无 .env，仅 ollama 注册；注入价格使 cost 超过 maxCost（cost=(i+o)/2e6，故注入需 ≥0.02）
+    engine.updatePrice("ollama", "ollama-llama3", 1, 1);
+    engine.updatePrice("ollama", "ollama-qwen2.5", 2, 2);
+    engine.setDegradation({ type: "cheap_only", maxCost: 0.00000001, maxLatency: Infinity, minQuality: 0 });
+    const d = engine.decide("general", undefined, new Set(["ollama"]));
+    expect(d.degraded).toBe(true);
+    // 约束放宽但未绕过：应选中注入的最低价比对，而不是超 maxCost 的任意候选
+    expect(d.provider).toBe("ollama");
+    expect(d.model).toBe("ollama-llama3");
+  });
+
+  // R10: 预算过滤空 → 选 cheapest 并标记 degraded（不静默选超 budget 候选）
+  it("R10: 预算过低时选 cheapest 并标记 degraded", () => {
+    const engine = new SmartRoutingEngine();
+    engine.updatePrice("ollama", "ollama-llama3", 1, 1);
+    engine.updatePrice("ollama", "ollama-qwen2.5", 2, 2);
+    const d = engine.decide("general", 0.00000001, new Set(["ollama"]));
+    expect(d.degraded).toBe(true);
+    expect(d.model).toBe("ollama-llama3");
+  });
 });
