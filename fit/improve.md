@@ -667,7 +667,7 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 | ✅ COMPLETED | R11-1 | package.json 发布字段补全 | version → 2.2.0；补 main/files/exports/repository/license/bin/publishConfig | `npm pkg get version main files` 输出正确 |
 | ✅ COMPLETED | R11-2 | 构建产物验证 | `npm run build` → `dist/`；rootDir 改为 src 对齐路径 | `npm run build` 成功 |
 | ✅ COMPLETED | R11-3 | CHANGELOG.md | v0.x → v1.x → v2.0 → v2.1 → v2.2 全版本记录 | `CHANGELOG.md` 存在 |
-| ✅ COMPLETED | R11-4 | GitHub Release v2.2.0 | `git tag v2.2.0` 已创建；gh CLI 不可用，需手动在 GitHub 网页创建 Release（引用 CHANGELOG） | `git tag v2.2.0` 存在 |
+| ✅ COMPLETED | R11-4 | GitHub Release v2.2.0 | **tag v2.2.0 已补打并推送（本地补）**；gh CLI 不可用，GitHub Release 页需手动创建（引用 CHANGELOG） | `git tag v2.2.0` 存在 + Release 页待手动 |
 | ✅ COMPLETED | R11-5 | npm 发布决策 | 个人项目不发布 npm：`publishConfig.private=true` 防误发；README 补生产构建说明 | `npm pkg get publishConfig` 返回 `{"private":true}` |
 
 > **执行约定**：R11-1 → R11-5 按序执行；每项完成跑 CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`）+ 更新本表状态为 ✅。R11-4 需要 GitHub 凭据（gh CLI / token）；无凭据时至少完成 tag + CHANGELOG，并在提交说明中注明。

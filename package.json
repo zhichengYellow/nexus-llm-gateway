@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/bran-huang/nexus-llm-gateway"
+    "url": "https://github.com/zhichengYellow/nexus-llm-gateway"
   },
   "license": "MIT",
   "publishConfig": {
