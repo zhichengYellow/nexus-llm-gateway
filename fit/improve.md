@@ -260,6 +260,32 @@
 
 > **跟进约定**：回归风险（30s 超时、流式超时）建议 P0 级优先修；夸大项按原清单 P1/P2 补完；测试缺口补用例。
 
+## 二轮巡检修复任务清单（⬜ 全部 TODO，供远程 agent 执行）
+
+> **优先级**：**R7（P0 级回归风险，必做）→ R8（P1/P2 夸大项补完）→ R9（测试缺口）**。每项单独 commit（`fix:` / `test:` 前缀），完成后更新本表状态为 ✅，并跑 CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22，见「远程 Agent 强制守则」）。改动前先读目标模块既有测试。
+
+### R7：P0 级——P0 修复引入的回归风险（最高优先）
+
+| 状态 | # | 任务 | 位置 | 修复方向 | 验证 |
+|---|---|---|---|---|---|
+| ⬜ TODO | R7-1 | **非流式 30s 硬超时误杀长生成** | src/providers/base.ts:87-88 | 非流式改为 **inactivity-based 超时**：每收到一段 chunk 重置计时器，超时时间可配置（config 增加如 `upstreamTimeoutSecs`，默认 60s），不再按总时长 30s 硬杀；或非流式内部改走流式聚合 | `npm test` + 手动：mock 上游构造 >30s 但持续有数据的慢响应，确认不再被 abort |
+| ⬜ TODO | R7-2 | **流式读取期无超时（连接泄漏）** | src/providers/base.ts:140-166 | reader.read() 循环挂 AbortController + inactivity 定时器（如 60s 无数据即 abort），每读到 chunk 重置；abort 时正确 writer.close() 不抛未捕获异常 | `npm test` + 手动：mock 上游中途挂起，确认连接在超时后被关闭、服务进程不崩 |
+
+### R8：P1/P2 夸大项补完
+
+| 状态 | # | 任务 | 位置 | 修复方向 | 验证 |
+|---|---|---|---|---|---|
+| ⬜ TODO | R8-1 | P1-2 计价口径统一 | src/analytics/daily-stats.ts:67-71、src/server/cost/cost-report.ts:65 | savedCost 改用 savedCostMicro（真实节省），去掉比例估算；与 timeline 端点口径一致 | `npm test`（cost-report 相关）+ curl 看 daily-stats 返回真实节省值 |
+| ⬜ TODO | R8-2 | P1-6 decide 候选源 | src/optimizer/routing/smart-routing.ts:84-101 | candidates 改为 `registry.listAllModels()` 生成（候选模型与价格合一），价格表仅保留计价用途 | `npm test`（smart-routing.test.ts） |
+| ⬜ TODO | R8-3 | P2-5 完整 request/response 长期存 DB | src/optimizer/cache/semantic-cache.ts:239-240、src/server/db/schema.ts:114-115 | 方案 A（推荐）：semantic_cache 加清理任务，按 TTL 定期删除过期完整 prompt；方案 B：只存 preview（需改 schema + `npx drizzle-kit push` + 迁移说明） | `npm test` +（若改 schema）`npx drizzle-kit push` 成功 |
+
+### R9：测试缺口补用例
+
+| 状态 | # | 任务 | 说明 | 验证 |
+|---|---|---|---|---|
+| ⬜ TODO | R9-1 | cacheHash 多轮/assistant 差异用例 | semantic-cache.test.ts 增加：system+user 相同但 assistant 历史不同的请求 → cacheHash 不同（不串扰） | `npx vitest run src/optimizer/cache/semantic-cache.test.ts` |
+| ⬜ TODO | R9-2 | smart-routing 候选空 fallback 用例 | smart-routing.test.ts 增加：候选为空 → registry 降级生效，且 cheap_only / 预算约束在降级时仍生效 | `npx vitest run src/optimizer/routing/smart-routing.test.ts` |
+
 ## R6 详细方案（Dashboard 价值展示中心，供执行 agent）
 
 > **产品原则**：Dashboard 不是"监控后台"，是"价值展示中心"。首页每个组件回答同一个问题——"Gateway 帮我省了什么？" 数据缺失时显示 "—"，不得崩溃。
