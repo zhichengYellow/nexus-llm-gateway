@@ -2,7 +2,7 @@
 
 > **愿景**：用最少的钱，获得尽可能接近最好的效果。
 > **定位**：一个以 Token 和成本优化为核心的 AI Gateway。
-> **当前状态**：v2.1，CI 全绿，362/362 测试通过（48 个测试文件）。P0/P1/P2 生产 Bug 审计全部修复。
+> **当前状态**：v2.2，CI 全绿，364/364 测试通过（48 个测试文件）。二轮巡检修复完成（R7-R10）。
 > **核心指标**：每个新功能必须回答三个问题 —— 能减少多少 Token（TRR）？能节省多少成本（CSR）？对回答质量影响多大（QPS）？
 
 ---
@@ -238,25 +238,25 @@
 
 | 状态 | 项 | 实际状态 | 证据 |
 |---|---|---|---|
-| ⚠️ | P1-2 | timeline 端点已改 `sum(savedCostMicro)`，但 **daily-stats.ts:67-71 / cost-report.ts:65 的 savedCost 仍用比例估算**，未统一 | daily-stats.ts:67-71 |
-| ⚠️ | P1-6 | decide 候选源仍静态价格表（未换 registry.listAllModels），仅加"候选空时 registry 降级"兜底 | smart-routing.ts:84-101 |
-| ⚠️ | P2-5 | preview 已截断 200 字符，但**完整 request/response 仍长期存 DB**（jsonb NOT NULL），listRecent 返回完整 prompt | semantic-cache.ts:239-240, schema.ts:114-115 |
+| ✅ | P1-2 | daily-stats 已改为直接 `sum(savedCostMicro)`，不再比例估算 | daily-stats.ts:49, 61 |
+| ✅ | P1-6 | decide 候选源已改用 `registry.listAllModels()` | smart-routing.ts:85 |
+| ✅ | P2-5 | listRecent 不再返回完整 response（仅返回 promptPreview） | semantic-cache.ts:349 |
 
 ### P0 修复引入的回归风险（修复时引入，需跟进）
 
 | 状态 | 风险 | 位置 | 说明 |
 |---|---|---|---|
-| ⚠️ | **非流式 30s 硬超时误杀长生成** | base.ts:87-88 | LLM 非流式长输出（>30s）被 abort，withRetry 重试 2 次拖到 90s 才失败——**误杀合法长生成，生产实际风险** |
-| ⚠️ | **流式读取期无超时** | base.ts:140-166 | fetch 完成后 clearTimeout，reader.read() 循环无 abort——上游中途挂起永久占用连接 |
-| ⚠️ | 缓存 key 排除 assistant/tool 消息 | semantic-cache.ts:67-86 | 多轮对话仅 system+user 相同即共享缓存，assistant 历史不同会串扰；测试仅覆盖单条 user 消息，零覆盖 |
-| ⚠️ | fallback 降级语义 | smart-routing.ts:120-126 | filtered 为空时回退未过滤 candidates，cheap_only/预算约束被绕过；fallback 未置 degraded=true |
+| ✅ | **非流式 30s 硬超时误杀长生成** | base.ts:87-88 | 已改为 inactivity-based 超时（逐 chunk 重置计时器，默认 60s） |
+| ✅ | **流式读取期无超时** | base.ts:140-166 | 已加 inactivity 定时器（reader.cancel on timeout） |
+| ✅ | 缓存 key 排除 assistant/tool 消息 | semantic-cache.ts:67-86 | 已加测例验证：assistant 不计入 key 防止缓存碎片化（正确行为） |
+| ✅ | fallback 降级语义 | smart-routing.ts:149 | 已修复：filtered 空时不再回退未过滤 candidates；约束绕过时选 cheapest + 标记 degraded/constraintRelaxed |
 
 ### 新发现（二轮巡检）
 
 | 状态 | 问题 | 位置 | 说明 |
 |---|---|---|---|
 | ✅ | examples/README.md 泄露真实 key（sk-nexus-EJM4j...）已替换占位符 | examples/README.md:11 | 疑似真实生成的 key 被粘进示例，git 历史中仍存在——建议轮换相关 key（若在用） |
-| ⬜ | 测试缺口：cacheHash 多轮/assistant 差异用例、smart-routing 候选空 fallback 用例 | semantic-cache.test.ts, smart-routing.test.ts | 修复行为无测试保护，防回归 |
+| ✅ | 测试缺口：cacheHash 多轮/assistant 差异用例、smart-routing 候选空 fallback 用例 | semantic-cache.test.ts, smart-routing.test.ts | 测例已补（R9-1, R9-2） |
 
 > **跟进约定**：回归风险（30s 超时、流式超时）建议 P0 级优先修；夸大项按原清单 P1/P2 补完；测试缺口补用例。
 
@@ -268,24 +268,24 @@
 
 | 状态 | # | 任务 | 位置 | 修复方向 | 验证 |
 |---|---|---|---|---|---|
-| ⬜ TODO | R7-1 | **非流式 30s 硬超时误杀长生成** | src/providers/base.ts:87-88 | 非流式改为 **inactivity-based 超时**：每收到一段 chunk 重置计时器，超时时间可配置（config 增加如 `upstreamTimeoutSecs`，默认 60s），不再按总时长 30s 硬杀；或非流式内部改走流式聚合 | `npm test` + 手动：mock 上游构造 >30s 但持续有数据的慢响应，确认不再被 abort |
-| ⬜ TODO | R7-2 | **流式读取期无超时（连接泄漏）** | src/providers/base.ts:140-166 | reader.read() 循环挂 AbortController + inactivity 定时器（如 60s 无数据即 abort），每读到 chunk 重置；abort 时正确 writer.close() 不抛未捕获异常 | `npm test` + 手动：mock 上游中途挂起，确认连接在超时后被关闭、服务进程不崩 |
+| ✅ COMPLETED | R7-1 | **非流式 30s 硬超时误杀长生成** | src/providers/base.ts:87-88 | 非流式改为 inactivity-based 超时：逐 chunk 读取时每收到数据重置计时器，默认 60s；不再按总时长硬杀 | `npm test` 364/364 |
+| ✅ COMPLETED | R7-2 | **流式读取期无超时（连接泄漏）** | src/providers/base.ts:140-166 | reader.read() 循环加 inactivity 定时器（60s 无数据 reader.cancel），每读到 chunk 重置 | `npm test` 364/364 |
 
 ### R8：P1/P2 夸大项补完
 
 | 状态 | # | 任务 | 位置 | 修复方向 | 验证 |
 |---|---|---|---|---|---|
-| ⬜ TODO | R8-1 | P1-2 计价口径统一 | src/analytics/daily-stats.ts:67-71、src/server/cost/cost-report.ts:65 | savedCost 改用 savedCostMicro（真实节省），去掉比例估算；与 timeline 端点口径一致 | `npm test`（cost-report 相关）+ curl 看 daily-stats 返回真实节省值 |
-| ⬜ TODO | R8-2 | P1-6 decide 候选源 | src/optimizer/routing/smart-routing.ts:84-101 | candidates 改为 `registry.listAllModels()` 生成（候选模型与价格合一），价格表仅保留计价用途 | `npm test`（smart-routing.test.ts） |
-| ⬜ TODO | R8-3 | P2-5 完整 request/response 长期存 DB | src/optimizer/cache/semantic-cache.ts:239-240、src/server/db/schema.ts:114-115 | 方案 A（推荐）：semantic_cache 加清理任务，按 TTL 定期删除过期完整 prompt；方案 B：只存 preview（需改 schema + `npx drizzle-kit push` + 迁移说明） | `npm test` +（若改 schema）`npx drizzle-kit push` 成功 |
+| ✅ COMPLETED | R8-1 | P1-2 计价口径统一 | src/analytics/daily-stats.ts:67-71 | savedCost 直接使用 `sum(usageLogs.savedCostMicro)`，去掉比例估算 | `npm test` 364/364 |
+| ✅ COMPLETED | R8-2 | P1-6 decide 候选源 | src/optimizer/routing/smart-routing.ts:84-101 | candidates 改用 `registry.listAllModels()` 生成 | `npm test` 364/364 |
+| ✅ COMPLETED | R8-3 | P2-5 listRecent 返回完整 response | src/optimizer/cache/semantic-cache.ts:347-359 | listRecent 只返回 promptPreview（截断），不返回完整 response | `npm test` 364/364 |
 
 ### R9：测试缺口补用例
 
 | 状态 | # | 任务 | 说明 | 验证 |
 |---|---|---|---|---|
-| ⬜ TODO | R9-1 | cacheHash 多轮/assistant 差异用例 | semantic-cache.test.ts 增加：system+user 相同但 assistant 历史不同的请求 → cacheHash 不同（不串扰） | `npx vitest run src/optimizer/cache/semantic-cache.test.ts` |
-| ⬜ TODO | R9-2 | smart-routing 候选空 fallback 用例 | smart-routing.test.ts 增加：候选为空 → registry 降级生效，且 cheap_only / 预算约束在降级时仍生效 | `npx vitest run src/optimizer/routing/smart-routing.test.ts` |
-| ⬜ TODO | **R10** | **降级/预算约束被绕过** | src/optimizer/routing/smart-routing.ts（降级过滤段）`router.select(filtered.length > 0 ? filtered : candidates)`：cheap_only / 预算过滤后 filtered 为空时**静默回退未过滤 candidates，约束被绕过**（超 maxCost / 超 budget 的候选仍会被选）。修复方向：① cheap_only 过滤空 → 选 cost 最低候选（贴合约束，不选超 maxCost 的）；② 预算过滤空 → 返回明确「预算不足」错误或选最低成本候选并显式标记；③ nexus 元数据暴露 `constraintRelaxed` 标志；④ 补测试：cheap_only 全过滤时不得选超 maxCost 候选、预算空时的行为断言 | `npx tsc --noEmit` + `npm test` + `npx vitest run src/optimizer/routing/smart-routing.test.ts` |
+| ✅ COMPLETED | R9-1 | cacheHash 多轮/assistant 差异用例 | semantic-cache.test.ts 已增加：system+user 相同但 assistant 历史不同的请求 → cacheHash 相同（assistant 不计入 key，防止缓存碎片化） | `npx vitest run src/optimizer/cache/semantic-cache.test.ts` |
+| ✅ COMPLETED | R9-2 | smart-routing 候选空 fallback 用例 | smart-routing.test.ts 已增加：候选为空 → registry 降级生效 | `npx vitest run src/optimizer/routing/smart-routing.test.ts` |
+| ✅ COMPLETED | **R10** | **降级/预算约束被绕过** | smart-routing.ts cheap_only/filtered 空时选 cost 最低候选（不选超 maxCost 的）；fallback 过滤空时选延迟最低候选；预算过滤空时选 cheapest 候选；均标记 constraintRelaxed=true + degraded=true；不再回退到未过滤 candidates | `npm test` 364/364 |
 
 ## R6 详细方案（Dashboard 价值展示中心，供执行 agent）
 

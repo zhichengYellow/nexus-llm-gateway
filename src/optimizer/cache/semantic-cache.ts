@@ -346,11 +346,9 @@ export class SemanticCache {
 
       return rows.map((r: any) => ({
         hash: r.keyHash ?? "",
-        prompt: (r.request as any)?.messages?.filter?.((m: any) => m.role === "user")?.map?.((m: any) => m.content)?.join?.(" ") ?? r.promptPreview ?? "",
-        canonical: canonicalText(
-          (r.request as any)?.messages?.filter?.((m: any) => m.role === "user")?.map?.((m: any) => m.content)?.join?.(" ") ?? r.promptPreview ?? "",
-        ),
-        response: r.response,
+        prompt: r.promptPreview ?? "",
+        canonical: canonicalText(r.promptPreview ?? ""),
+        response: null,             // 不返回完整 response（隐私保护）
         createdAt: r.createdAt,
         lastAccessedAt: r.lastAccessedAt,
         hits: r.hits ?? 0,

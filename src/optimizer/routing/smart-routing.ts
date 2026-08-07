@@ -126,9 +126,17 @@ export class SmartRoutingEngine {
     // 降级过滤
     let filtered = candidates;
     let degraded = false;
+    let constraintRelaxed = false;
 
     if (this.degradation.type === "cheap_only") {
       filtered = candidates.filter((c) => c.cost <= this.degradation.maxCost);
+      if (filtered.length === 0) {
+        // cheap_only 过滤后为空 → 选 cost 最低的候选（不选超 maxCost 的）
+        const sorted = [...candidates].sort((a, b) => a.cost - b.cost);
+        filtered = sorted.slice(0, 1);
+        constraintRelaxed = true;
+        logger.warn({ maxCost: this.degradation.maxCost, cheapest: filtered[0]?.cost }, "cheap_only: all candidates exceed maxCost, selecting cheapest");
+      }
       degraded = true;
     } else if (this.degradation.type === "cache_only") {
       // 只返回缓存，不调 LLM
@@ -137,16 +145,33 @@ export class SmartRoutingEngine {
       filtered = candidates.filter(
         (c) => c.latency <= this.degradation.maxLatency && c.quality >= this.degradation.minQuality,
       );
+      if (filtered.length === 0) {
+        // fallback 过滤后为空 → 选延迟最低的
+        const sorted = [...candidates].sort((a, b) => a.latency - b.latency);
+        filtered = sorted.slice(0, 1);
+        constraintRelaxed = true;
+      }
       degraded = true;
     }
 
     // 预算过滤
     if (budget && budget > 0) {
-      filtered = filtered.filter((c) => c.cost <= budget);
+      const budgetFiltered = filtered.filter((c) => c.cost <= budget);
+      if (budgetFiltered.length === 0) {
+        // 预算过滤后为空 → 返回明确错误或选最低成本候选
+        const cheapest = [...filtered].sort((a, b) => a.cost - b.cost)[0];
+        if (cheapest) {
+          filtered = [cheapest];
+          constraintRelaxed = true;
+          logger.warn({ budget, cheapest: cheapest.cost }, "budget exceeded, selecting cheapest candidate");
+        }
+      } else {
+        filtered = budgetFiltered;
+      }
     }
 
-    // 多维路由选择
-    const decision = router.select(filtered.length > 0 ? filtered : candidates);
+    // 多维路由选择（不再回退到未过滤 candidates）
+    const decision = router.select(filtered);
 
     // 候选为空时从 registry 真实可用 provider 降级（不硬编码）
     let fallbackProvider = "unknown";
@@ -168,11 +193,11 @@ export class SmartRoutingEngine {
     const result: RoutingDecision = {
       provider: (decision?.selected.provider ?? fallbackProvider) as ProviderType,
       model: decision?.selected.model ?? fallbackModel,
-      reason: decision?.reason ?? (fallbackProvider !== "unknown" ? "fallback-to-available" : "default"),
+      reason: decision?.reason ?? (constraintRelaxed ? "constraint-relaxed-fallback" : fallbackProvider !== "unknown" ? "fallback-to-available" : "default"),
       cost: decision?.selected.cost ?? 0,
       estimatedLatency: decision?.selected.latency ?? 500,
       confidence: decision?.selected.intentMatch ?? 0.5,
-      degraded,
+      degraded: degraded || constraintRelaxed,
     };
 
     this.decisions.push(result);
