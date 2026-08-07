@@ -91,6 +91,21 @@ describe("cacheHash（Provider/Model 隔离 + 参数分桶）", () => {
     const b = mkReq([{ role: "user", content: "hello！" }]);
     expect(cacheHash(a, "m", "d")).toBe(cacheHash(b, "m", "d"));
   });
+
+  // R9-1: system+user 相同 → 无论 assistant 历史如何，应共享缓存
+  it("system+user 相同但 assistant 历史不同 → 共享缓存（assistant 不计入 key）", () => {
+    const a = mkReq([
+      { role: "system", content: "你是助手" },
+      { role: "user", content: "你好" },
+    ]);
+    const b = mkReq([
+      { role: "system", content: "你是助手" },
+      { role: "user", content: "你好" },
+      { role: "assistant", content: "我推荐方案A" },
+    ]);
+    // assistant 内容不影响 cacheHash，防止缓存碎片化
+    expect(cacheHash(a, "m", "d")).toBe(cacheHash(b, "m", "d"));
+  });
 });
 
 describe("classifyTtl（分类 TTL - Cache Policy）", () => {

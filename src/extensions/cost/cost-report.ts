@@ -50,6 +50,7 @@ export class CostReportEngine {
     const [summary] = await db
       .select({
         totalCost: sql<number>`coalesce(sum(${usageLogs.costMicro}), 0)::bigint::int`,
+        savedCostMicro: sql<number>`coalesce(sum(${usageLogs.savedCostMicro}), 0)::bigint::int`,
         totalTokens: sql<number>`coalesce(sum(${usageLogs.totalTokens}), 0)::bigint::int`,
         savedTokens: sql<number>`coalesce(sum(${usageLogs.savedTokens}), 0)::bigint::int`,
         totalRequests: sql<number>`count(*)::int`,
@@ -62,7 +63,8 @@ export class CostReportEngine {
     const totalCost = (summary?.totalCost ?? 0) / 1_000_000;
     const totalTokens = summary?.totalTokens ?? 0;
     const savedTokens = summary?.savedTokens ?? 0;
-    const savedCost = totalTokens > 0 ? totalCost * (savedTokens / totalTokens) : 0;
+    // 直接使用 usageLogs 中记录的 savedCostMicro（真实节省），不做比例估算
+    const savedCost = (summary?.savedCostMicro ?? 0) / 1_000_000;
 
     // By Provider
     const byProviderRows = await db

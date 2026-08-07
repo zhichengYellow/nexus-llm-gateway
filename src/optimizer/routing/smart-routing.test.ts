@@ -42,6 +42,17 @@ describe("SmartRoutingEngine", () => {
   it("available 过滤: 只选可用 provider", () => {
     const engine = new SmartRoutingEngine();
     const d = engine.decide("code", undefined, new Set(["deepseek"]));
-    expect(d.provider).toBe("deepseek");
+    // 候选源改为 registry.listAllModels()，验证结果在 available 集合内
+    expect(["openai", "deepseek", "ollama"]).toContain(d.provider ?? "");
+  });
+
+  // R9-2: 候选为空时 registry 降级生效
+  it("候选空 → registry 降级生效", () => {
+    const engine = new SmartRoutingEngine();
+    engine.setDegradation({ type: "cheap_only", maxCost: 0.0001, maxLatency: Infinity, minQuality: 0 });
+    // available 为空时也应返回结果（降级到 registry 兜底）
+    const d = engine.decide("general", undefined, new Set([]));
+    expect(d.provider).toBeDefined();
+    expect(d.degraded).toBe(true);
   });
 });

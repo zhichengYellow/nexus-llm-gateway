@@ -264,6 +264,13 @@ export class SemanticCache {
     }
   }
 
+  /** 启动周期性清理（每 10 分钟执行一次） */
+  startPeriodicCleanup(intervalMs = 600_000): NodeJS.Timeout {
+    return setInterval(() => {
+      this.cleanupExpired().catch(() => {});
+    }, intervalMs);
+  }
+
   async stats(): Promise<{ totalEntries: number; totalHits: number; avgHits: number; totalSavedTokens: number }> {
     try {
       const rows = await db.select().from(semanticCache);

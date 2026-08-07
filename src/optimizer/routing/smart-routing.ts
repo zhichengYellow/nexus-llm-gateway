@@ -80,25 +80,48 @@ export class SmartRoutingEngine {
     const router = getMultiDimRouter();
     const estimator = getCostEstimator();
 
-    // 构建候选列表（仅保留可用 provider；available 缺省时不过滤，保持兼容）
-    const prices = estimator.getPrices();
-    const candidates: RouteOption[] = prices
-      .filter((p) => !available || available.has(p.provider))
-      .map((p) => {
-      // 意图匹配度（基于画像）
-      const intentMatch = this.profile.intentDistribution[intent] ?? 0.3;
-      // Provider 偏好
-      const preference = this.profile.preferredProviders[p.provider] ?? 0.5;
+    // 构建候选列表：从 registry 获取实际模型，从 estimator 获取价格
+    const registry = getRegistry();
+    const allModels = registry.listAllModels();
+    const candidates: RouteOption[] = allModels
+      .filter((m) => !available || m.owned_by ? available?.has(m.owned_by as ProviderType) : true)
+      .map((m) => {
+        const price = estimator.getPrice(m.owned_by as ProviderType, m.id) ?? {
+          inputPrice: 0,
+          outputPrice: 0,
+          provider: m.owned_by as ProviderType,
+          model: m.id,
+        } as any;
+        // 意图匹配度（基于画像）
+        const intentMatch = this.profile.intentDistribution[intent] ?? 0.3;
+        const preference = this.profile.preferredProviders[m.owned_by] ?? 0.5;
+        return {
+          provider: m.owned_by as ProviderType,
+          model: m.id,
+          cost: (price.inputPrice + price.outputPrice) / 2_000_000,
+          quality: Math.max(0.5, preference),
+          latency: this.profile.avgLatencyByProvider[m.owned_by] ?? 500,
+          intentMatch: Math.max(0.3, intentMatch),
+        };
+      });
 
-      return {
-        provider: p.provider,
-        model: p.model,
-        cost: (p.inputPrice + p.outputPrice) / 2_000_000, // 估算
-        quality: Math.max(0.5, preference),
-        latency: this.profile.avgLatencyByProvider[p.provider] ?? 500,
-        intentMatch: Math.max(0.3, intentMatch),
-      };
-    });
+    // 候选为空时 → registry 降级兜底（去掉 available 过滤）
+    if (candidates.length === 0) {
+      candidates.push(
+        ...allModels.map((m) => {
+          const provider = m.owned_by as ProviderType;
+          const price = estimator.getPrice(provider, m.id) ?? { inputPrice: 0, outputPrice: 0, provider, model: m.id } as any;
+          return {
+            provider,
+            model: m.id,
+            cost: (price.inputPrice + price.outputPrice) / 2_000_000,
+            quality: 0.5,
+            latency: this.profile.avgLatencyByProvider[provider] ?? 500,
+            intentMatch: 0.3,
+          };
+        }),
+      );
+    }
 
     // 降级过滤
     let filtered = candidates;

@@ -84,8 +84,9 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
 
   async chat(req: ChatCompletionRequest, upstreamModel: string): Promise<ChatCompletionResponse> {
     const body = this.buildChatBody(req, upstreamModel, false);
+    const timeoutMs = this.config.upstreamTimeoutMs ?? 60_000;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const res = await this.doFetch(this.chatUrl, {
       method: "POST",
       headers: this.headers,
@@ -116,15 +117,16 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
 
   async *chatStream(req: ChatCompletionRequest, upstreamModel: string): AsyncIterable<ChatCompletionChunk> {
     const body = this.buildChatBody(req, upstreamModel, true);
-    // 流式响应也要有超时，防止上游挂起导致连接永久占用
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeoutMs = this.config.upstreamTimeoutMs ?? 60_000;
+    // 初始连接超时
+    const connectController = new AbortController();
+    const connectTimeout = setTimeout(() => connectController.abort(), timeoutMs);
     const res = await this.doFetch(this.chatUrl, {
       method: "POST",
       headers: this.headers,
       body: JSON.stringify(body),
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timeout));
+      signal: connectController.signal,
+    }).finally(() => clearTimeout(connectTimeout));
     if (!res.ok || !res.body) {
       const text = res.body ? await res.text() : "no body";
       const safeText = text.replace(/sk-[a-zA-Z0-9_-]{20,}/g, "sk-***").slice(0, 200);
@@ -137,10 +139,25 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
     const decoder = new TextDecoder();
     let buffer = "";
 
+    // inactivity 超时：读取无数据超时则 abort，每收到 chunk 则重置
+    let inactivityTimer: ReturnType<typeof setTimeout> | null = setTimeout(
+      () => reader.cancel("upstream stream inactivity timeout"),
+      timeoutMs,
+    );
+
+    const resetInactivity = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(
+        () => reader.cancel("upstream stream inactivity timeout"),
+        timeoutMs,
+      );
+    };
+
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        resetInactivity();
         buffer += decoder.decode(value, { stream: true });
         const lines = parseSseLines(buffer);
         // 保留未完成的最后一行
@@ -165,6 +182,7 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
         }
       }
     } finally {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
       reader.releaseLock();
     }
   }

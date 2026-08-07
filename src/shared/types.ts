@@ -140,6 +140,8 @@ export interface ProviderConfig {
   apiKey?: string;
   /** 该 provider 暴露给上层的模型别名 → 实际模型名 */
   models: Record<string, string>;
+  /** 上游超时（毫秒），非流式请求 & 流式 inactivity 共用，默认 60000 */
+  upstreamTimeoutMs?: number;
 }
 
 export interface ChatProvider {
