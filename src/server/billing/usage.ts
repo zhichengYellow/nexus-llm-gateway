@@ -41,13 +41,14 @@ function calcCostMicro(usage: Usage, priceInPerM?: number, priceOutPerM?: number
 export function recordUsage(input: UsageRecordInput): void {
   // 价格优先用调用方传入，否则按 provider/model 查价格表
   const price = getCostEstimator().getPrice(input.provider as ProviderType, input.model);
-  const costMicro = calcCostMicro(
+  const virtualCost = calcCostMicro(
     input.usage,
     input.priceInputPerM ?? price?.inputPrice,
     input.priceOutputPerM ?? price?.outputPrice,
   );
-  // 缓存命中：本次响应本应产生的成本全部视为节省
-  const savedCostMicro = input.savedCostMicro ?? (input.cached ? costMicro : 0);
+  // 缓存命中: 不产生真实成本(costMicro=0);本应产生的成本全部记为节省
+  const costMicro = input.cached ? 0 : virtualCost;
+  const savedCostMicro = input.cached ? virtualCost : (input.savedCostMicro ?? 0);
   db.insert(usageLogs)
     .values({
       requestId: input.requestId,
