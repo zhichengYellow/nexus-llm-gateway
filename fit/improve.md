@@ -285,6 +285,7 @@
 |---|---|---|---|---|
 | ⬜ TODO | R9-1 | cacheHash 多轮/assistant 差异用例 | semantic-cache.test.ts 增加：system+user 相同但 assistant 历史不同的请求 → cacheHash 不同（不串扰） | `npx vitest run src/optimizer/cache/semantic-cache.test.ts` |
 | ⬜ TODO | R9-2 | smart-routing 候选空 fallback 用例 | smart-routing.test.ts 增加：候选为空 → registry 降级生效，且 cheap_only / 预算约束在降级时仍生效 | `npx vitest run src/optimizer/routing/smart-routing.test.ts` |
+| ⬜ TODO | **R10** | **降级/预算约束被绕过** | src/optimizer/routing/smart-routing.ts（降级过滤段）`router.select(filtered.length > 0 ? filtered : candidates)`：cheap_only / 预算过滤后 filtered 为空时**静默回退未过滤 candidates，约束被绕过**（超 maxCost / 超 budget 的候选仍会被选）。修复方向：① cheap_only 过滤空 → 选 cost 最低候选（贴合约束，不选超 maxCost 的）；② 预算过滤空 → 返回明确「预算不足」错误或选最低成本候选并显式标记；③ nexus 元数据暴露 `constraintRelaxed` 标志；④ 补测试：cheap_only 全过滤时不得选超 maxCost 候选、预算空时的行为断言 | `npx tsc --noEmit` + `npm test` + `npx vitest run src/optimizer/routing/smart-routing.test.ts` |
 
 ## R6 详细方案（Dashboard 价值展示中心，供执行 agent）
 
