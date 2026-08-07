@@ -19,6 +19,7 @@ import { getAdaptiveContext } from "../../optimizer/prompt/adaptive-context.js";
 import { getCacheGate } from "../../optimizer/cache/cache-gate.js";
 import { getCacheAutoRefresh } from "../../optimizer/cache/cache-auto-refresh.js";
 import { getSmartRoutingEngine } from "../../optimizer/routing/smart-routing.js";
+import { scoreDifficulty, pickStrongModel, pickCheapModel } from "../../optimizer/routing/difficulty.js";
 import { getBudgetController } from "../../optimizer/cost/cost-controller.js";
 import { getCostOptimizer } from "../../extensions/prompt/cost-optimizer.js";
 import { getRequestJudge } from "../../optimizer/judge/request-judge.js";
@@ -143,7 +144,25 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
     const decision = smartRouting.decide(intentResult.category, undefined, available);
     model = decision.model ?? intentResult.model ?? intentResult.provider;
     cacheProvider = decision.provider;
-    logger.info({ requestId, intent: intentResult.category, provider: decision.provider, model, degraded: decision.degraded }, "smart-routed");
+
+    // A+B: 难度感知 + 档位覆盖(x-nexus-model-tier: cheap | balanced | strong)
+    const tier = (c.req.header("x-nexus-model-tier") ?? "").toLowerCase();
+    const diff = scoreDifficulty(userPrompt);
+    if (tier === "strong" || (diff.level === "hard" && tier !== "cheap")) {
+      const strongModel = pickStrongModel(decision.provider);
+      if (strongModel && strongModel !== model) {
+        logger.info({ requestId, difficulty: diff.level, score: diff.score, signals: diff.signals, from: model, to: strongModel }, "upgraded to strong model");
+        model = strongModel;
+      }
+    } else if (tier === "cheap") {
+      const cheapModel = pickCheapModel(decision.provider);
+      if (cheapModel && cheapModel !== model) {
+        logger.info({ requestId, from: model, to: cheapModel }, "downgraded to cheap model (tier=cheap)");
+        model = cheapModel;
+      }
+    }
+
+    logger.info({ requestId, intent: intentResult.category, provider: decision.provider, model, degraded: decision.degraded, difficulty: diff.level }, "smart-routed");
   } else if (model === "auto") {
     const userPrompt = (messages as any[]).filter((m: any) => m.role === "user").map((m: any) => normalizeContent(m.content)).join("\n");
     const router = getPromptRouter();
