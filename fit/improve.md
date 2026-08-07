@@ -60,18 +60,18 @@
 
 | 模块 | 源码 | 接入点 |
 |------|------|--------|
-| Prompt Compression | `src/server/prompt/compression.ts` | chat.ts |
-| Conversation Compression | `src/server/prompt/conversation-compressor.ts` | chat.ts |
-| Adaptive Context | `src/server/prompt/adaptive-context.ts` | chat.ts |
-| Cache Confidence | `src/server/cache/cache-confidence.ts` | cache-gate |
-| Cache Gate | `src/server/cache/cache-gate.ts` | chat.ts |
-| Cache Auto Refresh | `src/server/cache/cache-auto-refresh.ts` | chat.ts / admin |
-| Smart Routing | `src/server/routing/smart-routing.ts` | chat.ts |
-| Multi-Dim Router | `src/server/prompt/multi-dim-router.ts` | 经 smart-routing |
-| Cost Controller | `src/server/cost/cost-controller.ts` | chat.ts |
-| Request Judge | `src/server/judge/request-judge.ts` | chat.ts / admin |
-| Intent Learning | `src/server/prompt/intent-learning.ts` | 经 smart-routing |
-| Trend Analyzer | `src/server/analytics/trend-analyzer.ts` | admin |
+| Prompt Compression | `src/optimizer/prompt/compression.ts` | chat.ts |
+| Conversation Compression | `src/optimizer/prompt/conversation-compressor.ts` | chat.ts |
+| Adaptive Context | `src/optimizer/prompt/adaptive-context.ts` | chat.ts |
+| Cache Confidence | `src/optimizer/cache/cache-confidence.ts` | cache-gate |
+| Cache Gate | `src/optimizer/cache/cache-gate.ts` | chat.ts |
+| Cache Auto Refresh | `src/optimizer/cache/cache-auto-refresh.ts` | chat.ts / admin |
+| Smart Routing | `src/optimizer/routing/smart-routing.ts` | chat.ts |
+| Multi-Dim Router | `src/optimizer/prompt/multi-dim-router.ts` | 经 smart-routing |
+| Cost Controller | `src/optimizer/cost/cost-controller.ts` | chat.ts |
+| Request Judge | `src/optimizer/judge/request-judge.ts` | chat.ts / admin |
+| Intent Learning | `src/optimizer/prompt/intent-learning.ts` | 经 smart-routing |
+| Trend Analyzer | `src/analytics/trend-analyzer.ts` | admin |
 | Batch API | `src/server/routes/batch.ts` | 路由 /v1/batch |
 | CLI / SDK / Auto Benchmark | `cli/` `sdk/` `benchmark/` | 周边工具 |
 
@@ -648,15 +648,6 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 ---
 
-## 必要未完成 TODO（基础设施）
-
-| 状态 | 任务 | 说明 |
-|------|------|------|
-| ⚠️ PARTIAL | Phase 1 | `CacheConfidence` + `CacheGate` + `CacheAutoRefresh` 完成 |
-| ⚠️ PARTIAL | Phase 12 | 核心模块已就绪，目录重构待进行 |
-
----
-
 ## GitHub Release 与 npm Package 完善（⬜ 全部 TODO，供远程 agent 执行）
 
 > **现状**（2026-08-07 实测）：`package.json` version = 0.1.0（实际产品已 v2.2），缺 `main/types/files/exports/repository/license/bin`；无 `CHANGELOG.md`；git tag 仅 v1.1.1/v1.1.2；npm 未发布。**目标**：Release 可追溯、包可安装（npm 或本地构建），版本对齐 v2.2。
@@ -667,7 +658,7 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 | ✅ COMPLETED | R11-1 | package.json 发布字段补全 | version → 2.2.0；补 main/files/exports/repository/license/bin/publishConfig | `npm pkg get version main files` 输出正确 |
 | ✅ COMPLETED | R11-2 | 构建产物验证 | `npm run build` → `dist/`；rootDir 改为 src 对齐路径 | `npm run build` 成功 |
 | ✅ COMPLETED | R11-3 | CHANGELOG.md | v0.x → v1.x → v2.0 → v2.1 → v2.2 全版本记录 | `CHANGELOG.md` 存在 |
-| ✅ COMPLETED | R11-4 | GitHub Release v2.2.0 | **tag v2.2.0 已补打并推送（本地补）**；gh CLI 不可用，GitHub Release 页需手动创建（引用 CHANGELOG） | `git tag v2.2.0` 存在 + Release 页待手动 |
+| ✅ COMPLETED | R11-4 | GitHub Release v2.2.0 | **Release 已创建**：`gh release create v2.2.0`（2026-08-07，本地补）——https://github.com/zhichengYellow/nexus-llm-gateway/releases/tag/v2.2.0 | `gh release view v2.2.0` 返回正常 |
 | ✅ COMPLETED | R11-5 | npm 发布决策 | 个人项目不发布 npm：`publishConfig.private=true` 防误发；README 补生产构建说明 | `npm pkg get publishConfig` 返回 `{"private":true}` |
 
 > **执行约定**：R11-1 → R11-5 按序执行；每项完成跑 CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`）+ 更新本表状态为 ✅。R11-4 需要 GitHub 凭据（gh CLI / token）；无凭据时至少完成 tag + CHANGELOG，并在提交说明中注明。
@@ -727,7 +718,7 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 |------|------|------|
 | 🚧 PLANNED | 技术博客 | 写高质量技术博客（Token 优化、成本优化、Semantic Cache 2.0 的思路） |
 | 🚧 PLANNED | Issues & PR | 持续回应 Issues 和接受 PR |
-| 🚧 PLANNED | Release 维护 | 持续维护 Release，打 tag，写 changelog |
+| ✅ COMPLETED | Release 维护 | 持续维护 Release，打 tag，写 changelog（v2.2.0 已完成：tag + Release + CHANGELOG） |
 | 🚧 PLANNED | GitHub Discussions | 开启讨论区 |
 
 ---
