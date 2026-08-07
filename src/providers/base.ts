@@ -33,6 +33,7 @@ interface OpenAiLikeChunk {
 export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvider {
   abstract type: ProviderType;
   protected config: ProviderConfig;
+  private _dispatcher: ProxyAgent | undefined | null = null;
 
   constructor(config: ProviderConfig) {
     this.config = config;
@@ -44,15 +45,21 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
     return h;
   }
 
-  /** 若该 provider 配置了代理（如 GEMINI_PROXY=http://127.0.0.1:7897），返回 undici dispatcher */
+  /** 若该 provider 配置了代理（如 GEMINI_PROXY=http://127.0.0.1:7897），返回 undici dispatcher（单例复用） */
   protected get dispatcher(): ProxyAgent | undefined {
-    const proxy = process.env[`${this.type.toUpperCase()}_PROXY`];
-    if (!proxy) return undefined;
-    return new ProxyAgent(proxy);
+    if (this._dispatcher === null) {
+      const proxy = process.env[`${this.type.toUpperCase()}_PROXY`];
+      if (!proxy) {
+        this._dispatcher = undefined;
+        return undefined;
+      }
+      this._dispatcher = new ProxyAgent(proxy);
+    }
+    return this._dispatcher;
   }
 
   protected get hasProxy(): boolean {
-    return !!this.dispatcher;
+    return !!process.env[`${this.type.toUpperCase()}_PROXY`];
   }
 
   /** 统一请求：有代理走 undici ufetch（同源 dispatcher），无代理走全局 fetch；返回 any 放宽类型差异 */

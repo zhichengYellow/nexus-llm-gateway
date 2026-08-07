@@ -111,11 +111,11 @@ export class ProviderRegistry {
     return { provider, providerType: primary.providerType, upstreamModel: primary.upstreamModel };
   }
 
-  /** 获取 provider 实例 */
+  /** 获取 provider 实例（直接返回原实例，不用 spread 避免丢失原型方法） */
   getProvider(type: ProviderType): ChatProvider & EmbeddingProvider | undefined {
-    const c = this.chatProviders.get(type);
-    const e = this.embedProviders.get(type);
-    return (c && e ? { ...c, ...e } : undefined) as ChatProvider & EmbeddingProvider | undefined;
+    const p = this.chatProviders.get(type);
+    if (!p) return undefined;
+    return p as ChatProvider & EmbeddingProvider;
   }
 
   /** 列出所有对外暴露的模型 */

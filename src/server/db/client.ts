@@ -12,6 +12,7 @@ const config = getConfig();
 const queryClient = postgres(config.databaseUrl, {
   max: 10,
   prepare: false,
+  connect_timeout: 5,
 });
 
 export const db = drizzle(queryClient, { schema, logger: config.logLevel === "debug" });

@@ -12,8 +12,8 @@
  * 说明: 测试前后读取 /admin/optimization/stats 的差值,结果精确对应本次流量。
  */
 const GATEWAY_URL = process.env.GATEWAY_URL || "http://localhost:8787/v1";
-const GATEWAY_KEY = process.env.GATEWAY_KEY || "sk-nexus-dev-DjkLq0vqjPa9o-IQnQTYBRcv";
-const MASTER_KEY = process.env.GATEWAY_MASTER_KEY || ""; // admin stats 需要 master key
+const GATEWAY_KEY = process.env.GATEWAY_KEY || "";
+const MASTER_KEY = process.env.GATEWAY_MASTER_KEY || "";
 const MODEL = process.env.MODEL || "auto"; // 可用 deepseek-v4-flash 绕过 gemini 配额
 const ROUNDS = parseInt(process.env.ROUNDS || "150", 10); // 长文档重复次数,150 → ~1M token
 

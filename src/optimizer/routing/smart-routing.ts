@@ -7,6 +7,7 @@ import type { ProviderType } from "../../shared/types.js";
 import { getMultiDimRouter, type RouteOption } from "../prompt/multi-dim-router.js";
 import { getCostEstimator } from "../cost/cost-controller.js";
 import { getIntentLearner } from "../prompt/intent-learning.js";
+import { getRegistry } from "../../providers/registry.js";
 import { logger } from "../../shared/logger.js";
 
 export interface RoutingProfile {
@@ -124,10 +125,27 @@ export class SmartRoutingEngine {
     // 多维路由选择
     const decision = router.select(filtered.length > 0 ? filtered : candidates);
 
+    // 候选为空时从 registry 真实可用 provider 降级（不硬编码）
+    let fallbackProvider = "unknown";
+    let fallbackModel = "unknown";
+    if (!decision || !decision.selected) {
+      const reg = getRegistry();
+      const availableProviders = reg.registeredProviders();
+      if (availableProviders.length > 0) {
+        const firstProv = availableProviders[0]!;
+        const aliases = reg.listAllAliases().filter((a) => {
+          try { const r = reg.resolve(a); return r.providerType === firstProv; } catch { return false; }
+        });
+        fallbackProvider = firstProv;
+        fallbackModel = aliases.length > 0 ? aliases[0]! : "unknown";
+        logger.warn({ fallbackProvider, fallbackModel, candidates: candidates.length }, "smart-routing: no candidates, falling back to available provider");
+      }
+    }
+
     const result: RoutingDecision = {
-      provider: decision?.selected.provider ?? "deepseek",
-      model: decision?.selected.model ?? "deepseek-chat",
-      reason: decision?.reason ?? "default",
+      provider: (decision?.selected.provider ?? fallbackProvider) as ProviderType,
+      model: decision?.selected.model ?? fallbackModel,
+      reason: decision?.reason ?? (fallbackProvider !== "unknown" ? "fallback-to-available" : "default"),
       cost: decision?.selected.cost ?? 0,
       estimatedLatency: decision?.selected.latency ?? 500,
       confidence: decision?.selected.intentMatch ?? 0.5,

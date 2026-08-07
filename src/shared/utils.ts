@@ -16,7 +16,8 @@ export function genCompletionId(): string {
 /** 粗略估算 token 数（4 字符 ≈ 1 token，仅用于缺省场景） */
 export function estimateTokens(text: string): number {
   if (!text) return 0;
-  return Math.ceil(text.length / 4);
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  return Math.max(1, Math.ceil(cleaned.length / 4));
 }
 
 /**

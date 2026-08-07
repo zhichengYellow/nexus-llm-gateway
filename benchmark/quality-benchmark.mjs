@@ -9,7 +9,7 @@ import { performance } from "node:perf_hooks";
 import { createHash } from "node:crypto";
 
 const GATEWAY = process.env.GATEWAY_URL || "http://localhost:8787/v1";
-const KEY = process.env.GATEWAY_KEY || "sk-nexus-master-9f3aK2mP7vXq4WsR";
+const KEY = process.env.GATEWAY_KEY || process.env.GATEWAY_MASTER_KEY || "";
 
 // ===== 加载 Prompt 数据集 =====
 const prompts = JSON.parse(readFileSync("./benchmark/prompts/quality-prompts.json", "utf-8"));

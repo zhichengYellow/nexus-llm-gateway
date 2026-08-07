@@ -185,6 +185,7 @@ adminRoute.get("/usage/timeline", async (c) => {
       totalRequests: sql<number>`count(*)::int`,
       totalTokens: sql<number>`coalesce(sum(${usageLogs.totalTokens}), 0)::bigint::int`,
       savedTokens: sql<number>`coalesce(sum(${usageLogs.savedTokens}), 0)::bigint::int`,
+      savedCostMicro: sql<number>`coalesce(sum(${usageLogs.savedCostMicro}), 0)::bigint::int`,
       totalCostMicro: sql<number>`coalesce(sum(${usageLogs.costMicro}), 0)::bigint::int`,
       cacheHits: sql<number>`coalesce(sum(case when ${usageLogs.cached} then 1 else 0 end), 0)::int`,
       cacheMisses: sql<number>`coalesce(sum(case when ${usageLogs.cached} = false then 1 else 0 end), 0)::int`,
@@ -201,16 +202,12 @@ adminRoute.get("/usage/timeline", async (c) => {
   const points = new Map<string, any>();
   for (const r of rows) {
     const hour = new Date(r.hour as string).toISOString();
-    const costMicro = r.totalCostMicro ?? 0;
-    const savedTokens = r.savedTokens ?? 0;
-    // savedCost = 缓存命中不产生 cost + 压缩节省比例
-    const savedCost = costMicro > 0 ? Math.round(costMicro * (savedTokens / Math.max(1, r.totalTokens ?? 1))) : 0;
     points.set(hour, {
       hour,
       totalRequests: r.totalRequests,
       totalTokens: r.totalTokens,
-      savedTokens,
-      savedCostMicro: savedCost,
+      savedTokens: r.savedTokens ?? 0,
+      savedCostMicro: r.savedCostMicro ?? 0,
       cacheHits: r.cacheHits,
       cacheMisses: r.cacheMisses,
     });

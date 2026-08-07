@@ -60,11 +60,14 @@ export class OllamaProvider implements ChatProvider, EmbeddingProvider {
 
   async chat(req: ChatCompletionRequest, upstreamModel: string): Promise<ChatCompletionResponse> {
     const body = this.buildChatBody(req, upstreamModel, false);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     const res = await fetch(this.chatUrl, {
       method: "POST",
       headers: this.headers,
       body: JSON.stringify(body),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
     if (!res.ok) {
       const text = await res.text();
       throw new ProviderError(`upstream ollama chat error: ${text}`, res.status, this.type);
@@ -95,11 +98,14 @@ export class OllamaProvider implements ChatProvider, EmbeddingProvider {
 
   async *chatStream(req: ChatCompletionRequest, upstreamModel: string): AsyncIterable<ChatCompletionChunk> {
     const body = this.buildChatBody(req, upstreamModel, true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
     const res = await fetch(this.chatUrl, {
       method: "POST",
       headers: this.headers,
       body: JSON.stringify(body),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
     if (!res.ok || !res.body) {
       const text = res.body ? await res.text() : "no body";
       throw new ProviderError(`upstream ollama stream error: ${text}`, res.status, this.type);

@@ -63,12 +63,25 @@ function bucketNumber(v: number | undefined, defaultValue: number): number {
   return 1;
 }
 
-/** Cache Key：Provider + Model + Canonical prompt + 分桶参数（模型间隔离） */
+/** 提取所有消息的规范化文本（system + 所有 user 消息，含历史） */
+function allMessagesText(req: ChatCompletionRequest): string {
+  const msgs = req.messages as Array<{ role: string; content: string | any[] }>;
+  const parts: string[] = [];
+  for (const m of msgs) {
+    if (m.role === "system" || m.role === "user") {
+      const c = typeof m.content === "string" ? m.content : String(m.content ?? "");
+      parts.push(canonicalText(c));
+    }
+  }
+  return parts.join("|");
+}
+
+/** Cache Key：Provider + Model + 完整上下文（system + 所有 user）+ 分桶参数 */
 export function cacheHash(req: ChatCompletionRequest, model: string, provider: string): string {
-  const canonical = canonicalText(rawLastUser(req));
+  const fullText = allMessagesText(req);
   const tempBucket = bucketNumber(req.temperature, 1);
   const topPBucket = bucketNumber(req.top_p, 1);
-  const text = `${provider}|${model}|${canonical}|t${tempBucket}|p${topPBucket}`;
+  const text = `${provider}|${model}|${fullText}|t${tempBucket}|p${topPBucket}`;
   return createHash("sha256").update(text).digest("hex");
 }
 
@@ -194,12 +207,21 @@ export class SemanticCache {
       const canonical = canonicalText(raw);
       if (!isCacheable(raw, canonical)) return;
 
-      // ===== 防毒化校验（内容必须非空、无 error）=====
-      // 注意：非流式 max_tokens 截断时 finish_reason="length"，也是有效回答，必须缓存；
-      // 半截回答防护由 handleStream（流中断走 catch 不写缓存）承担。
+      // ===== 防毒化校验 =====
+      const finishReason = (response as any)?.choices?.[0]?.finish_reason ?? "stop";
+      // 只缓存完整回答：非 stop 的（content_filter/length/tool_calls 等）不缓存
+      if (finishReason !== "stop") {
+        logger.warn({ model, finishReason }, "skip cache: non-stop finish_reason");
+        return;
+      }
       const content = (response as any)?.choices?.[0]?.message?.content ?? "";
       if (!content || typeof content !== "string" || content.trim().length === 0) {
         logger.warn({ model }, "skip cache: empty content");
+        return;
+      }
+      // 内容长度上限：防止超长回答占用大量存储
+      if (content.length > 50000) {
+        logger.warn({ model, length: content.length }, "skip cache: content too long");
         return;
       }
       if ((response as any)?.error) return;
@@ -224,6 +246,21 @@ export class SemanticCache {
       logger.info({ model, hash: hash.slice(0, 8), ttl, preview }, "cache stored");
     } catch (e) {
       logger.error({ err: (e as Error).message, model }, "cache store failed");
+    }
+  }
+
+  /** 定期清理过期缓存条目 */
+  async cleanupExpired(): Promise<number> {
+    try {
+      const result = await db
+        .delete(semanticCache)
+        .where(sql`${semanticCache.expiresAt} < now()`);
+      const count = (result as any).rowCount ?? 0;
+      if (count > 0) logger.info({ count }, "cleaned up expired cache entries");
+      return count;
+    } catch (e) {
+      logger.warn({ err: (e as Error).message }, "cache cleanup failed");
+      return 0;
     }
   }
 

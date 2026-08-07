@@ -14,6 +14,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { nanoid } from "nanoid";
 import { logger } from "../../shared/logger.js";
+import { getConfig } from "../../shared/config.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
 
@@ -32,6 +33,7 @@ interface BatchRequest {
 
 interface BatchJob {
   id: string;
+  tenantId: string | null;
   status: "validating" | "in_progress" | "completed" | "failed" | "cancelled";
   requests: BatchRequest[];
   results: Array<{
@@ -42,6 +44,18 @@ interface BatchJob {
   }>;
   createdAt: number;
   completedAt: number | null;
+}
+
+/** 允许的批量请求路径白名单 */
+const ALLOWED_BATCH_PATHS = new Set([
+  "/v1/chat/completions",
+  "/v1/embeddings",
+]);
+
+/** SSRF 防护：禁止 URL 中包含 @ // ../ 等注入字符 */
+function isValidBatchUrl(url: string): boolean {
+  if (url.includes("@") || url.includes("//") || url.includes("..")) return false;
+  return ALLOWED_BATCH_PATHS.has(url);
 }
 
 const jobs = new Map<string, BatchJob>();
@@ -70,9 +84,24 @@ batchRoute.post(
       return c.json({ error: { message: "no requests provided" } }, 400);
     }
 
+    // SSRF 防护：验证所有请求 URL
+    for (const req of requests) {
+      if (!isValidBatchUrl(req.url)) {
+        return c.json({ error: { message: `invalid or disallowed batch URL: ${req.url}` } }, 400);
+      }
+    }
+
+    // 请求数上限
+    if (requests.length > 100) {
+      return c.json({ error: { message: "max 100 requests per batch" } }, 400);
+    }
+
+    const tenant = c.get("tenant");
+    const config = getConfig();
     const jobId = `batch_${nanoid(16)}`;
     const job: BatchJob = {
       id: jobId,
+      tenantId: tenant?.id ?? null,
       status: "validating",
       requests,
       results: [],
@@ -88,15 +117,15 @@ batchRoute.post(
         job.status = "in_progress";
         for (const req of requests) {
           try {
-            // 将请求转发到网关内部
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), 30000);
 
-            const res = await fetch(`http://localhost:8787${req.url}`, {
+            const res = await fetch(`http://localhost:${config.port}${req.url}`, {
               method: req.method,
               headers: {
                 "Content-Type": "application/json",
-                Authorization: c.req.header("Authorization") ?? "",
+                // 不转发用户 Authorization，用服务端 master key
+                Authorization: `Bearer ${config.masterKey}`,
               },
               body: req.method !== "GET" ? JSON.stringify(req.body) : undefined,
               signal: controller.signal,
@@ -187,13 +216,17 @@ batchRoute.post("/:id/cancel", async (c) => {
   return c.json({ id: job.id, status: "cancelled" });
 });
 
-// 列出所有批量任务
+// 列出所有批量任务（按租户隔离）
 batchRoute.get("/", async (c) => {
-  const list = [...jobs.values()].map((j) => ({
-    id: j.id,
-    status: j.status,
-    created_at: j.createdAt,
-    request_counts: { total: j.requests.length, completed: j.results.length },
-  }));
+  const tenant = c.get("tenant");
+  const tenantId = tenant?.id ?? null;
+  const list = [...jobs.values()]
+    .filter((j) => !tenantId || j.tenantId === tenantId)
+    .map((j) => ({
+      id: j.id,
+      status: j.status,
+      created_at: j.createdAt,
+      request_counts: { total: j.requests.length, completed: j.results.length },
+    }));
   return c.json({ data: list });
 });

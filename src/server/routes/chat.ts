@@ -20,7 +20,7 @@ import { getCacheGate } from "../../optimizer/cache/cache-gate.js";
 import { getCacheAutoRefresh } from "../../optimizer/cache/cache-auto-refresh.js";
 import { getSmartRoutingEngine } from "../../optimizer/routing/smart-routing.js";
 import { scoreDifficulty, pickStrongModel, pickCheapModel } from "../../optimizer/routing/difficulty.js";
-import { getBudgetController } from "../../optimizer/cost/cost-controller.js";
+import { getBudgetController, getCostEstimator } from "../../optimizer/cost/cost-controller.js";
 import { getCostOptimizer } from "../../extensions/prompt/cost-optimizer.js";
 import { getRequestJudge } from "../../optimizer/judge/request-judge.js";
 import { getQualityEvaluator } from "../../extensions/judge/quality-evaluator.js";
@@ -28,6 +28,7 @@ import { getE2ECollector } from "../../analytics/e2e-metrics.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
 import type { ChatCompletionRequest } from "../../shared/types.js";
+import { estimateTokens } from "../../shared/utils.js";
 
 const chatSchema = z.object({
   model: z.string().min(1),
@@ -56,12 +57,6 @@ function normalizeContent(content: unknown): string {
   return String(content ?? "");
 }
 
-/** 粗略估算 tokens（中英文混合，~3.5 chars/token） */
-function estimateTokens(text: string): number {
-  const cleaned = text.replace(/\s+/g, " ").trim();
-  return Math.max(1, Math.ceil(cleaned.length / 3.5));
-}
-
 function cacheToSSE(c: Context<ChatEnv>, response: any) {
   c.header("Content-Type", "text/event-stream");
   c.header("Cache-Control", "no-cache");
@@ -71,13 +66,18 @@ function cacheToSSE(c: Context<ChatEnv>, response: any) {
   const encoder = new TextEncoder();
   const content = response.choices?.[0]?.message?.content ?? "";
   (async () => {
-    const chunks = content.match(/.{1,20}/g) || [content];
-    for (const chunk of chunks) {
-      await writer.write(encoder.encode(`data: ${JSON.stringify({ id: response.id, object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: response.model, choices: [{ index: 0, delta: { content: chunk }, finish_reason: null }] })}\n\n`));
+    try {
+      const chunks = content.match(/.{1,20}/g) || [content];
+      for (const chunk of chunks) {
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ id: response.id, object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: response.model, choices: [{ index: 0, delta: { content: chunk }, finish_reason: null }] })}\n\n`));
+      }
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ id: response.id, object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: response.model, choices: [{ index: 0, delta: {}, finish_reason: "stop" }], usage: response.usage })}\n\n`));
+      await writer.write(encoder.encode("data: [DONE]\n\n"));
+    } catch (e) {
+      logger.warn({ err: (e as Error).message }, "cache SSE write failed (client disconnected)");
+    } finally {
+      await writer.close().catch(() => {});
     }
-    await writer.write(encoder.encode(`data: ${JSON.stringify({ id: response.id, object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: response.model, choices: [{ index: 0, delta: {}, finish_reason: "stop" }], usage: response.usage })}\n\n`));
-    await writer.write(encoder.encode("data: [DONE]\n\n"));
-    await writer.close();
   })();
   return c.body(readable);
 }
@@ -92,6 +92,25 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   // ===== C1.6: 门控逃生开关 =====
   if (bypassOptimize) {
     logger.info({ requestId }, "optimization bypassed via x-nexus-no-optimize header");
+  }
+
+  // ===== 预算与限流检查（不受 no-optimize 影响） =====
+  if (!c.get("isMaster") && tenant) {
+    // 限流检查
+    const { checkRateLimit } = await import("../quota/rate-limiter.js");
+    const rl = await checkRateLimit(apiKey?.id ?? "unknown", 60);
+    if (!rl.allowed) {
+      return c.json({ error: { message: `rate limit exceeded, retry in ${rl.resetIn}s`, type: "rate_limit_error" } }, 429);
+    }
+    // 预算检查
+    const budgetCtrl = getBudgetController();
+    const costOptimizer = getCostOptimizer();
+    const userPrompt = raw.messages.map((m: any) => normalizeContent(m.content)).join("\n");
+    const estimatedCost = costOptimizer.estimateCost(userPrompt, raw.model as any, raw.model);
+    const budgetResult = budgetCtrl.recordSpending(tenant.id, estimatedCost);
+    if (!budgetResult.allowed) {
+      return c.json({ error: { message: budgetResult.reason, type: "budget_error" } }, 402);
+    }
   }
 
   // ===== R4.2: E2E 测量 — 记录原始输入 tokens =====
@@ -186,18 +205,6 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
     } catch { /* 无效模型会走 404,缓存键用 unknown 兜底 */ }
   }
 
-  // ===== C1.4: 成本控制接入 =====
-  if (!c.get("isMaster") && tenant && !bypassOptimize) {
-    const budgetCtrl = getBudgetController();
-    const costOptimizer = getCostOptimizer();
-    const userPrompt = (messages as any[]).filter((m: any) => m.role === "user").map((m: any) => normalizeContent(m.content)).join("\n");
-    const estimatedCost = costOptimizer.estimateCost(userPrompt, model as any, model);
-    const budgetResult = budgetCtrl.recordSpending(tenant.id, estimatedCost);
-    if (!budgetResult.allowed) {
-      return c.json({ error: { message: budgetResult.reason, type: "budget_error" } }, 402);
-    }
-  }
-
   const ctx: PipelineContext = {
     c, model, request: req, requestId,
     tenant, apiKey,
@@ -227,7 +234,9 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
 
       // 修复计价虚高：缓存命中时异步记录 savedTokens 与虚拟成本
       const cachedUsage = (gateResult.response.usage ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }) as any;
-      const cachedTokenCount = (cachedUsage.total_tokens ?? cachedUsage.prompt_tokens ?? 0) + (cachedUsage.completion_tokens ?? 0);
+      // 用 total_tokens 直接（如果存在），否则 prompt + completion（不重复加）
+      const cachedTokenCount = cachedUsage.total_tokens
+        ?? ((cachedUsage.prompt_tokens ?? 0) + (cachedUsage.completion_tokens ?? 0));
       if (cachedTokenCount > 0) {
         const { recordUsage } = await import("../billing/usage.js");
         recordUsage({
@@ -283,7 +292,15 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
       const optimizedTokens = estimateTokens(optimizedPrompt);
       const outputContent = response.choices?.[0]?.message?.content ?? "";
       const outputTokens = estimateTokens(outputContent);
-      const costMicro = (response.usage?.total_tokens ?? 0) * 0.02; // 估算成本
+      // 用真实价格表计算成本（不再硬编码 0.02）
+      const costEstimator = getCostEstimator();
+      const price = costEstimator.getPrice(cacheProvider as ProviderType, model);
+      const promptTokens = response.usage?.prompt_tokens ?? optimizedTokens;
+      const completionTokens = response.usage?.completion_tokens ?? outputTokens;
+      const costMicro = Math.round(
+        (promptTokens / 1_000_000) * (price?.inputPrice ?? 0) * 1_000_000 +
+        (completionTokens / 1_000_000) * (price?.outputPrice ?? 0) * 1_000_000
+      );
       const savedTokenCount = Math.max(0, entryTokens - optimizedTokens);
       e2e.record({
         requestId,
@@ -341,8 +358,12 @@ async function handleStream(c: Context<ChatEnv>, ctx: PipelineContext) {
           recordUsage({ requestId: ctx.requestId, tenantId: ctx.tenant?.id ?? null, apiKeyId: ctx.apiKey?.id ?? null, provider: node.providerType, model: ctx.model, upstreamModel: node.upstreamModel, usage: totalUsage, latencyMs, cached: false, stream: true, status: 200 });
           const { getSemanticCache } = await import("../../optimizer/cache/semantic-cache.js");
           await getSemanticCache().store(ctx.request, ctx.model, node.providerType, { id: ctx.requestId, object: "chat.completion" as const, created: Math.floor(Date.now() / 1000), model: ctx.model, choices: [{ index: 0, message: { role: "assistant" as const, content: collectedContent }, finish_reason: "stop" }], usage: totalUsage, nexus: { provider: node.providerType, upstreamModel: node.upstreamModel } }, ctx.tenant?.id ?? null).catch(() => {});
-        } catch (e) { logger.error({ err: (e as Error).message, requestId: ctx.requestId }, "stream error"); } finally { await writer.close(); }
-      })();
+        } catch (e) {
+          logger.error({ err: (e as Error).message, requestId: ctx.requestId }, "stream error");
+        } finally {
+          await writer.close().catch(() => {});
+        }
+      })().catch(() => {});
       return c.body(readable);
     } catch (e) { logger.warn({ err: (e as Error).message, provider: node.providerType, attempt: i + 1 }, "stream failed"); }
   }

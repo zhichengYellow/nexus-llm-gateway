@@ -15,6 +15,7 @@
  * - QPS = avg quality score
  */
 
+import { sql } from "drizzle-orm";
 import { db } from "../server/db/client.js";
 import { optimizationStats } from "../server/db/schema.js";
 import { logger } from "../shared/logger.js";
@@ -149,25 +150,36 @@ export class E2EMetricsCollector {
    */
   private async persist(point: MetricPoint): Promise<void> {
     const trr = point.entryTokens > 0
-      ? (point.entryTokens - point.optimizedTokens) / point.entryTokens
+      ? Math.round(((point.entryTokens - point.optimizedTokens) / point.entryTokens) * 100)
       : 0;
     const csr = point.totalCostMicro > 0
-      ? point.savedCostMicro / point.totalCostMicro
+      ? Math.round((point.savedCostMicro / point.totalCostMicro) * 100)
       : 0;
+    const date = new Date().toISOString().slice(0, 10);
 
-    await db.insert(optimizationStats).values({
-      date: new Date().toISOString().slice(0, 10),
-      trr,
-      csr,
-      qps: point.qualityScore,
-      entryTokens: point.entryTokens,
-      optimizedTokens: point.optimizedTokens,
-      savedTokens: point.entryTokens - point.optimizedTokens,
-      totalCostMicro: point.totalCostMicro,
-      savedCostMicro: point.savedCostMicro,
-      requestCount: 1,
-      avgLatencyMs: point.latencyMs,
-    } as any).catch(() => undefined);
+    await db
+      .insert(optimizationStats)
+      .values({
+        date,
+        trr,
+        csr,
+        qps: Math.round(point.qualityScore * 100),
+        totalTokens: point.entryTokens,
+        totalCostMicro: point.totalCostMicro,
+        totalRequests: 1,
+      } as any)
+      .onConflictDoUpdate({
+        target: [optimizationStats.date],
+        set: {
+          trr: sql`${optimizationStats.trr} + ${trr}`,
+          csr: sql`${optimizationStats.csr} + ${csr}`,
+          totalTokens: sql`${optimizationStats.totalTokens} + ${point.entryTokens}`,
+          totalCostMicro: sql`${optimizationStats.totalCostMicro} + ${point.totalCostMicro}`,
+          totalRequests: sql`${optimizationStats.totalRequests} + 1`,
+        },
+      })
+      .execute()
+      .catch((e) => logger.warn({ err: e }, "persist optimization stats failed"));
   }
 
   /** 清空内存记录 */

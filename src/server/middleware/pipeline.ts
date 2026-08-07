@@ -160,13 +160,15 @@ export const routerMiddleware: MiddlewareHandler = {
     const registry = getRegistry();
     try {
       const resolved = registry.resolve(ctx.model);
+      const fallbacks = resolved.fallbacks
+        .map((f) => {
+          const p = registry.getProvider(f.providerType);
+          return p ? { provider: p, providerType: f.providerType, upstreamModel: f.upstreamModel } : null;
+        })
+        .filter((f): f is NonNullable<typeof f> => f !== null);
       ctx.chain = [
         { provider: resolved.provider, providerType: resolved.providerType, upstreamModel: resolved.upstreamModel },
-        ...resolved.fallbacks.map((f) => ({
-          provider: registry.getProvider(f.providerType),
-          providerType: f.providerType,
-          upstreamModel: f.upstreamModel,
-        })),
+        ...fallbacks,
       ];
     } catch (e) {
       return {
@@ -209,9 +211,10 @@ export const providerMiddleware: MiddlewareHandler = {
       }
 
       try {
+        const reqParams = `${ctx.request.temperature ?? 1}|${ctx.request.top_p ?? 1}|${ctx.request.max_tokens ?? 0}`;
         const key = `sf:${node.providerType}:${ctx.model}:${node.upstreamModel}:${String(
           (ctx.request.messages as any[]).at(-1)?.content ?? "",
-        ).slice(0, 100)}`;
+        ).slice(0, 100)}:${reqParams}`;
 
         const res = await cache.deduplicate<ChatCompletionResponse>(key, () =>
           withRetry(() => node.provider.chat(ctx.request, node.upstreamModel), {
@@ -225,6 +228,7 @@ export const providerMiddleware: MiddlewareHandler = {
         trackRequest(false, latencyMs, 0, res.usage && typeof res.usage === "object" ? res.usage.total_tokens : 0);
         res.nexus.requestId = ctx.requestId;
 
+        const compressionSaved = (ctx.meta.savedTokens as number) ?? 0;
         recordUsage({
           requestId: ctx.requestId,
           tenantId,
@@ -237,6 +241,7 @@ export const providerMiddleware: MiddlewareHandler = {
           cached: false,
           stream: false,
           status: 200,
+          savedTokens: compressionSaved,
         });
 
         await cache.store(ctx.request, ctx.model, node.providerType, res, tenantId).catch(() => undefined);
@@ -253,11 +258,21 @@ export const providerMiddleware: MiddlewareHandler = {
     }
 
     const status: ContentfulStatusCode =
-      lastErr instanceof ProviderError ? (lastErr.status as ContentfulStatusCode) : 502;
+      lastErr instanceof ProviderError ? (lastErr.status as ContentfulStatusCode) : 503;
+    const breakerStatuses = chain
+      .map((n) => {
+        const b = n?.providerType ? breakers.get(`${n.providerType}:${n.upstreamModel}`) : null;
+        return b ? `${n!.providerType}:${b.allowRequest() ? "CLOSED" : "OPEN"}` : null;
+      })
+      .filter(Boolean);
     return {
       break: true,
       status,
-      error: { message: `all providers failed: ${(lastErr as Error)?.message ?? "unknown"}`, type: "upstream_error" },
+      error: {
+        message: `all providers failed: ${(lastErr as Error)?.message ?? "unknown"}` +
+          (breakerStatuses.length > 0 ? ` | breakers: [${breakerStatuses.join(", ")}]` : ""),
+        type: "upstream_error",
+      },
     };
   },
 };

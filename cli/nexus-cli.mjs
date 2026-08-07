@@ -9,7 +9,7 @@
  *   node cli/nexus-cli.mjs benchmark
  */
 const API = process.env.NEXUS_URL || "http://localhost:8787";
-const KEY = process.env.NEXUS_KEY || "sk-nexus-master-9f3aK2mP7vXq4WsR";
+const KEY = process.env.NEXUS_KEY || process.env.GATEWAY_MASTER_KEY || "";
 
 const headers = {
   "Content-Type": "application/json",

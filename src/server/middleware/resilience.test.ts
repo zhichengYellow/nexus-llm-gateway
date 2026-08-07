@@ -68,7 +68,7 @@ describe("withRetry 指数退避", () => {
   });
 
   it("isRetryable 判定", () => {
-    expect(isRetryable({ status: 429 })).toBe(true);
+    expect(isRetryable({ status: 429 })).toBe(false); // 429 不重试，避免放大限流
     expect(isRetryable({ status: 502 })).toBe(true);
     expect(isRetryable(new Error("fetch failed"))).toBe(true);
     expect(isRetryable({ status: 400 })).toBe(false);

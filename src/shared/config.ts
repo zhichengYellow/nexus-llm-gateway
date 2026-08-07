@@ -38,7 +38,7 @@ export function loadConfig(): GatewayConfig {
   return {
     port: num("PORT", 8787),
     logLevel: process.env.LOG_LEVEL ?? "info",
-    masterKey: required("GATEWAY_MASTER_KEY", "sk-nexus-master-change-me"),
+    masterKey: process.env.GATEWAY_MASTER_KEY ?? (process.env.VITEST ? "test-master-key" : required("GATEWAY_MASTER_KEY")),
     databaseUrl: required("DATABASE_URL", "postgres://nexus:nexus@localhost:5432/nexus"),
     redisUrl: required("REDIS_URL", "redis://localhost:6379"),
     semanticCacheThreshold: num("SEMANTIC_CACHE_THRESHOLD", 0.95),

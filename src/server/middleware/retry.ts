@@ -17,7 +17,7 @@ export interface RetryOptions {
   jitterRatio: number;
 }
 
-/** 是否可重试：429 / 5xx / 网络错误 */
+/** 是否可重试：5xx / 网络错误（429 不重试，避免放大限流） */
 export function isRetryable(err: unknown): boolean {
   if (err instanceof Error) {
     // fetch 网络错误（无 status）都可重试
@@ -25,7 +25,7 @@ export function isRetryable(err: unknown): boolean {
   }
   const status = (err as any)?.status ?? (err as any)?.statusCode;
   if (typeof status !== "number") return true;
-  return status === 429 || status >= 500;
+  return status >= 500 && status < 600;
 }
 
 function sleep(ms: number) {

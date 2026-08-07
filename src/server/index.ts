@@ -32,8 +32,10 @@ app.onError((err, c) => {
 // 全局日志
 app.use("*", loggingMiddleware);
 
-// CORS
-app.use("*", cors());
+// CORS（白名单模式：仅允许 dashboard 域名）
+app.use("*", cors({
+  origin: ["http://localhost:3000", "http://127.0.0.1:3000", ...(process.env.CORS_ORIGINS?.split(",") ?? [])].filter(Boolean),
+}));
 
 // 健康检查（无需认证）
 app.route("/metrics", metricsRoute);
@@ -59,9 +61,15 @@ app.route("/", api);
 
 // 启动
 const config = getConfig();
-void loadProviderKeysFromDB(); // 启动时从 DB 加载 UI 配置的 Provider Key
+await loadProviderKeysFromDB(); // 启动时从 DB 加载 UI 配置的 Provider Key
 
-serve(
+// 定期清理过期缓存（每小时）
+setInterval(async () => {
+  const { getSemanticCache } = await import("../optimizer/cache/semantic-cache.js");
+  await getSemanticCache().cleanupExpired();
+}, 3600_000);
+
+const server = serve(
   {
     fetch: app.fetch,
     port: config.port,
@@ -74,3 +82,20 @@ serve(
     logger.info(`   健康检查:    /health`);
   },
 );
+
+server.on("error", (err: NodeJS.ErrnoException) => {
+  logger.error({ err: err.message, code: err.code }, "server error");
+  if (err.code === "EADDRINUSE") {
+    logger.error(`Port ${config.port} is already in use`);
+    process.exit(1);
+  }
+});
+
+// 全局兜底：unhandled rejections / uncaught exceptions 不崩进程
+process.on("unhandledRejection", (reason) => {
+  logger.error({ err: (reason as Error)?.message ?? String(reason) }, "unhandledRejection");
+});
+process.on("uncaughtException", (err) => {
+  logger.error({ err: err.message, stack: err.stack }, "uncaughtException");
+  process.exit(1);
+});

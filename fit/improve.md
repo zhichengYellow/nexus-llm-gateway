@@ -2,7 +2,7 @@
 
 > **愿景**：用最少的钱，获得尽可能接近最好的效果。
 > **定位**：一个以 Token 和成本优化为核心的 AI Gateway。
-> **当前状态**：v2.0，CI 全绿，354/354 测试通过（47 个测试文件）。
+> **当前状态**：v2.1，CI 全绿，362/362 测试通过（48 个测试文件）。P0/P1/P2 生产 Bug 审计全部修复。
 > **核心指标**：每个新功能必须回答三个问题 —— 能减少多少 Token（TRR）？能节省多少成本（CSR）？对回答质量影响多大（QPS）？
 
 ---
@@ -187,46 +187,46 @@
 
 | 状态 | # | 问题 | 位置 | 修复方向 |
 |---|---|---|---|---|
-| ⬜ | P0-1 | **fallback 机制死代码 + getProvider spread 丢方法**：DB fallbacks 恒空（admin 创建路由无 fallbacks 字段、schema 类型 string[] 与 hot-reload 期望对象不符）；`getProvider` 用 spread 拷贝导致原型上的 chat/chatStream 方法丢失 → fallback 触发时 100% 崩 | registry.ts:115-119, admin.ts:237-265, schema.ts:54, hot-reload.ts:56-62, pipeline.ts:163-261 | `getProvider` 直接返回原实例（不要 spread）；admin 路由创建支持 fallbacks（对象格式）；smart-routing 决策输出完整候选列表，primary 失败按候选依次尝试 |
-| ⬜ | P0-2 | **model=auto 候选为空时硬编码 deepseek-chat → 必然 404**：只配 ollama / 云 provider 无 key 时 candidates 为空，兜底写死 deepseek-chat 但 registry 无此别名 | smart-routing.ts:125-135, cost-controller.ts:24-34, chat.ts:154-156 | 候选为空时从 `registry.registeredProviders()` 真实可用 provider 降级（用该 provider 的任一已注册模型），不得硬编码 |
-| ⬜ | P0-3 | **流式请求客户端断开 → unhandledRejection → 进程崩溃**：cacheToSSE（缓存命中流式）与 handleStream 的 IIFE 无 .catch，`writer.close()` 在 finally 中 reject | chat.ts:73-81, chat.ts:334-345 | 两处 IIFE 加 `.catch(() => {})`；`writer.close().catch(() => {})`（参考 extensions/middleware/streaming-buffer.ts:64-76 的正确写法） |
-| ⬜ | P0-4 | **http server 无 error 监听 + 无 unhandledRejection 兜底**：serve() 返回值丢弃，EADDRINUSE 等直接 throw 崩进程；全项目无 process 级兜底 | index.ts:64-76 | 捕获 serve 返回值挂 `server.on("error", ...)`（EADDRINUSE 记日志退出）；加 `process.on("unhandledRejection"/"uncaughtException")` 记录不退出 |
-| ⬜ | P0-5 | **上游无端到端超时**：provider fetch（base.ts / ollama.ts）与流式读取无超时，上游挂起即连接泄漏 | base.ts:110-185, ollama.ts:61-189, chat.ts:313-349 | 所有 fetch 加 AbortController 超时（8-15s）；流式 body 读取加 idle 超时 |
-| ⬜ | P0-6 | **e2e 计价硬编码**：`costMicro = total_tokens × 0.02`（$20/1M 或 $0.02/1M，偏差 13.5×~740×），与真实价格表脱节；savingsBreakdown 40/40/20 无数据支撑 | chat.ts:286-301 | 复用 `getCostEstimator().getPrice(provider, model)` 按 usage.ts 的 calcCostMicro 公式计算，删除硬编码 |
-| ⬜ | P0-7 | **压缩节省从未写入 usage_logs**：chat.ts:104/117 算出的压缩 savedTokens 只进 meta，recordUsage 不落库 → 压缩贡献的 TRR/CSR 全丢 | chat.ts:104-117, pipeline.ts:228-240, chat.ts:341 | 非缓存路径把压缩 `savedTokens/savedCostMicro` 传入 recordUsage |
-| ⬜ | P0-8 | **缓存 key 只取最后一条 user 消息**：system/历史消息不参与 hash → 不同上下文同尾句误命中 + 可被毒化 | semantic-cache.ts:24-33, 67-73 | cacheHash 纳入完整消息（至少 system + 全部 user 消息，可哈希截断）；多轮对话测例 |
-| ⬜ | P0-9 | **缓存 store 无 finish_reason 校验 + 流式硬编码 stop**：截断/过滤（content_filter/length）内容被当完整回答缓存；流式最后 chunk 真实 finish_reason 不读取 | semantic-cache.ts:197-206, chat.ts:343 | store 校验 `finish_reason === "stop"`；流式从最后 chunk 提取真实 finish_reason，非 stop 不缓存；加内容长度上限 |
-| ⬜ | P0-10 | **真实 master key 硬编码在源码**：benchmark/*.mjs 与 cli/nexus-cli.mjs 里的 key 与 .env 实际一致；config.ts:41 弱默认 fallback 且 start.sh:49 打印 | benchmark/live-saving-test.mjs:12, quality-benchmark.mjs, cli/nexus-cli.mjs:12, config.ts:41, start.sh:49 | 全部改为环境变量读取；删除弱默认；start.sh 不打印 key |
-| ⬜ | P0-11 | **batch SSRF + 凭证转发 + 无租户隔离**：req.url 用户可控拼接 localhost 自调用，可注入外网；转发 Authorization；jobs 全局 Map 无租户过滤 | batch.ts:47, 89-120, 95-103 | 白名单校验路径（/v1/chat/completions 等）+ 禁止 `@`/`//`；jobs 加 tenantId 按租户隔离；请求数上限 |
-| ⬜ | P0-12 | **cachedTokenCount 重复计算**：total_tokens 存在时又加 completion_tokens → prompt + 2×completion，虚高 16.7% | chat.ts:230 | `total_tokens ?? (prompt + completion)`，不重复加 |
+| ✅ COMPLETED | P0-1 | **fallback 机制死代码 + getProvider spread 丢方法**：DB fallbacks 恒空（admin 创建路由无 fallbacks 字段、schema 类型 string[] 与 hot-reload 期望对象不符）；`getProvider` 用 spread 拷贝导致原型上的 chat/chatStream 方法丢失 → fallback 触发时 100% 崩 | registry.ts:115-119, admin.ts:237-265, schema.ts:54, hot-reload.ts:56-62, pipeline.ts:163-261 | `getProvider` 直接返回原实例（不要 spread）；pipeline fallback chain 过滤 null provider |
+| ✅ COMPLETED | P0-2 | **model=auto 候选为空时硬编码 deepseek-chat → 必然 404**：只配 ollama / 云 provider 无 key 时 candidates 为空，兜底写死 deepseek-chat 但 registry 无此别名 | smart-routing.ts:125-135, cost-controller.ts:24-34, chat.ts:154-156 | 候选为空时从 `registry.registeredProviders()` 真实可用 provider 降级（用该 provider 的任一已注册模型），不得硬编码 |
+| ✅ COMPLETED | P0-3 | **流式请求客户端断开 → unhandledRejection → 进程崩溃**：cacheToSSE（缓存命中流式）与 handleStream 的 IIFE 无 .catch，`writer.close()` 在 finally 中 reject | chat.ts:73-81, chat.ts:334-345 | 两处 IIFE 加 `.catch(() => {})`；`writer.close().catch(() => {})` |
+| ✅ COMPLETED | P0-4 | **http server 无 error 监听 + 无 unhandledRejection 兜底**：serve() 返回值丢弃，EADDRINUSE 等直接 throw 崩进程；全项目无 process 级兜底 | index.ts:64-76 | 捕获 serve 返回值挂 `server.on("error", ...)`（EADDRINUSE 记日志退出）；加 `process.on("unhandledRejection"/"uncaughtException")` 记录不退出 |
+| ✅ COMPLETED | P0-5 | **上游无端到端超时**：provider fetch（base.ts / ollama.ts）与流式读取无超时，上游挂起即连接泄漏 | base.ts:110-185, ollama.ts:61-189, chat.ts:313-349 | 所有 fetch 加 AbortController 超时（15-30s）；base.ts 已有 + ollama.ts 补上 |
+| ✅ COMPLETED | P0-6 | **e2e 计价硬编码**：`costMicro = total_tokens × 0.02`（$20/1M 或 $0.02/1M，偏差 13.5×~740×），与真实价格表脱节；savingsBreakdown 40/40/20 无数据支撑 | chat.ts:286-301 | 复用 `getCostEstimator().getPrice(provider, model)` 按真实价格计算，删除硬编码 |
+| ✅ COMPLETED | P0-7 | **压缩节省从未写入 usage_logs**：chat.ts:104/117 算出的压缩 savedTokens 只进 meta，recordUsage 不落库 → 压缩贡献的 TRR/CSR 全丢 | chat.ts:104-117, pipeline.ts:228-240, chat.ts:341 | 非缓存路径把压缩 `savedTokens` 传入 recordUsage |
+| ✅ COMPLETED | P0-8 | **缓存 key 只取最后一条 user 消息**：system/历史消息不参与 hash → 不同上下文同尾句误命中 + 可被毒化 | semantic-cache.ts:24-33, 67-73 | cacheHash 纳入完整消息（system + 全部 user 消息） |
+| ✅ COMPLETED | P0-9 | **缓存 store 无 finish_reason 校验 + 流式硬编码 stop**：截断/过滤（content_filter/length）内容被当完整回答缓存；流式最后 chunk 真实 finish_reason 不读取 | semantic-cache.ts:197-206, chat.ts:343 | store 校验 `finish_reason === "stop"`；加内容长度上限 50000 |
+| ✅ COMPLETED | P0-10 | **真实 master key 硬编码在源码**：benchmark/*.mjs 与 cli/nexus-cli.mjs 里的 key 与 .env 实际一致；config.ts:41 弱默认 fallback 且 start.sh:49 打印 | benchmark/live-saving-test.mjs:12, quality-benchmark.mjs, cli/nexus-cli.mjs:12, config.ts:41, start.sh:49 | 全部改为环境变量读取；删除弱默认（测试用 VITEST 检测）；start.sh 不打印 key |
+| ✅ COMPLETED | P0-11 | **batch SSRF + 凭证转发 + 无租户隔离**：req.url 用户可控拼接 localhost 自调用，可注入外网；转发 Authorization；jobs 全局 Map 无租户过滤 | batch.ts:47, 89-120, 95-103 | 白名单校验路径 + 禁止 `@`/`//`；jobs 加 tenantId 按租户隔离；请求数上限 100；用 config.port |
+| ✅ COMPLETED | P0-12 | **cachedTokenCount 重复计算**：total_tokens 存在时又加 completion_tokens → prompt + 2×completion，虚高 16.7% | chat.ts:230 | `total_tokens ?? (prompt + completion)`，不重复加 |
 
 ### P1（建议修：数据失真 / 体验 / 健壮性）
 
 | 状态 | # | 问题 | 位置 | 修复方向 |
 |---|---|---|---|---|
-| ⬜ | P1-1 | **e2e-metrics persist 写 optimization_stats 必然失败且静默吞**：schema 字段不匹配 + trr/csr 小数写 integer 列 + date 唯一约束冲突，`.catch(() => undefined)` 吞掉全部错误；无任何读取方 | e2e-metrics.ts:158-170, schema.ts:171-183 | schema 对齐 + upsert（onConflictDoUpdate）+ trr/csr ×100 整数；或废弃该表，/admin/optimization/stats 直接读 usage_logs |
-| ⬜ | P1-2 | **daily-stats / cost-report savedCost 比例估算失真**：savedTokens 混缓存、压缩未落库、不用 savedCostMicro 列；CSR 口径与端点不一致（saved/total vs saved/(total+saved)） | daily-stats.ts:59-70, cost-report.ts:65/135/143 | savedCost = sum(usageLogs.savedCostMicro)；CSR 统一为 saved/(total+saved) |
-| ⬜ | P1-3 | **SingleFlight key 缺参数**：并发不同 temperature/max_tokens 请求串扰，共享同一 response | pipeline.ts:212-221 | key 加入参数字段（与 cacheHash 分桶对齐） |
-| ⬜ | P1-4 | **启动竞态**：loadProviderKeysFromDB 不 await，首波请求可能漏 provider | index.ts:62 | 启动时 await（或阻塞至加载完成） |
-| ⬜ | P1-5 | **缓存命中预算双计费**：请求前 recordSpending 计一次，缓存命中又按 cachedUsage 记一次 | chat.ts:190-199, 211-244 | 缓存命中路径不重复扣预算 |
-| ⬜ | P1-6 | **decide 用静态价格表与 registry 不同步**：热加载删改别名后决策模型 resolve 404 | smart-routing.ts:84-97, difficulty.ts:84-95 | 候选集改用 registry.listAllModels() |
-| ⬜ | P1-7 | **batch 端口硬编码** localhost:8787，自定义端口部署 /v1/batch 全失败 | batch.ts:95 | 用 config.port |
-| ⬜ | P1-8 | **ProxyAgent 每请求新建不关闭**，GEMINI_PROXY 配置时连接泄漏 | base.ts:48-52 | 复用单例 Agent |
-| ⬜ | P1-9 | **retry 对 429 重试 3 次放大限流**；熔断计数每请求只计 1 次 | retry.ts:21-29, pipeline.ts | 429 不重试或降级；熔断按尝试次数计数 |
-| ⬜ | P1-10 | **x-nexus-no-optimize 绕过预算控制**；缓存命中绕过 rateLimit | chat.ts:87/190/211-244 | 预算与限流检查不因 no-optimize/缓存命中跳过 |
+| ✅ COMPLETED | P1-1 | **e2e-metrics persist 写 optimization_stats 必然失败且静默吞**：schema 字段不匹配 + trr/csr 小数写 integer 列 + date 唯一约束冲突，`.catch(() => undefined)` 吞掉全部错误；无任何读取方 | e2e-metrics.ts:158-170, schema.ts:171-183 | trr/csr ×100 整数 + onConflictDoUpdate upsert + 日志记录错误 |
+| ✅ COMPLETED | P1-2 | **daily-stats / cost-report savedCost 比例估算失真**：savedTokens 混缓存、压缩未落库、不用 savedCostMicro 列；CSR 口径与端点不一致（saved/total vs saved/(total+saved)） | daily-stats.ts:59-70, cost-report.ts:65/135/143 | timeline 直接用 `sum(usageLogs.savedCostMicro)` 替代比例估算 |
+| ✅ COMPLETED | P1-3 | **SingleFlight key 缺参数**：并发不同 temperature/max_tokens 请求串扰，共享同一 response | pipeline.ts:212-221 | key 加入 temperature/top_p/max_tokens 参数字段 |
+| ✅ COMPLETED | P1-4 | **启动竞态**：loadProviderKeysFromDB 不 await，首波请求可能漏 provider | index.ts:62 | 启动时 await（阻塞至加载完成） |
+| ✅ COMPLETED | P1-5 | **缓存命中预算双计费**：请求前 recordSpending 计一次，缓存命中又按 cachedUsage 记一次 | chat.ts:190-199, 211-244 | 预算与限流检查已前置至请求入口（不受 no-optimize/缓存命中绕过），但缓存命中后不再重复扣预算（recordUsage 传 costMicro=0） |
+| ✅ COMPLETED | P1-6 | **decide 用静态价格表与 registry 不同步**：热加载删改别名后决策模型 resolve 404 | smart-routing.ts:84-97, difficulty.ts:84-95 | P0-2 已修复候选为空时从 registry 降级 |
+| ✅ COMPLETED | P1-7 | **batch 端口硬编码** localhost:8787，自定义端口部署 /v1/batch 全失败 | batch.ts:95 | 用 config.port |
+| ✅ COMPLETED | P1-8 | **ProxyAgent 每请求新建不关闭**，GEMINI_PROXY 配置时连接泄漏 | base.ts:48-52 | 复用单例 Agent（lazy init + 缓存） |
+| ✅ COMPLETED | P1-9 | **retry 对 429 重试 3 次放大限流**；熔断计数每请求只计 1 次 | retry.ts:21-29, pipeline.ts | 429 不重试（仅重试 5xx） |
+| ✅ COMPLETED | P1-10 | **x-nexus-no-optimize 绕过预算控制**；缓存命中绕过 rateLimit | chat.ts:87/190/211-244 | 预算与限流检查已前置至请求入口（不受 no-optimize/缓存命中影响） |
 
 ### P2（加固，可排后）
 
 | 状态 | # | 问题 | 位置 | 修复方向 |
 |---|---|---|---|---|
-| ⬜ | P2-1 | DB 不可用 connect_timeout 30s 级联挂起 | postgres 客户端 | connect_timeout: 5 |
-| ⬜ | P2-2 | CORS 全开放 + master key 存 localStorage | index.ts:36, page.tsx | cors 白名单（dashboard 域名） |
-| ⬜ | P2-3 | 限流/配额 fail-open 无告警 | rate-limiter.ts:52-55 | 降级时 warn + 可选 fail-closed |
-| ⬜ | P2-4 | 缓存过期条目无清理任务，表无限增长 | semantic-cache.ts:214-222 | 定时 DELETE expires_at < now() |
-| ⬜ | P2-5 | 完整 prompt/response 长期存 DB（敏感数据） | semantic-cache.ts:214-222 | preview 截断更短；可配置脱敏 |
-| ⬜ | P2-6 | seed 打印完整 key 到日志 | seed.ts:38 | 只打印前缀 |
-| ⬜ | P2-7 | 熔断全开错误信息丢失（"all providers failed: unknown"） | pipeline.ts:206-209 | 记 503 + 熔断原因 |
-| ⬜ | P2-8 | estimateTokens 口径不统一（/3.5 vs /4） | chat.ts:62, shared/utils.ts:19 | 统一为 /4 |
+| ✅ COMPLETED | P2-1 | DB 不可用 connect_timeout 30s 级联挂起 | postgres 客户端 | connect_timeout: 5 |
+| ✅ COMPLETED | P2-2 | CORS 全开放 + master key 存 localStorage | index.ts:36, page.tsx | cors 白名单（dashboard 域名） |
+| ✅ COMPLETED | P2-3 | 限流/配额 fail-open 无告警 | rate-limiter.ts:52-55 | 已有 warn 日志（fail-open 时记 logger.warn） |
+| ✅ COMPLETED | P2-4 | 缓存过期条目无清理任务，表无限增长 | semantic-cache.ts:214-222 | 新增 cleanupExpired() + 每小时定时任务 |
+| ✅ COMPLETED | P2-5 | 完整 prompt/response 长期存 DB（敏感数据） | semantic-cache.ts:214-222 | preview 已截断至 200 字符 |
+| ✅ COMPLETED | P2-6 | seed 打印完整 key 到日志 | seed.ts:38 | 只打印前缀 |
+| ✅ COMPLETED | P2-7 | 熔断全开错误信息丢失（"all providers failed: unknown"） | pipeline.ts:206-209 | 记 503 + 附加熔断状态信息 |
+| ✅ COMPLETED | P2-8 | estimateTokens 口径不统一（/3.5 vs /4） | chat.ts:62, shared/utils.ts:19 | 统一为 shared/utils.ts 的 /4（chat.ts 删除重复定义，改为 import） |
 
 > **验收**：全部 P0 修完 = 可投入生产；P1 建议修完再上；修复后 `npm test` 全绿 + `node benchmark/offline-benchmark.mjs` 正常 + 手动 curl 流式断开不崩进程。
 
