@@ -13,7 +13,7 @@
  * 需要网关在 http://localhost:8787 运行，并有一个有效 API Key。
  */
 const API = process.env.GATEWAY_URL || "http://localhost:8787/v1";
-const KEY = process.env.GATEWAY_KEY || "sk-nexus-dev-UUPCSeUMFC4rGW63I1sSH6hJ";
+const KEY = process.env.GATEWAY_KEY || ""; // 必填: GATEWAY_KEY=<api_key> 运行
 const MODEL = process.env.GATEWAY_MODEL || "deepseek-v4-flash";
 
 async function chat(prompt, opts = {}) {

@@ -13,7 +13,7 @@ import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
 
 const GATEWAY = process.env.GATEWAY_URL || "http://localhost:8787/v1";
-const KEY = process.env.GATEWAY_KEY || "sk-nexus-master-9f3aK2mP7vXq4WsR";
+const KEY = process.env.GATEWAY_KEY || ""; // 必填: GATEWAY_KEY=<master_key> 运行
 
 // 标准测试 Prompt 集
 const PROMPTS = [

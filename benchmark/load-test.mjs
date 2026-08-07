@@ -11,7 +11,7 @@
  * 需要网关在 http://localhost:8787 运行。
  */
 const GATEWAY_URL = process.env.GATEWAY_URL || "http://localhost:8787/v1";
-const GATEWAY_KEY = process.env.GATEWAY_KEY || "sk-nexus-master-9f3aK2mP7vXqW4sR";
+const GATEWAY_KEY = process.env.GATEWAY_KEY || ""; // 必填: GATEWAY_KEY=<master_key> 运行
 const MODEL = process.env.GATEWAY_MODEL || "gemini-flash-lite";
 const CONCURRENT = parseInt(process.env.CONCURRENT || "20", 10);
 const DURATION = parseInt(process.env.DURATION || "5", 10); // 秒
