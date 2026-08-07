@@ -135,6 +135,17 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   let model = req.model;
   let cacheProvider = "unknown";
   let intentResult = null;
+  // 模型名即档位(最低门槛): auto / auto-strong / auto-cheap / auto:strong / auto:cheap
+  // 用户只需把 SDK 的 model 字符串换成 auto-strong 即可强制强模型,无需请求头
+  let tierFromModel = "";
+  {
+    const m = String(req.model).toLowerCase();
+    const tierMatch = m.match(/^auto(?::|-)(strong|cheap|balanced)$/);
+    if (tierMatch) {
+      tierFromModel = tierMatch[1]!;
+      model = "auto"; // 归一化,走智能路由
+    }
+  }
   if (model === "auto" && !bypassOptimize) {
     const smartRouting = getSmartRoutingEngine();
     const userPrompt = (messages as any[]).filter((m: any) => m.role === "user").map((m: any) => normalizeContent(m.content)).join("\n");
@@ -145,8 +156,8 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
     model = decision.model ?? intentResult.model ?? intentResult.provider;
     cacheProvider = decision.provider;
 
-    // A+B: 难度感知 + 档位覆盖(x-nexus-model-tier: cheap | balanced | strong)
-    const tier = (c.req.header("x-nexus-model-tier") ?? "").toLowerCase();
+    // A+B: 难度感知 + 档位覆盖(model 名档位优先,其次 x-nexus-model-tier 头)
+    const tier = tierFromModel || (c.req.header("x-nexus-model-tier") ?? "").toLowerCase();
     const diff = scoreDifficulty(userPrompt);
     if (tier === "strong" || (diff.level === "hard" && tier !== "cheap")) {
       const strongModel = pickStrongModel(decision.provider);

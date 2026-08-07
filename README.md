@@ -215,7 +215,12 @@ curl http://localhost:8787/v1/chat/completions \
 # 再发一次相同问题 → 命中缓存（nexus.cached=true, savedTokens>0）
 ```
 
-> `model=auto` 让 Nexus 自动选择最省最合适的 Provider。请求头 `x-nexus-no-optimize: 1` 可强制跳过优化。
+> `model=auto` 让 Nexus 自动选择最省最合适的 Provider（简单任务省钱，复杂任务自动升级强模型）。请求头 `x-nexus-no-optimize: 1` 可强制跳过优化。
+>
+> **手动切换档位（最低门槛，只改一个字符串）**：
+> - `model=auto-cheap`（或 `auto:cheap`）→ 强制最便宜模型
+> - `model=auto-strong`（或 `auto:strong`）→ 强制强模型（复杂任务/Agent 用）
+> - 高级：请求头 `x-nexus-model-tier: cheap | balanced | strong` 同样生效
 
 ---
 
