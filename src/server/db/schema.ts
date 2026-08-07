@@ -73,6 +73,8 @@ export const usageLogs = pgTable(
     totalTokens: integer("total_tokens").notNull().default(0),
     /** 节省的 token 数（压缩 + 缓存） */
     savedTokens: integer("saved_tokens").default(0),
+    /** 节省的成本（微美元） */
+    savedCostMicro: integer("saved_cost_micro").default(0),
     costMicro: integer("cost_micro").notNull().default(0),
     latencyMs: integer("latency_ms").notNull().default(0),
     /** 首 token 延迟 (ms) */
