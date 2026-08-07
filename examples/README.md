@@ -8,7 +8,7 @@
 {
   "apiProvider": "openai",
   "openAiBaseUrl": "http://localhost:8787/v1",
-  "openAiApiKey": "sk-nexus-EJM4jfLFTW0LrGF2ionV-4FfH1Nk6Qxp",
+  "openAiApiKey": "sk-nexus-<your-api-key>",
   "openAiModelId": "deepseek-v4-flash"
 }
 ```

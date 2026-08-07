@@ -230,6 +230,36 @@
 
 > **验收**：全部 P0 修完 = 可投入生产；P1 建议修完再上；修复后 `npm test` 全绿 + `node benchmark/offline-benchmark.mjs` 正常 + 手动 curl 流式断开不崩进程。
 
+## 二轮巡检结论（2026-08-07，agent 修复后复查）
+
+> **背景**：agent 提交 1e610dd 声称"修复全部 P0/P1/P2"。逐项代码验证结果：**P0 12/12 真修（含本地补漏的 P0-10 硬编码 key）**；P1 8/10、P2 7/8 真修，**3 项夸大（部分修）+ 2 个 P0 修复引入的回归风险 + 1 个新泄露**。全部列在下表，修复后更新状态。
+
+### 夸大项（agent 标 ✅ 但未完全修）
+
+| 状态 | 项 | 实际状态 | 证据 |
+|---|---|---|---|
+| ⚠️ | P1-2 | timeline 端点已改 `sum(savedCostMicro)`，但 **daily-stats.ts:67-71 / cost-report.ts:65 的 savedCost 仍用比例估算**，未统一 | daily-stats.ts:67-71 |
+| ⚠️ | P1-6 | decide 候选源仍静态价格表（未换 registry.listAllModels），仅加"候选空时 registry 降级"兜底 | smart-routing.ts:84-101 |
+| ⚠️ | P2-5 | preview 已截断 200 字符，但**完整 request/response 仍长期存 DB**（jsonb NOT NULL），listRecent 返回完整 prompt | semantic-cache.ts:239-240, schema.ts:114-115 |
+
+### P0 修复引入的回归风险（修复时引入，需跟进）
+
+| 状态 | 风险 | 位置 | 说明 |
+|---|---|---|---|
+| ⚠️ | **非流式 30s 硬超时误杀长生成** | base.ts:87-88 | LLM 非流式长输出（>30s）被 abort，withRetry 重试 2 次拖到 90s 才失败——**误杀合法长生成，生产实际风险** |
+| ⚠️ | **流式读取期无超时** | base.ts:140-166 | fetch 完成后 clearTimeout，reader.read() 循环无 abort——上游中途挂起永久占用连接 |
+| ⚠️ | 缓存 key 排除 assistant/tool 消息 | semantic-cache.ts:67-86 | 多轮对话仅 system+user 相同即共享缓存，assistant 历史不同会串扰；测试仅覆盖单条 user 消息，零覆盖 |
+| ⚠️ | fallback 降级语义 | smart-routing.ts:120-126 | filtered 为空时回退未过滤 candidates，cheap_only/预算约束被绕过；fallback 未置 degraded=true |
+
+### 新发现（二轮巡检）
+
+| 状态 | 问题 | 位置 | 说明 |
+|---|---|---|---|
+| ✅ | examples/README.md 泄露真实 key（sk-nexus-EJM4j...）已替换占位符 | examples/README.md:11 | 疑似真实生成的 key 被粘进示例，git 历史中仍存在——建议轮换相关 key（若在用） |
+| ⬜ | 测试缺口：cacheHash 多轮/assistant 差异用例、smart-routing 候选空 fallback 用例 | semantic-cache.test.ts, smart-routing.test.ts | 修复行为无测试保护，防回归 |
+
+> **跟进约定**：回归风险（30s 超时、流式超时）建议 P0 级优先修；夸大项按原清单 P1/P2 补完；测试缺口补用例。
+
 ## R6 详细方案（Dashboard 价值展示中心，供执行 agent）
 
 > **产品原则**：Dashboard 不是"监控后台"，是"价值展示中心"。首页每个组件回答同一个问题——"Gateway 帮我省了什么？" 数据缺失时显示 "—"，不得崩溃。
