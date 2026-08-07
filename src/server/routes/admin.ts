@@ -184,30 +184,45 @@ adminRoute.get("/usage/timeline", async (c) => {
       hour: sql<string>`date_trunc('hour', ${usageLogs.createdAt})::text`,
       totalRequests: sql<number>`count(*)::int`,
       totalTokens: sql<number>`coalesce(sum(${usageLogs.totalTokens}), 0)::bigint::int`,
+      savedTokens: sql<number>`coalesce(sum(${usageLogs.savedTokens}), 0)::bigint::int`,
+      totalCostMicro: sql<number>`coalesce(sum(${usageLogs.costMicro}), 0)::bigint::int`,
       cacheHits: sql<number>`coalesce(sum(case when ${usageLogs.cached} then 1 else 0 end), 0)::int`,
+      cacheMisses: sql<number>`coalesce(sum(case when ${usageLogs.cached} = false then 1 else 0 end), 0)::int`,
     })
     .from(usageLogs)
     .where(gte(usageLogs.createdAt, since))
     .groupBy(sql`date_trunc('hour', ${usageLogs.createdAt})`)
     .orderBy(sql`date_trunc('hour', ${usageLogs.createdAt})`);
 
-  // 对齐到整点基准（与 SQL date_trunc('hour') 一致），保证补零 key 能匹配真实数据
+  // 对齐到整点基准
   const baseHour = new Date(since);
   baseHour.setMinutes(0, 0, 0);
 
   const points = new Map<string, any>();
   for (const r of rows) {
     const hour = new Date(r.hour as string).toISOString();
-    points.set(hour, { hour, totalRequests: r.totalRequests, totalTokens: r.totalTokens, cacheHits: r.cacheHits });
+    const costMicro = r.totalCostMicro ?? 0;
+    const savedTokens = r.savedTokens ?? 0;
+    // savedCost = 缓存命中不产生 cost + 压缩节省比例
+    const savedCost = costMicro > 0 ? Math.round(costMicro * (savedTokens / Math.max(1, r.totalTokens ?? 1))) : 0;
+    points.set(hour, {
+      hour,
+      totalRequests: r.totalRequests,
+      totalTokens: r.totalTokens,
+      savedTokens,
+      savedCostMicro: savedCost,
+      cacheHits: r.cacheHits,
+      cacheMisses: r.cacheMisses,
+    });
   }
 
   const timeline: any[] = [];
   for (let i = 0; i <= hoursInRange; i++) {
     const t = new Date(baseHour.getTime() + i * 3600 * 1000);
-    if (t.getTime() > Date.now() + 3600 * 1000) break; // 不超当前时间
+    if (t.getTime() > Date.now() + 3600 * 1000) break;
     const key = t.toISOString();
     const existing = points.get(key);
-    timeline.push(existing ?? { hour: key, totalRequests: 0, totalTokens: 0, cacheHits: 0 });
+    timeline.push(existing ?? { hour: key, totalRequests: 0, totalTokens: 0, savedTokens: 0, savedCostMicro: 0, cacheHits: 0, cacheMisses: 0 });
   }
 
   return c.json({ window: range, since: since.toISOString(), timeline });

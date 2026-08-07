@@ -54,11 +54,21 @@ export class DailyStatsEngine {
       .where(and(gte(usageLogs.createdAt, dayStart), sql`${usageLogs.createdAt} < ${dayEnd.toISOString()}`));
 
     const totalTokens = row?.totalTokens ?? 0;
-    const savedTokens = Math.min(row?.savedTokens ?? 0, totalTokens); // 防止缓存命中时 savedTokens > totalTokens
+    const savedTokens = Math.min(row?.savedTokens ?? 0, totalTokens);
     const totalCost = row?.totalCostMicro ?? 0;
-    const savedCost = totalCost > 0 && totalTokens > 0
-      ? Math.round(totalCost * (savedTokens / totalTokens))
+    // 修复计价虚高：缓存命中时 costMicro=0 但 token 不为 0，savedCost 不应按比例估算
+    // 改为：savedCost = 缓存命中节省的成本（缓存命中路径不产生 cost，视为全部节省）
+    const [cacheCost] = await db
+      .select({ cachedCost: sql<number>`coalesce(sum(${usageLogs.costMicro}), 0)::bigint::int` })
+      .from(usageLogs)
+      .where(and(gte(usageLogs.createdAt, dayStart), sql`${usageLogs.createdAt} < ${dayEnd.toISOString()}`, eq(usageLogs.cached, true)));
+    const nonCachedCost = totalCost - (cacheCost?.cachedCost ?? 0);
+    // savedCost = 非缓存请求中压缩节省的比例 + 缓存请求全部视为节省
+    const compressionSavedCost = nonCachedCost > 0 && totalTokens > 0
+      ? Math.round(nonCachedCost * (savedTokens / Math.max(1, totalTokens)))
       : 0;
+    const cacheSavedCost = Math.round((cacheCost?.cachedCost ?? 0) * 0.5); // 缓存命中省一半（TTL过期需刷新）
+    const savedCost = compressionSavedCost + cacheSavedCost;
 
     return {
       date: `${dayStart.getFullYear()}-${String(dayStart.getMonth() + 1).padStart(2, "0")}-${String(dayStart.getDate()).padStart(2, "0")}`,

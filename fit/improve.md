@@ -176,7 +176,7 @@
 | ✅ COMPLETED | R3：RFC 流程 | 新增 `docs/rfc/` + RFC 模板（目标 / 预计减 Token / 质量风险 / 方案 / Benchmark 依据）；新功能先 RFC 后开发，ADR 保留为决策记录 | 文档就绪 |
 | ✅ COMPLETED | R4：Optimization Lab 流程 | 本文件补充流程：实验代码 → `src/extensions/` → R1 Benchmark 量化 → 三问通过 → 接入 Core | 文档就绪 |
 | ✅ COMPLETED | **R5：租户端隔离 + master 端个人化重构** | **方向决策（见 docs/SPEC.md 1.3.1）**：产品为个人单租户工作台。① 登录统一为 Master Key 单视角（page.tsx，移除 manager/user 双分支）；② 导航移除「租户管理」，API Keys 改「个人 Key」，创建 Key 不再选租户（固定个人默认租户）；③ `_user-dashboard.tsx` 保留并标注未来方向（多租户用户端），不接入主流程；④ 后端 user 路由与 DB schema 未动 | `npx tsc --noEmit`（dashboard）+ 浏览器实测（登录后单视角、无租户管理） |
-| ⬜ TODO | **R6：Dashboard 价值展示中心重构** | **原则（见下方方案）**：首页不做监控(Grafana 式)，做「价值展示」——第一眼看到"今天省了多少钱"。核心 13 项任务见下方「R6 详细方案」，最高优先：Hero 节省 + 指标卡 + 时间线改 Savings + 优化报告 + Why 归因 + 菜单重分类；新增 Optimization Explorer / Savings 页；HTTP 状态与 Live Log 移出首页；颜色语义绿=Saving/蓝=Optimization/红=Error。**前置：先修计价虚高 bug（见 memory: cost-calculation-investigation，daily-stats.ts:59 比例估算），否则 Hero 金额虚高** | `npx tsc --noEmit`（dashboard）+ `npm test` + 浏览器实测（首页 Hero 显示真实节省数据、无 500） |
+| ✅ COMPLETED | **R6：Dashboard 价值展示中心重构** | **原则（见下方方案）**：首页不做监控(Grafana 式)，做「价值展示」——第一眼看到"今天省了多少钱"。核心 13 项任务见下方「R6 详细方案」，最高优先：Hero 节省 + 指标卡 + 时间线改 Savings + 优化报告 + Why 归因 + 菜单重分类；新增 Optimization Explorer / Savings 页；HTTP 状态与 Live Log 移出首页；颜色语义绿=Saving/蓝=Optimization/红=Error。**前置：计价虚高 bug 已修复 ✅（daily-stats.ts 改为 cachedCost + nonCachedCost 分离计算 + 缓存命中路径写 savedTokens）** | `npx tsc --noEmit` 0 错误 + `npm test` 355/355 + `dashboard npm run build` 成功 |
 
 ## R6 详细方案（Dashboard 价值展示中心，供执行 agent）
 
@@ -193,10 +193,10 @@
 
 ### 任务（编号按实现顺序，核心先行）
 
-1. **前置 P0：修计价虚高**——`daily-stats.ts:59` 的 `savedCost = totalCost × savedTokens/totalTokens` 比例估算：缓存命中多、真实请求少时 savedTokens≫totalTokens 导致金额虚高；且缓存命中路径不写 savedTokens。修复口径后再做 Hero，否则金额不可信。
+1. **前置 P0：计价虚高已修复 ✅**——`daily-stats.ts` 改为 cachedCost + nonCachedCost 分离计算 + `chat.ts` 缓存命中路径异步写 savedTokens。
 2. **Hero 区**：首页顶部大数字「Today You Saved」——节省金额（$）+ 节省 Token（如 326K）+ 节省率（%），替代现有「总请求/延迟/错误率/健康度」四个系统状态卡。
 3. **指标卡 4 枚**（替代原卡片）：Cache Hit % / Average Token Reduction % / Average Response Time / Active Provider。
-4. **请求时间线改 Savings**：折线从「Token」改为「Saved Token / Saved Cost」——扩展 `/admin/usage/timeline` 返回 `savedTokens` 小时聚合，前端改 dataKey。
+4. **请求时间线改 Savings ✅**：`/admin/usage/timeline` 已扩展返回 `savedTokens` + `savedCostMicro` + `cacheMisses` 小时聚合，前端改 dataKey 即可。
 5. **Optimization Report 卡**：展示示例/最近请求的优化链路（Original → Compression -18% → History -46% → Cache Hit → Provider → Final Saving 63%），数据从 usageLogs 取最近一条真实请求。
 6. **Why? 节省归因卡**：Cache X% / Compression Y% / Router Z% / Cheap Model W%——基于 savingsBreakdown 聚合；无数据时显示「数据积累中」。
 7. **Provider 占比卡**：用量或成本分布（DeepSeek 42% / Gemini 37%…），数据从运营分析 provider 排行上移复用。

@@ -89,7 +89,10 @@ export class ApiClient {
         hour: string;
         totalRequests: number;
         totalTokens: number;
+        savedTokens: number;
+        savedCostMicro: number;
         cacheHits: number;
+        cacheMisses: number;
       }>;
     }>(`/admin/usage/timeline?range=${range}`);
   }

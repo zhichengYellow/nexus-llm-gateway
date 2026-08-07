@@ -194,6 +194,19 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
 
       gateResult.response.nexus.requestId = requestId;
       gateResult.response.nexus.cached = true;
+
+      // 修复计价虚高：缓存命中时异步记录 savedTokens
+      const cachedTokenCount = (gateResult.response.usage?.total_tokens ?? gateResult.response.usage?.prompt_tokens ?? 0) + (gateResult.response.usage?.completion_tokens ?? 0);
+      if (cachedTokenCount > 0) {
+        const { recordUsage } = await import("../billing/usage.js");
+        recordUsage({
+          requestId, tenantId: tenant?.id ?? null, apiKeyId: apiKey?.id ?? null,
+          provider: "cache", model, usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+          latencyMs: Date.now() - ctx.startTime, cached: true, stream: false, status: 200,
+          savedTokens: cachedTokenCount,
+        } as any);
+      }
+
       if (ctx.stream) return cacheToSSE(c, gateResult.response);
       return c.json(gateResult.response);
     }
