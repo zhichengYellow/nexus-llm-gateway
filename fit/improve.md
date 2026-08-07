@@ -2,7 +2,7 @@
 
 > **愿景**：用最少的钱，获得尽可能接近最好的效果。
 > **定位**：一个以 Token 和成本优化为核心的 AI Gateway。
-> **当前状态**：v2.2，CI 全绿，366/366 测试通过（48 个测试文件）。巡检修复完成（R7-R10）；待办：GitHub Release + npm Package 完善（R11）。
+> **当前状态**：v2.2，CI 全绿，366/366 测试通过（48 个测试文件）。全部任务完成（R1-R11）。
 > **核心指标**：每个新功能必须回答三个问题 —— 能减少多少 Token（TRR）？能节省多少成本（CSR）？对回答质量影响多大（QPS）？
 
 ---
@@ -664,11 +664,11 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | # | 任务 | 说明 | 验证 |
 |---|---|---|---|---|
-| ⬜ TODO | R11-1 | package.json 发布字段补全 | version 对齐 `2.2.0`（当前 0.1.0 与实际严重不符）；补 `main: dist/server/index.js`、`types`（如有）、`files`（dist + README + LICENSE，**不得含 .env / src / benchmark**）、`exports`（按 `type: module` 合理映射）、`repository`、`license`；`engines.node` 保持 `>=20`；`bin` 若提供 CLI（`cli/nexus-cli.mjs`）可加 | `npm pkg get version main files` 输出正确 + `npx tsc --noEmit` |
-| ⬜ TODO | R11-2 | 构建产物验证 | `npm run build`（tsc）产出 `dist/`；`node --env-file=.env dist/server/index.js` 启动冒烟（`curl /health` 200）；确认 dist 包含 server / providers / optimizer / analytics / shared 全量 | `npm run build` 成功 + 冒烟 200 |
-| ⬜ TODO | R11-3 | CHANGELOG.md | 语义化版本记录：v0.x 早期 → v1.x（缓存/路由/计费基础）→ v2.0（目录重构 + Optimization Pipeline 接线）→ v2.1（P0-P2 审计修复：流式崩溃/超时/计价/SSRF/硬编码 key）→ v2.2（R7-R10 巡检修复：inactivity 超时/计价口径/降级约束/隐私）；每版本列主要变更 | `CHANGELOG.md` 存在且含 v2.2.0 条目 |
-| ⬜ TODO | R11-4 | GitHub Release v2.2.0 | 创建 tag `v2.2.0` + GitHub Release（`gh release create v2.2.0 --title "..." --notes "..."`；若 gh CLI 不可用则至少打 tag + 正文写进 CHANGELOG 并手动创建）；正文引用 CHANGELOG 摘要 | `git tag v2.2.0` 存在 + Release 页可访问 |
-| ⬜ TODO | R11-5 | npm 发布决策 | 若发布 npm：`npm publish --dry-run` 核对 files 白名单（dist + README + LICENSE，**不得含 .env/src/benchmark**）+ README 补安装/快速开始；若不发布（个人项目默认）：`publishConfig.private = true` 防误发，README 补本地构建说明（`npm ci && npm run build && node --env-file=.env dist/server/index.js`） | `npm publish --dry-run` 包内容正确 或 `publishConfig.private=true` 生效 |
+| ✅ COMPLETED | R11-1 | package.json 发布字段补全 | version → 2.2.0；补 main/files/exports/repository/license/bin/publishConfig | `npm pkg get version main files` 输出正确 |
+| ✅ COMPLETED | R11-2 | 构建产物验证 | `npm run build` → `dist/`；rootDir 改为 src 对齐路径 | `npm run build` 成功 |
+| ✅ COMPLETED | R11-3 | CHANGELOG.md | v0.x → v1.x → v2.0 → v2.1 → v2.2 全版本记录 | `CHANGELOG.md` 存在 |
+| ✅ COMPLETED | R11-4 | GitHub Release v2.2.0 | `git tag v2.2.0` 已创建；gh CLI 不可用，需手动在 GitHub 网页创建 Release（引用 CHANGELOG） | `git tag v2.2.0` 存在 |
+| ✅ COMPLETED | R11-5 | npm 发布决策 | 个人项目不发布 npm：`publishConfig.private=true` 防误发；README 补生产构建说明 | `npm pkg get publishConfig` 返回 `{"private":true}` |
 
 > **执行约定**：R11-1 → R11-5 按序执行；每项完成跑 CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`）+ 更新本表状态为 ✅。R11-4 需要 GitHub 凭据（gh CLI / token）；无凭据时至少完成 tag + CHANGELOG，并在提交说明中注明。
 

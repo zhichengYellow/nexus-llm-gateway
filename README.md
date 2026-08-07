@@ -197,9 +197,18 @@ npm run seed                   # 输出一个 dev API Key，保存它
 
 ### 4. 启动网关
 
+**开发模式**（热重载）：
 ```bash
 npm run dev
 ```
+
+**生产模式**（构建后运行）：
+```bash
+npm run build                           # tsc → dist/
+node --env-file=.env dist/server/index.js
+```
+
+> 构建产物在 `dist/` 目录，入口 `dist/server/index.js`。`npm run build` 后无需 `tsx`/`src/`。
 
 ### 5. 验证
 

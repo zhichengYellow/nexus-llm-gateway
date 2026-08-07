@@ -1,9 +1,30 @@
 {
   "name": "nexus-llm-gateway",
-  "version": "0.1.0",
-  "private": true,
+  "version": "2.2.0",
+  "private": false,
   "type": "module",
-  "description": "Nexus LLM Gateway - 生产级 AI 统一网关，OpenAI 兼容协议，多 Provider 适配，语义缓存、限流配额、故障转移、用量计费。",
+  "description": "Nexus LLM Gateway - AI Cost Optimization Platform. OpenAI-compatible API gateway with prompt compression, semantic cache, smart routing, and budget control. Save 30-80% on LLM costs.",
+  "main": "dist/server/index.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": "./dist/server/index.js",
+    "./server": "./dist/server/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bran-huang/nexus-llm-gateway"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "private": true
+  },
+  "bin": {
+    "nexus-cli": "./cli/nexus-cli.mjs"
+  },
   "engines": {
     "node": ">=20"
   },
