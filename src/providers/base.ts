@@ -86,20 +86,42 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
     const body = this.buildChatBody(req, upstreamModel, false);
     const timeoutMs = this.config.upstreamTimeoutMs ?? 60_000;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    // inactivity 超时：连接建立 + 读取期间无数据才 abort；总时长不再硬杀（长生成不受限）
+    let timeout: ReturnType<typeof setTimeout> | null = setTimeout(() => controller.abort(), timeoutMs);
+    const resetTimeout = () => {
+      if (timeout) clearTimeout(timeout);
+      timeout = setTimeout(() => controller.abort(), timeoutMs);
+    };
     const res = await this.doFetch(this.chatUrl, {
       method: "POST",
       headers: this.headers,
       body: JSON.stringify(body),
       signal: controller.signal,
     });
-    clearTimeout(timeout);
     if (!res.ok) {
       const text = await res.text();
       const safeText = text.replace(/sk-[a-zA-Z0-9_-]{20,}/g, "sk-***").slice(0, 200);
       throw new ProviderError(`upstream ${this.type} error: ${safeText}`, res.status, this.type);
     }
-    const data = (await res.json()) as ChatCompletionResponse & { model: string };
+    if (!res.body) {
+      throw new ProviderError(`upstream ${this.type} error: empty body`, 502, this.type);
+    }
+    // 逐 chunk 读取聚合：每收到数据重置 inactivity 计时，避免长生成被总时长超时误杀
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let raw = "";
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        resetTimeout();
+        raw += decoder.decode(value, { stream: true });
+      }
+    } finally {
+      if (timeout) clearTimeout(timeout);
+      reader.releaseLock();
+    }
+    const data = JSON.parse(raw) as ChatCompletionResponse & { model: string };
     return {
       id: data.id ?? genCompletionId(),
       object: "chat.completion",
