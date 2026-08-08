@@ -7,8 +7,34 @@ import pino from "pino";
 const level = process.env.LOG_LEVEL ?? "info";
 const isDev = process.env.NODE_ENV !== "production";
 
+/**
+ * 敏感字段脱敏路径（pino redact）。
+ * API Key / Authorization / 密码等一律以 [REDACTED] 输出，防日志泄漏凭据。
+ */
+export const REDACT_PATHS = [
+  "authorization",
+  "*.authorization",
+  "req.headers.authorization",
+  "headers.authorization",
+  "apiKey",
+  "*.apiKey",
+  "*.*.apiKey",
+  "*.*.*.apiKey",
+  "api_key",
+  "*.api_key",
+  "*.*.api_key",
+  "*.*.*.api_key",
+  "api-key",
+  "*.api-key",
+  "password",
+  "*.password",
+  "secret",
+  "*.secret",
+];
+
 export const logger = pino({
   level,
+  redact: { paths: REDACT_PATHS, censor: "[REDACTED]" },
   ...(isDev
     ? {
          transport: {

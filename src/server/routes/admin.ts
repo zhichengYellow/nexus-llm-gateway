@@ -14,6 +14,7 @@ import { getSemanticCache } from "../../optimizer/cache/semantic-cache.js";
 import { getRegistry } from "../../providers/registry.js";
 import { reloadRegistryFromDB, getHotReloadStatus } from "../config/hot-reload.js";
 import { saveProviderKey, deleteProviderKey } from "../config/provider-keys.js";
+import { decryptSecret, maskKey } from "../../shared/crypto.js";
 import { getConfig } from "../../shared/config.js";
 import { logger } from "../../shared/logger.js";
 import type { AuthEnv } from "../middleware/auth.js";
@@ -314,11 +315,24 @@ adminRoute.get("/providers/keys", async (c) => {
   const cfg = getConfig();
   const rows = await db.select().from(providerConfigs);
   const dbKeys = new Map(rows.map((r) => [r.provider, r.apiKey]));
-  const providers = Object.entries(cfg.providers).map(([type, p]) => ({
-    provider: type,
-    configured: Boolean(dbKeys.get(type) ?? p.apiKey),
-    source: dbKeys.has(type) ? "db" : "env",
-  }));
+  const providers = Object.entries(cfg.providers).map(([type, p]) => {
+    const meta = dbKeys.has(type)
+      ? { configured: true, source: "db" as const }
+      : p.apiKey
+        ? { configured: true, source: "env" as const }
+        : { configured: false, source: "none" as const };
+    let masked: string | undefined;
+    if (dbKeys.has(type)) {
+      try {
+        masked = maskKey(decryptSecret(dbKeys.get(type) ?? ""));
+      } catch {
+        masked = "****";
+      }
+    } else if (p.apiKey) {
+      masked = maskKey(p.apiKey);
+    }
+    return { provider: type, ...meta, masked };
+  });
   return c.json({ providers });
 });
 

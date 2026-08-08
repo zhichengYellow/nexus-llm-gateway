@@ -9,6 +9,7 @@ import { db } from "../db/client.js";
 import { providerConfigs } from "../db/schema.js";
 import { getRegistry } from "../../providers/registry.js";
 import { logger } from "../../shared/logger.js";
+import { decryptSecret, encryptSecret, isEncrypted, maskKey } from "../../shared/crypto.js";
 import type { ProviderType } from "../../shared/types.js";
 
 /** 启动时调用:从 DB 加载已配置的 Provider Key(覆盖 .env),失败不阻塞启动 */
@@ -16,7 +17,17 @@ export async function loadProviderKeysFromDB(): Promise<void> {
   try {
     const rows = await db.select().from(providerConfigs);
     for (const row of rows) {
-      getRegistry().updateProviderKey(row.provider as ProviderType, row.apiKey);
+      const decrypted = decryptSecret(row.apiKey);
+      // 懒迁移:旧明文 → 加密写回（一次）
+      if (!isEncrypted(row.apiKey)) {
+        await db
+          .update(providerConfigs)
+          .set({ apiKey: encryptSecret(decrypted), updatedAt: new Date() })
+          .where(eq(providerConfigs.provider, row.provider))
+          .catch(() => undefined);
+        logger.info({ provider: row.provider }, "provider key migrated to encrypted storage");
+      }
+      getRegistry().updateProviderKey(row.provider as ProviderType, decrypted);
     }
     if (rows.length > 0) {
       logger.info({ providers: rows.map((r) => r.provider) }, "provider api keys loaded from DB");
@@ -26,17 +37,38 @@ export async function loadProviderKeysFromDB(): Promise<void> {
   }
 }
 
-/** 保存 Provider Key:写 DB + 立即热生效 */
+/** 保存 Provider Key:加密写 DB + 立即热生效 */
 export async function saveProviderKey(type: ProviderType, apiKey: string): Promise<void> {
   const trimmed = apiKey.trim();
   await db
     .insert(providerConfigs)
-    .values({ provider: type, apiKey: trimmed })
+    .values({ provider: type, apiKey: encryptSecret(trimmed) })
     .onConflictDoUpdate({
       target: providerConfigs.provider,
-      set: { apiKey: trimmed, updatedAt: new Date() },
+      set: { apiKey: encryptSecret(trimmed), updatedAt: new Date() },
     });
   getRegistry().updateProviderKey(type, trimmed);
+}
+
+/** 读取 Provider Key 元数据(脱敏,供 GET API) */
+export async function getProviderKeyMeta(
+  type: ProviderType,
+): Promise<{ configured: boolean; source: "db" | "env" | "none"; masked?: string }> {
+  const cfg = (await import("../../shared/config.js")).getConfig();
+  const rows = await db.select().from(providerConfigs).where(eq(providerConfigs.provider, type)).limit(1);
+  const row = rows[0];
+  if (row) {
+    let decrypted: string;
+    try {
+      decrypted = decryptSecret(row.apiKey);
+    } catch {
+      decrypted = "";
+    }
+    return { configured: true, source: "db", masked: maskKey(decrypted) };
+  }
+  const envKey = cfg.providers[type]?.apiKey;
+  if (envKey) return { configured: true, source: "env", masked: maskKey(envKey) };
+  return { configured: false, source: "none" };
 }
 
 /** 删除 Provider Key(恢复为 .env 配置) */
