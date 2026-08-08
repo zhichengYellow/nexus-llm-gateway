@@ -270,6 +270,27 @@ const resp = await client.chat.completions.create({
 
 ---
 
+## 🔒 隐私与安全（Privacy by Architecture）
+
+> 不是"作者承诺不偷看"，而是**架构默认不允许**获取你的 Prompt / Response / API Key。
+
+- **Provider API Key 静态加密**：AES-256-GCM（`enc:v1:...`），密钥 `ENCRYPTION_KEY`；API 只返回脱敏值 `sk-****abcd`。
+- **Gateway Key 只存哈希**：SHA-256，创建时仅展示一次。
+- **日志全局脱敏**：`apiKey / authorization / password / secret` 一律输出 `[REDACTED]`。
+- **无远程遥测**：不向任何外部端点发送 Prompt / Response / 指标；`observability.ts` 仅本地日志。
+- 详细说明见 [SECURITY.md](./SECURITY.md) 与 [PRIVACY.md](./PRIVACY.md)。
+
+## ☁️ 云端部署（Render）
+
+仓库含 `render.yaml`，Render 上 **New → Blueprint → 选择仓库** 一键部署（Web Service + PostgreSQL + Redis + 健康检查 + 自动迁移）。
+
+```bash
+# 本地部署（Docker 起依赖）:
+docker compose up -d && npm ci && npx drizzle-kit push && npm run dev
+```
+
+完整指南见 [DEPLOYMENT.md](./DEPLOYMENT.md)（本地 / Render 两种模式、环境变量清单、验证命令）。
+
 ## 🧪 测试 & 基准
 
 ```bash

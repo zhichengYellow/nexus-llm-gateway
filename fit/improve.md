@@ -663,6 +663,22 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 > **执行约定**：R11-1 → R11-5 按序执行；每项完成跑 CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`）+ 更新本表状态为 ✅。R11-4 需要 GitHub 凭据（gh CLI / token）；无凭据时至少完成 tag + CHANGELOG，并在提交说明中注明。
 
+## R12 个人化重构增量（本地完成，2026-08-07）
+
+> **背景**：对照「Nexus v2.0 Personal Developer Edition 任务书」（BYOK + Privacy + Token Optimization）审计后，项目 6/9 个 Phase 已达成（v2.0 个人化/R5、Optimization Pipeline、Dashboard 价值化/R6 等）；以下为审计发现的真增量，已本地完成。
+
+| 状态 | 项 | 说明 | 验证 |
+|---|---|---|---|
+| ✅ | **Provider Key 静态加密** | AES-256-GCM（`src/shared/crypto.ts`），存储 `enc:v1:iv.tag.cipher`；密钥 `ENCRYPTION_KEY`（生产缺失拒绝保存）；旧明文懒迁移；`GET /admin/providers/keys` 返回 `masked`（`sk-****abcd`）不返回明文 | crypto.test.ts 7 用例 + tsc + npm test |
+| ✅ | **日志全局脱敏** | pino redact：`apiKey / api_key / authorization / password / secret`（含嵌套深度变体）一律 `[REDACTED]`（`src/shared/logger.ts`） | credential-security.test.ts 6 用例 |
+| ✅ | **隐私测试** | `credential-security.test.ts`：日志不落 apiKey/Authorization/嵌套凭据、加密存储无明文、脱敏不泄漏完整 key | 6 用例全过 |
+| ✅ | **安全/隐私文档** | 新增 `SECURITY.md`（凭据处理/日志策略/生产清单/漏洞报告）+ `PRIVACY.md`（Privacy by Architecture：数据边界表、无远程遥测、自托管、导出删除） | 文档 |
+| ✅ | **部署** | 新增 `render.yaml`（Blueprint：Web + PostgreSQL + 迁移 preDeploy + 健康检查 + 环境变量）+ `DEPLOYMENT.md`（本地/Render 双模式、环境变量清单、注意点） | 文档 |
+| ✅ | **README** | 新增「隐私与安全（Privacy by Architecture）」+「云端部署（Render）」章节，链接 SECURITY/PRIVACY/DEPLOYMENT | 文档 |
+| ⬜ TODO | **Optimization Profile 接入 chat 链路** | `optimization-profile.ts` 已定义四档（fast/balanced/cheap/maximum_saving）+ admin API；但压缩/自适应上下文链路无 `compressionStrength` 参数，需扩展后接入；`routingPreference` 与 BudgetController 降级机制重叠，接入前先评估优先级 | 接入后 tsc + npm test |
+
+> **结论**：任务书 P0（凭据安全）→ P1（隐私/文档）→ P1（部署）已本地闭环；唯一遗留为 Optimization Profile 接线（可选增强，不阻塞发布）。
+
 ---
 
 ## 季度路线

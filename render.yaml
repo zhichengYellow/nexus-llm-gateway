@@ -1,0 +1,38 @@
+# Nexus Gateway - Render Blueprint
+# 使用方式: Render Dashboard → New → Blueprint → 选择本仓库
+# 说明: 先确认托管 Redis 可用（Render 控制台创建，或使用外部 Redis 后把 REDIS_URL 填入）
+
+services:
+  - type: web
+    name: nexus-gateway
+    runtime: node
+    plan: free                     # 长期使用建议 starter($7/月,不休眠)
+    buildCommand: npm ci && npm run build
+    preDeployCommand: npx drizzle-kit push   # 生产建表/迁移
+    startCommand: node dist/server/index.js  # Render 环境变量直接注入 process.env
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.20.0
+      - key: NODE_ENV
+        value: production
+      - key: GATEWAY_MASTER_KEY
+        sync: false                # 在 Render 控制台填写
+      - key: ENCRYPTION_KEY
+        sync: false                # openssl rand -hex 32,Provider Key 静态加密
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      # OPENAI_API_KEY / OLLAMA_BASE_URL 等按需添加
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nexus-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false                # 必填:Render 托管 Redis 或外部 Redis(如 Upstash)的连接串
+
+databases:
+  - name: nexus-db
+    plan: free                     # 免费 30 天后需升级或迁移
+    # Redis: Render 托管 Redis 请在控制台创建后,把 connectionString 配到 REDIS_URL
