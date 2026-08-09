@@ -8,6 +8,7 @@ import { db } from "../db/client.js";
 import { usageLogs, tenants, apiKeys } from "../db/schema.js";
 import { getSemanticCache } from "../../optimizer/cache/semantic-cache.js";
 import { getTenantProviderKeys, saveProviderKey, deleteProviderKey } from "../config/provider-keys.js";
+import { attributeSavings } from "../../analytics/savings-attribution.js";
 import type { ProviderType } from "../../shared/types.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
@@ -197,8 +198,7 @@ userRoute.get("/requests", async (c) => {
     .limit(limit + 1);
 
   const hasMore = rows.length > limit;
-  const data = rows.slice(0, limit);
-  const nextCursor = data.length > 0 ? data[data.length - 1]!.createdAt : null;
+  const data = rows.slice(0, limit);  const nextCursor = data.length > 0 ? data[data.length - 1]!.createdAt : null;
 
   return c.json({
     requests: data.map((r) => ({
@@ -214,6 +214,80 @@ userRoute.get("/requests", async (c) => {
     })),
     hasMore,
     nextCursor,
+  });
+});
+
+// ===== 请求详情（Savings Explainability：元数据 + 归因，不含 prompt/response）=====
+userRoute.get("/requests/:id", async (c) => {
+  const tenant = c.get("tenant")!;
+  const id = c.req.param("id");
+  const rows = await db
+    .select({
+      requestId: usageLogs.requestId,
+      createdAt: usageLogs.createdAt,
+      provider: usageLogs.provider,
+      model: usageLogs.model,
+      upstreamModel: usageLogs.upstreamModel,
+      promptTokens: usageLogs.promptTokens,
+      completionTokens: usageLogs.completionTokens,
+      totalTokens: usageLogs.totalTokens,
+      savedTokens: usageLogs.savedTokens,
+      savedCostMicro: usageLogs.savedCostMicro,
+      costMicro: usageLogs.costMicro,
+      latencyMs: usageLogs.latencyMs,
+      ttftMs: usageLogs.ttftMs,
+      cached: usageLogs.cached,
+      stream: usageLogs.stream,
+      compressionRatio: usageLogs.compressionRatio,
+      cacheType: usageLogs.cacheType,
+      routerReason: usageLogs.routerReason,
+      intentCategory: usageLogs.intentCategory,
+      status: usageLogs.status,
+    })
+    .from(usageLogs)
+    .where(and(eq(usageLogs.tenantId, tenant.id), eq(usageLogs.requestId, id)))
+    .limit(1);
+  const row = rows[0];
+  if (!row) {
+    return c.json({ error: { message: "request not found", type: "not_found" } }, 404);
+  }
+  const attribution = attributeSavings(row);
+  const originalTokens = row.totalTokens + (row.savedTokens ?? 0);
+  const reductionRate = originalTokens > 0 ? ((row.savedTokens ?? 0) / originalTokens) : 0;
+  return c.json({
+    request: {
+      requestId: row.requestId,
+      time: row.createdAt,
+      provider: row.provider,
+      model: row.model,
+      upstreamModel: row.upstreamModel,
+      status: row.status,
+      stream: row.stream,
+      // Tokens
+      originalTokens,
+      optimizedTokens: row.totalTokens,
+      savedTokens: row.savedTokens ?? 0,
+      reductionRate: Number(reductionRate.toFixed(4)),
+      // Savings
+      savings: {
+        source: attribution.source,
+        kind: attribution.kind,
+        savedTokens: attribution.savedTokens,
+        savedCostMicro: attribution.savedCostMicro,
+      },
+      // Cost（微美元；无价格时 costMicro=0 为 unknown，不冒充估算）
+      costMicro: row.costMicro,
+      savedCostMicro: row.savedCostMicro ?? 0,
+      originalCostMicro: row.costMicro + (row.savedCostMicro ?? 0),
+      // Latency
+      latencyMs: row.latencyMs,
+      ttftMs: row.ttftMs,
+      // 优化元数据
+      compressionRatio: row.compressionRatio,
+      cacheType: row.cacheType,
+      routerReason: row.routerReason,
+      intentCategory: row.intentCategory,
+    },
   });
 });
 

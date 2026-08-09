@@ -396,6 +396,10 @@ export class ApiClient {
     }>(`/user/requests?${params}`);
   }
 
+  async getUserRequest(id: string) {
+    return this.get<{ request: any }>(`/user/requests/${encodeURIComponent(id)}`);
+  }
+
   async getUserSpeedTest() {
     return this.post<{
       results: Array<{ provider: string; status: string; latencyMs?: number; error?: string }>;

@@ -132,17 +132,25 @@ export const cacheMiddleware: MiddlewareHandler = {
       const res = cacheResult.response;
       res.nexus.requestId = ctx.requestId;
 
+      // 缓存命中: 上游调用被完全避免。用缓存响应里的真实 usage 记账——
+      // cached=true 时 costMicro=0, 本应花费的成本全部记为节省(savedTokens/savedCostMicro)
+      const cachedUsage = res.usage && typeof res.usage === "object"
+        ? res.usage
+        : { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+      const savedTokens = (cachedUsage.total_tokens ?? 0) + ((ctx.meta.savedTokens as number) ?? 0);
+
       recordUsage({
         requestId: ctx.requestId,
         tenantId,
         apiKeyId: ctx.apiKey?.id ?? null,
         provider: "cache",
         model: ctx.model,
-        usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+        usage: cachedUsage,
         latencyMs,
         cached: true,
         stream: false,
         status: 200,
+        savedTokens,
       });
 
       logger.info({ requestId: ctx.requestId, model: ctx.model, latencyMs }, "served from cache");

@@ -51,6 +51,8 @@ export default function UserDashboard({ client, onLogout }: Props) {
   const [error, setError] = useState("");
   const [tab, setTab] = useState<TabId>("overview");
   const [requests, setRequests] = useState<any[]>([]);
+  const [selectedReq, setSelectedReq] = useState<any>(null);
+  const [reqDetailLoading, setReqDetailLoading] = useState(false);
   const [reqHasMore, setReqHasMore] = useState(false);
   const [reqCursor, setReqCursor] = useState<string | null>(null);
   const [reqLoading, setReqLoading] = useState(false);
@@ -256,7 +258,11 @@ export default function UserDashboard({ client, onLogout }: Props) {
                   </tr></thead>
                   <tbody>
                     {requests.map((r: any, i: number) => (
-                      <tr key={i} className="border-b border-zinc-800/40 hover:bg-zinc-800/20">
+                      <tr key={i} onClick={async () => {
+                        setReqDetailLoading(true); setSelectedReq(null);
+                        try { const d = await client.getUserRequest(r.requestId); setSelectedReq(d.request); } catch {}
+                        setReqDetailLoading(false);
+                      }} className="border-b border-zinc-800/40 hover:bg-zinc-800/20 cursor-pointer">
                         <td className="py-2 px-2 text-zinc-400">{formatBeijing(r.time)}</td>
                         <td className="py-2 px-2 text-zinc-300 font-mono">{r.model}</td>
                         <td className="py-2 px-2 text-zinc-500">{r.provider}</td>
@@ -276,6 +282,33 @@ export default function UserDashboard({ client, onLogout }: Props) {
                 </button>
               )}
               {requests.length === 0 && <div className="py-8 text-center text-zinc-600 text-sm">暂无请求记录</div>}
+
+              {/* ===== 请求详情（Savings Explainability）===== */}
+              {selectedReq && (
+                <div className="mt-4 rounded-lg bg-zinc-800/40 border border-zinc-700/60 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-zinc-200">请求详情 · 为什么省</h4>
+                    <button onClick={() => setSelectedReq(null)} className="text-zinc-500 hover:text-zinc-300 text-xs">✕ 关闭</button>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                    <div className="p-2.5 rounded bg-zinc-900/60"><div className="text-zinc-500 mb-0.5">原始 Token</div><div className="text-zinc-200 font-mono">{selectedReq.originalTokens?.toLocaleString()}</div></div>
+                    <div className="p-2.5 rounded bg-zinc-900/60"><div className="text-zinc-500 mb-0.5">优化后 Token</div><div className="text-zinc-200 font-mono">{selectedReq.optimizedTokens?.toLocaleString()}</div></div>
+                    <div className="p-2.5 rounded bg-zinc-900/60"><div className="text-zinc-500 mb-0.5">节省</div><div className="text-emerald-400 font-mono">-{selectedReq.savedTokens?.toLocaleString()} ({Math.round((selectedReq.reductionRate || 0) * 100)}%)</div></div>
+                    <div className="p-2.5 rounded bg-zinc-900/60"><div className="text-zinc-500 mb-0.5">节省来源</div><div className="text-blue-400 font-mono">{selectedReq.savings?.source} <span className="text-zinc-500">({selectedReq.savings?.kind})</span></div></div>
+                    <div className="p-2.5 rounded bg-zinc-900/60"><div className="text-zinc-500 mb-0.5">成本(微$)</div><div className="text-zinc-200 font-mono">{selectedReq.costMicro} → 省 {selectedReq.savedCostMicro}</div></div>
+                    <div className="p-2.5 rounded bg-zinc-900/60"><div className="text-zinc-500 mb-0.5">延迟</div><div className="text-zinc-200 font-mono">总 {selectedReq.latencyMs}ms{selectedReq.ttftMs ? ` · TTFT ${selectedReq.ttftMs}ms` : ""}</div></div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-zinc-500">
+                    <span className="px-2 py-0.5 rounded bg-zinc-900/60">provider: {selectedReq.provider}</span>
+                    <span className="px-2 py-0.5 rounded bg-zinc-900/60">model: {selectedReq.model}</span>
+                    <span className="px-2 py-0.5 rounded bg-zinc-900/60">缓存: {selectedReq.cacheType}</span>
+                    <span className="px-2 py-0.5 rounded bg-zinc-900/60">压缩比: {selectedReq.compressionRatio || 0}</span>
+                    <span className="px-2 py-0.5 rounded bg-zinc-900/60">路由: {selectedReq.routerReason || "—"}</span>
+                    <span className="px-2 py-0.5 rounded bg-zinc-900/60">状态: {selectedReq.status}</span>
+                  </div>
+                </div>
+              )}
+              {reqDetailLoading && <div className="py-4 text-center text-zinc-500 text-xs">加载详情…</div>}
             </div>
           </div>
         )}
