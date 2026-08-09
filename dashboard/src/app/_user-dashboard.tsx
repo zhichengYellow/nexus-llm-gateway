@@ -143,7 +143,7 @@ export default function UserDashboard({ client, onLogout }: Props) {
                 <h3 className="font-semibold text-sm text-zinc-200">使用说明</h3>
               </div>
               <div className="space-y-1.5 text-sm text-zinc-400">
-                <div>Base URL: <code className="bg-zinc-950/60 border border-zinc-800 px-2 py-0.5 rounded text-blue-400 text-xs">http://localhost:8787/v1</code></div>
+                <div>Base URL: <code className="bg-zinc-950/60 border border-zinc-800 px-2 py-0.5 rounded text-blue-400 text-xs">{process.env.NEXT_PUBLIC_API_URL || "https://nexus-llm-gateway-5te0.onrender.com"}/v1</code></div>
                 <div>Model: <code className="bg-zinc-950/60 border border-zinc-800 px-2 py-0.5 rounded text-violet-400 text-xs">deepseek-v4-flash</code></div>
                 <div className="text-xs text-amber-400/80 mt-2">⚠️ BYOK 模式：请先在「我的 Provider」配置自己的 API Key，Nexus 不提供免费额度</div>
               </div>

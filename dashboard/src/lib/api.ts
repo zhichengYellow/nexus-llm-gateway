@@ -369,7 +369,7 @@ export class ApiClient {
     return this.get<{
       window: string;
       timeline: Array<{ hour: string; totalRequests: number; totalTokens: number; cacheHits: number }>;
-    }>(`/user/usage/timeline?range=${range}`);
+    }>(`/user/timeline?range=${range}`);
   }
 
   async getUserProviderKeys() {
