@@ -74,6 +74,20 @@ setInterval(async () => {
   await getSemanticCache().cleanupExpired();
 }, 3600_000);
 
+// 闲置租户数据清理（启动时一次 + 每 24h;阈值 IDLE_TENANT_CLEANUP_DAYS,默认 30 天）
+setInterval(async () => {
+  const { cleanupIdleTenants } = await import("./cleanup/idle-tenant-cleanup.js");
+  const { removed, skipped } = await cleanupIdleTenants().catch((e) => {
+    logger.error({ err: (e as Error).message }, "idle tenant cleanup failed");
+    return { removed: 0, skipped: 0 };
+  });
+  if (removed > 0) logger.info({ removed, skipped }, "idle tenant cleanup done");
+}, 24 * 3600_000);
+{
+  const { cleanupIdleTenants } = await import("./cleanup/idle-tenant-cleanup.js");
+  await cleanupIdleTenants().catch((e) => logger.error({ err: (e as Error).message }, "idle tenant cleanup (startup) failed"));
+}
+
 const server = serve(
   {
     fetch: app.fetch,
