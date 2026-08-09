@@ -30,6 +30,8 @@ function genApiKey(): { raw: string; prefix: string; hash: string } {
 const registerSchema = z.object({
   username: z.string().min(2, "用户名至少 2 位").max(30, "用户名最多 30 位").regex(/^[a-zA-Z0-9_-]+$/, "仅允许字母、数字、下划线、短横"),
   password: z.string().min(8, "密码至少 8 位").max(100, "密码最多 100 位"),
+  captchaId: z.string().min(1, "验证码已失效，请刷新"),
+  captchaAnswer: z.number().int("请输入数字答案"),
 });
 
 /** 将 zod 校验错误转为统一的中文 error.message 格式 */
@@ -38,6 +40,36 @@ export function authErrorMessage(errors: z.ZodIssue[]): string {
   if (!first) return "输入格式错误";
   return first.message;
 }
+
+// ===== 验证码（算术题，内存态、一次性、防人机） =====
+const captchaStore = new Map<string, { answer: number; expiresAt: number }>();
+const CAPTCHA_TTL_MS = 5 * 60_000;
+
+function newCaptcha(): { id: string; prompt: string } {
+  const a = 1 + Math.floor(Math.random() * 9);
+  const b = 1 + Math.floor(Math.random() * 9);
+  const op = ["+", "-", "×"][Math.floor(Math.random() * 3)];
+  const answer = op === "+" ? a + b : op === "-" ? a - b : a * b;
+  const id = randomBytes(12).toString("base64url");
+  captchaStore.set(id, { answer, expiresAt: Date.now() + CAPTCHA_TTL_MS });
+  if (captchaStore.size > 500) {
+    // 惰性清理过期项
+    for (const [k, v] of captchaStore) if (v.expiresAt < Date.now()) captchaStore.delete(k);
+  }
+  return { id, prompt: `${a} ${op} ${b} = ?` };
+}
+
+/** 注册开关状态（前端探测用，不再占用注册限流配额） */
+authRoute.get("/status", (c) => {
+  return c.json({ registrationEnabled: process.env.REGISTRATION_ENABLED === "true" });
+});
+
+authRoute.get("/captcha", (c) => {
+  return c.json(newCaptcha());
+});
+
+// 保留用户名，防止与内置角色/常见名混淆
+const RESERVED_USERNAMES = new Set(["admin", "root", "master", "nexus", "administrator", "system", "gateway"]);
 
 authRoute.post("/register", zValidator("json", registerSchema, (result, c) => {
   if (!result.success) {
@@ -64,7 +96,34 @@ authRoute.post("/register", zValidator("json", registerSchema, (result, c) => {
     logger.warn("registration rate limit check failed, allowing");
   }
 
-  const { username, password } = c.req.valid("json");
+  const { username, password, captchaId, captchaAnswer } = c.req.valid("json");
+
+  // 验证码校验（一次性，防重放）
+  const cap = captchaStore.get(captchaId);
+  captchaStore.delete(captchaId);
+  if (!cap || cap.expiresAt < Date.now()) {
+    return c.json({ error: { message: "验证码已过期，请刷新", type: "captcha_invalid" } }, 400);
+  }
+  if (cap.answer !== captchaAnswer) {
+    return c.json({ error: { message: "验证码错误，请重试", type: "captcha_invalid" } }, 400);
+  }
+
+  // 同一 IP 24h 内成功注册数上限（防批量注册）
+  try {
+    const okKey = `regok:${ip}`;
+    const okCount = await redis.incr(okKey);
+    if (okCount === 1) await redis.expire(okKey, 86400);
+    if (okCount > 5) {
+      return c.json({ error: { message: "该 IP 注册账号过多，请明天再试", type: "rate_limit" } }, 429);
+    }
+  } catch {
+    logger.warn("registration ok-rate check failed, allowing");
+  }
+
+  // 保留用户名检查
+  if (RESERVED_USERNAMES.has(username.toLowerCase())) {
+    return c.json({ error: { message: "该用户名不可用，请换一个", type: "duplicate" } }, 409);
+  }
 
   // 检查用户名唯一性
   const [existing] = await db

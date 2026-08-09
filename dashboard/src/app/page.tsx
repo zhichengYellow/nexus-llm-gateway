@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ApiClient } from "@/lib/api";
 import ManagerDashboard from "./_dashboard-client";
 import UserDashboard from "./_user-dashboard";
-import { KeyRound, Zap, Shield, Server, UserPlus } from "lucide-react";
+import { KeyRound, Zap, Shield, Server, UserPlus, RefreshCw, Copy } from "lucide-react";
 
 export default function Home() {
   const [apiKey, setApiKey] = useState("");
@@ -18,6 +18,10 @@ export default function Home() {
   const [regPass, setRegPass] = useState("");
   const [regResult, setRegResult] = useState<any>(null);
   const [regLoading, setRegLoading] = useState(false);
+  const [regCaptcha, setRegCaptcha] = useState<{ captchaId: string; prompt: string } | null>(null);
+  const [regCaptchaAnswer, setRegCaptchaAnswer] = useState("");
+  const [captchaLoading, setCaptchaLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const savedKey = localStorage.getItem("nexus_api_key");
@@ -31,20 +35,24 @@ export default function Home() {
 
   const checkRegEnabled = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787"}/auth/register`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: "_check", password: "________" }),
-      });
-      // 403 = disabled, 429 = rate-limited, 409 = username exists → all mean enabled
-      const status = res.status;
-      if (status === 403) {
-        setRegEnabled(false);
-      } else {
-        // 任何非 403 响应都说明端点存在且开启
-        setRegEnabled(true);
-      }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787"}/auth/status`);
+      const data = await res.json().catch(() => ({}));
+      setRegEnabled(!!data.registrationEnabled);
     } catch {
       setRegEnabled(false);
+    }
+  };
+
+  const loadCaptcha = async () => {
+    setCaptchaLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787"}/auth/captcha`);
+      if (res.ok) {
+        const data = await res.json();
+        setRegCaptcha({ captchaId: data.captchaId, prompt: data.prompt });
+      }
+    } catch {} finally {
+      setCaptchaLoading(false);
     }
   };
 
@@ -97,17 +105,25 @@ export default function Home() {
 
   const handleRegister = async () => {
     if (!regUser.trim() || !regPass.trim()) { setError("请填写用户名和密码"); return; }
+    if (!regCaptcha || !regCaptchaAnswer.trim()) { setError("请先完成验证码"); return; }
     setRegLoading(true); setError("");
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
       const res = await fetch(`${apiUrl}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: regUser.trim(), password: regPass }),
+        body: JSON.stringify({
+          username: regUser.trim(),
+          password: regPass,
+          captchaId: regCaptcha.captchaId,
+          captchaAnswer: Number(regCaptchaAnswer.trim()),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error?.message || "注册失败");
+        // 验证码错误/过期 → 刷新验证码并清答案
+        if (data.error?.type === "captcha_invalid") { setRegCaptchaAnswer(""); loadCaptcha(); }
         return;
       }
       setRegResult(data);
@@ -118,8 +134,23 @@ export default function Home() {
     }
   };
 
+  const copyKey = async () => {
+    try {
+      await navigator.clipboard.writeText(regResult?.apiKey ?? "");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+
   const clearRegForm = () => {
     setRegUser(""); setRegPass(""); setRegResult(null); setShowRegister(false);
+    setRegCaptchaAnswer(""); setRegCaptcha(null);
+  };
+
+  const openRegister = () => {
+    setError("");
+    setShowRegister(true);
+    loadCaptcha();
   };
 
   const handleLogout = () => {
@@ -181,7 +212,7 @@ export default function Home() {
               </div>
               {regEnabled && (
                 <button
-                  onClick={() => setShowRegister(true)}
+                  onClick={openRegister}
                   className="w-full mt-3 py-2 text-xs text-zinc-400 hover:text-emerald-400 border border-zinc-800/60 rounded-lg hover:border-emerald-500/20 transition flex items-center justify-center gap-1.5"
                 >
                   <UserPlus className="w-3 h-3" /> 没有 Key？注册一个（BYOK 模式）
@@ -196,27 +227,32 @@ export default function Home() {
           <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-2xl p-8 shadow-2xl hover:border-zinc-700 transition-all duration-200">
             <div className="text-center">
               <div className="text-emerald-400 text-lg font-semibold mb-2">✅ 注册成功！</div>
-              <p className="text-zinc-400 text-sm mb-4">请立即保存你的 API Key（仅显示一次）</p>
-              <div className="bg-zinc-950/60 rounded-lg px-3 py-2 border border-zinc-800 font-mono text-sm text-zinc-200 break-all mb-3">
-                {regResult.apiKey}
+              <p className="text-zinc-400 text-sm mb-4">你的 API Key <span className="text-amber-400">仅显示一次</span>，请立即复制并妥善保存</p>
+              <div className="relative">
+                <div className="bg-zinc-950/60 rounded-lg px-3 py-2.5 border border-zinc-800 font-mono text-sm text-zinc-200 break-all mb-3 pr-20">
+                  {regResult.apiKey}
+                </div>
+                <button
+                  onClick={copyKey}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 text-[11px] bg-zinc-800 border border-zinc-700 rounded-lg hover:bg-zinc-700 text-zinc-300 transition flex items-center gap-1"
+                >
+                  <Copy className="w-3 h-3" />{copied ? "已复制 ✓" : "复制"}
+                </button>
               </div>
-              <p className="text-amber-400/80 text-xs mb-4">
-                ⚠️ BYOK 模式：你需自配 Provider API Key，成本自理，无免费额度
+              <p className="text-amber-400/80 text-xs mb-5">
+                ⚠️ 关闭此页后将无法再次查看该 Key。BYOK 模式：需自配 Provider API Key，成本自理
               </p>
               <button
-                onClick={() => {
-                  setApiKey(regResult.apiKey);
-                  clearRegForm();
-                }}
+                onClick={clearRegForm}
                 className="w-full py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-500 transition"
               >
-                使用此 Key 登录
+                我已保存 Key，去登录
               </button>
               <button
                 onClick={clearRegForm}
                 className="w-full mt-2 py-2 text-xs text-zinc-500 hover:text-zinc-300 transition"
               >
-                返回登录
+                重新注册（将无法再查看此 Key）
               </button>
             </div>
           </div>
@@ -238,7 +274,25 @@ export default function Home() {
                   className="w-full px-4 py-2.5 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50"
                   placeholder="密码"
                 />
-                <p className="text-[10px] text-zinc-600 mt-1 ml-1">至少 8 位</p>
+                <p className="text-[10px] text-zinc-600 mt-1 ml-1">至少 8 位（当前版本密码为预留字段，实际凭 API Key 登录）</p>
+              </div>
+              <div>
+                <div className="flex items-stretch gap-2">
+                  <input
+                    type="text" value={regCaptchaAnswer} onChange={(e) => setRegCaptchaAnswer(e.target.value)}
+                    className="w-24 px-3 py-2.5 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50"
+                    placeholder="答案"
+                    onKeyDown={(e) => e.key === "Enter" && handleRegister()}
+                  />
+                  <button
+                    type="button" onClick={loadCaptcha} disabled={captchaLoading}
+                    className="flex-1 px-3 py-2.5 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-zinc-300 text-sm font-mono hover:bg-zinc-800 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    <span>{captchaLoading ? "加载中…" : (regCaptcha?.prompt ?? "点击获取验证码")}</span>
+                    <RefreshCw className={`w-3 h-3 ${captchaLoading ? "animate-spin" : ""}`} />
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-600 mt-1 ml-1">输入算式结果（防止机器人注册）</p>
               </div>
               {error && (
                 <div className="text-rose-400 text-sm bg-rose-500/10 rounded-lg px-3 py-2 border border-rose-500/20">{error}</div>
