@@ -2,17 +2,17 @@
  * Nexus LLM Gateway - 看板 API 客户端
  */
 export class ApiClient {
-  private masterKey: string;
-  private apiUrl: string;
+  readonly apiKey: string;
+  readonly apiUrl: string;
 
-  constructor(masterKey: string, apiUrl?: string) {
-    this.masterKey = masterKey;
+  constructor(apiKey: string, apiUrl?: string) {
+    this.apiKey = apiKey;
     this.apiUrl = apiUrl || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
   }
 
   private headers(): Record<string, string> {
     return {
-      Authorization: `Bearer ${this.masterKey}`,
+      Authorization: `Bearer ${this.apiKey}`,
       "Content-Type": "application/json",
     };
   }

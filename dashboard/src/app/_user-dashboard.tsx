@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { ApiClient } from "@/lib/api";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Line, BarChart, Bar } from "recharts";
-import { User, LogOut, Activity, Zap, Database, Server, KeyRound, TrendingDown, Download, Gauge, Shield, List, Layers, PiggyBank } from "lucide-react";
+import { User, LogOut, Activity, Zap, Database, Server, KeyRound, TrendingDown, Download, Gauge, Shield, List, Layers, PiggyBank, Sparkles } from "lucide-react";
+import OnboardingWizard from "./_onboarding-wizard";
 
 interface Props {
   client: ApiClient;
@@ -60,6 +61,7 @@ export default function UserDashboard({ client, onLogout }: Props) {
   const [bulkTesting, setBulkTesting] = useState(false);
   const [userKeys, setUserKeys] = useState<any[]>([]);
   const [activeProfile, setActiveProfile] = useState("balanced");
+  const [showWizard, setShowWizard] = useState(false);
 
   const loadData = async () => {
     try {
@@ -73,6 +75,12 @@ export default function UserDashboard({ client, onLogout }: Props) {
       setTimeline(tl);
       setProviders(pk.providers || []);
       setUserKeys(uk.keys || []);
+      // 首次引导：未配置任何 Provider 且从未产生用量 → 展示向导（仅一次）
+      const hasProvider = (pk.providers || []).some((k) => k.configured);
+      const noUsage = (ov?.today?.tokens ?? 0) === 0 && (ov?.month?.tokens ?? 0) === 0;
+      if (!hasProvider && noUsage && !localStorage.getItem("nexus_onboarding_done")) {
+        setShowWizard(true);
+      }
       setError("");
     } catch (e) {
       setError((e as Error).message);
@@ -141,7 +149,16 @@ export default function UserDashboard({ client, onLogout }: Props) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0D14] text-zinc-100 flex">
+    <>
+      {showWizard && (
+        <OnboardingWizard
+          client={client}
+          apiUrl={client.apiUrl}
+          onDone={() => { localStorage.setItem("nexus_onboarding_done", "1"); setShowWizard(false); loadData(); }}
+          onDismiss={() => { localStorage.setItem("nexus_onboarding_done", "1"); setShowWizard(false); }}
+        />
+      )}
+      <div className="min-h-screen bg-[#0A0D14] text-zinc-100 flex">
       {/* 侧边导航 */}
       <aside className="w-48 bg-zinc-900/40 border-r border-zinc-800/60 backdrop-blur-md flex flex-col shrink-0">
         <div className="flex items-center gap-2 px-4 h-16 border-b border-zinc-800/60">
@@ -160,7 +177,10 @@ export default function UserDashboard({ client, onLogout }: Props) {
             </button>
           ))}
         </nav>
-        <div className="p-2 border-t border-zinc-800/60">
+        <div className="p-2 border-t border-zinc-800/60 space-y-1">
+          <button onClick={() => setShowWizard(true)} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-zinc-500 hover:text-emerald-400 transition">
+            <Sparkles className="w-3.5 h-3.5" /> 新手引导
+          </button>
           {onLogout && (
             <button onClick={onLogout} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-zinc-500 hover:text-rose-400 transition">
               <LogOut className="w-3.5 h-3.5" /> 退出
@@ -190,17 +210,20 @@ export default function UserDashboard({ client, onLogout }: Props) {
                 <span className="text-sm text-emerald-400/80">Tokens</span>
                 <span className="text-sm text-zinc-500">${today.savedCost || "0.00"}</span>
               </div>
-              {/* 来源卡片 */}
+              {/* 来源卡片（百分比按真实 breakdown 计算，禁止硬编码） */}
               <div className="flex gap-4 mt-3 text-xs">
-                {[
-                  { label: "缓存", pct: 55, tokens: breakdown.cache, color: "#10B981" },
-                  { label: "压缩", pct: 30, tokens: breakdown.compression, color: "#3B82F6" },
-                  { label: "路由", pct: 15, tokens: breakdown.routing, color: "#8B5CF6" },
-                ].filter((s) => (s.tokens || 0) > 0).map((s) => (
-                  <span key={s.label} className="flex items-center gap-1">
+                {(() => {
+                  const srcTotal = (breakdown.cache || 0) + (breakdown.compression || 0) + (breakdown.routing || 0);
+                  const pctOf = (v: number) => srcTotal > 0 ? Math.round((v / srcTotal) * 100) : 0;
+                  return [
+                    { label: "缓存", pct: pctOf(breakdown.cache || 0), tokens: breakdown.cache, color: "#10B981" },
+                    { label: "压缩", pct: pctOf(breakdown.compression || 0), tokens: breakdown.compression, color: "#3B82F6" },
+                    { label: "路由", pct: pctOf(breakdown.routing || 0), tokens: breakdown.routing, color: "#8B5CF6" },
+                  ].filter((s) => (s.tokens || 0) > 0).map((s) => (
+                    <span key={s.label} className="flex items-center gap-1">
                     <span className="w-2 h-2 rounded-sm" style={{ background: s.color }} />{s.label} {formatNumber(s.tokens || 0)}
                   </span>
-                ))}
+                ))})()}
               </div>
             </div>
 
@@ -461,5 +484,6 @@ export default function UserDashboard({ client, onLogout }: Props) {
         )}
       </main>
     </div>
+    </>
   );
 }
