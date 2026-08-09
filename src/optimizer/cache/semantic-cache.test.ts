@@ -73,6 +73,15 @@ describe("cacheHash（Provider/Model 隔离 + 参数分桶）", () => {
     );
   });
 
+  it("不同租户产生不同 key（跨租户缓存不串扰）", () => {
+    const req = mkReq([{ role: "user", content: "我的银行卡号是 6222 0000" }]);
+    const tenantA = cacheHash(req, "deepseek-v4-flash", "deepseek", "tenant-a");
+    const tenantB = cacheHash(req, "deepseek-v4-flash", "deepseek", "tenant-b");
+    const global = cacheHash(req, "deepseek-v4-flash", "deepseek", null);
+    expect(tenantA).not.toBe(tenantB);
+    expect(tenantA).not.toBe(global);
+  });
+
   it("不同 Model 产生不同 key", () => {
     const req = mkReq([{ role: "user", content: "你好" }]);
     expect(cacheHash(req, "deepseek-v4-flash", "deepseek")).not.toBe(

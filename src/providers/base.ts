@@ -40,8 +40,14 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
   }
 
   protected get headers(): Record<string, string> {
+    return this.headersFor(undefined);
+  }
+
+  /** 构造请求头；BYOK 租户请求可覆盖 apiKey（不污染 registry 全局配置） */
+  protected headersFor(apiKeyOverride?: string): Record<string, string> {
     const h: Record<string, string> = { "Content-Type": "application/json" };
-    if (this.config.apiKey) h.Authorization = `Bearer ${this.config.apiKey}`;
+    const key = apiKeyOverride ?? this.config.apiKey;
+    if (key) h.Authorization = `Bearer ${key}`;
     return h;
   }
 
@@ -82,7 +88,7 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
     return `${this.config.baseUrl.replace(/\/$/, "")}/v1/models`;
   }
 
-  async chat(req: ChatCompletionRequest, upstreamModel: string): Promise<ChatCompletionResponse> {
+  async chat(req: ChatCompletionRequest, upstreamModel: string, apiKeyOverride?: string): Promise<ChatCompletionResponse> {
     const body = this.buildChatBody(req, upstreamModel, false);
     const timeoutMs = this.config.upstreamTimeoutMs ?? 60_000;
     const controller = new AbortController();
@@ -94,7 +100,7 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
     };
     const res = await this.doFetch(this.chatUrl, {
       method: "POST",
-      headers: this.headers,
+      headers: this.headersFor(apiKeyOverride),
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -137,7 +143,7 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
     };
   }
 
-  async *chatStream(req: ChatCompletionRequest, upstreamModel: string): AsyncIterable<ChatCompletionChunk> {
+  async *chatStream(req: ChatCompletionRequest, upstreamModel: string, apiKeyOverride?: string): AsyncIterable<ChatCompletionChunk> {
     const body = this.buildChatBody(req, upstreamModel, true);
     const timeoutMs = this.config.upstreamTimeoutMs ?? 60_000;
     // 初始连接超时
@@ -145,7 +151,7 @@ export abstract class OpenAiLikeProvider implements ChatProvider, EmbeddingProvi
     const connectTimeout = setTimeout(() => connectController.abort(), timeoutMs);
     const res = await this.doFetch(this.chatUrl, {
       method: "POST",
-      headers: this.headers,
+      headers: this.headersFor(apiKeyOverride),
       body: JSON.stringify(body),
       signal: connectController.signal,
     }).finally(() => clearTimeout(connectTimeout));

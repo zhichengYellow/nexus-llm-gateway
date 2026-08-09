@@ -235,7 +235,7 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   // ===== C1.2: 缓存门控接入 =====
   if (!bypassOptimize && opt.semanticCacheEnabled && !c.req.header("x-nexus-no-cache")) {
     const cacheGate = getCacheGate();
-    const gateResult = await cacheGate.evaluate(req as ChatCompletionRequest, model, cacheProvider);
+    const gateResult = await cacheGate.evaluate(req as ChatCompletionRequest, model, cacheProvider, tenant?.id ?? null);
     if (gateResult.hit && gateResult.response) {
       const latencyMs = Date.now() - ctx.startTime;
       const autoRefresh = getCacheAutoRefresh();
@@ -352,8 +352,20 @@ async function handleStream(c: Context<ChatEnv>, ctx: PipelineContext) {
   for (let i = 0; i < chain.length; i++) {
     const node = chain[i];
     if (!node?.provider) continue;
+    // BYOK: 非 master 租户必须用自己的 Provider Key（不回退全局，防止白嫖 master 账户成本）
+    let tenantKey: string | null = null;
+    if (!ctx.isMaster && ctx.tenant?.id) {
+      const { resolveProviderKey } = await import("../config/provider-keys.js");
+      tenantKey = await resolveProviderKey(node.providerType as ProviderType, ctx.tenant.id);
+      if (!tenantKey) {
+        return c.json(
+          { error: { message: `No provider key configured for ${node.providerType}. Please configure your own API key in the dashboard.`, type: "provider_key_required" } },
+          402,
+        );
+      }
+    }
     try {
-      const iterable = node.provider.chatStream(ctx.request, node.upstreamModel);
+      const iterable = node.provider.chatStream(ctx.request, node.upstreamModel, tenantKey ?? undefined);
       const iter = iterable[Symbol.asyncIterator]();
       const first = await iter.next();
       c.header("Content-Type", "text/event-stream");

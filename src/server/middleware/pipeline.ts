@@ -205,20 +205,17 @@ export const providerMiddleware: MiddlewareHandler = {
       const node = chain[i];
       if (!node?.provider) continue;
 
-      // BYOK: 非 master 租户没有 Provider Key 时返回明确错误
+      // BYOK: 非 master 租户必须用自己的 Provider Key（**不回退全局/环境 key**，防止白嫖 master 账户成本）
+      let tenantKey: string | null = null;
       if (!ctx.isMaster && tenantId) {
         const { resolveProviderKey } = await import("../config/provider-keys.js");
-        const tenantKey = await resolveProviderKey(node.providerType as ProviderType, tenantId);
+        tenantKey = await resolveProviderKey(node.providerType as ProviderType, tenantId);
         if (!tenantKey) {
-          const { getConfig } = await import("../../shared/config.js");
-          const envKey = getConfig().providers[node.providerType as ProviderType]?.apiKey;
-          if (!envKey) {
-            return {
-              break: true,
-              status: 402 as ContentfulStatusCode,
-              error: { message: `No provider key configured for ${node.providerType}. Please configure your own API key in the dashboard.`, type: "provider_key_required" },
-            };
-          }
+          return {
+            break: true,
+            status: 402 as ContentfulStatusCode,
+            error: { message: `No provider key configured for ${node.providerType}. Please configure your own API key in the dashboard.`, type: "provider_key_required" },
+          };
         }
       }
 
@@ -235,7 +232,7 @@ export const providerMiddleware: MiddlewareHandler = {
         ).slice(0, 100)}:${reqParams}`;
 
         const res = await cache.deduplicate<ChatCompletionResponse>(key, () =>
-          withRetry(() => node.provider.chat(ctx.request, node.upstreamModel), {
+          withRetry(() => node.provider.chat(ctx.request, node.upstreamModel, tenantKey ?? undefined), {
             maxRetries: 2,
             baseDelayMs: 500,
           }),

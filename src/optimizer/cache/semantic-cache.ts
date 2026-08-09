@@ -76,12 +76,12 @@ function allMessagesText(req: ChatCompletionRequest): string {
   return parts.join("|");
 }
 
-/** Cache Key：Provider + Model + 完整上下文（system + 所有 user）+ 分桶参数 */
-export function cacheHash(req: ChatCompletionRequest, model: string, provider: string): string {
+/** Cache Key：租户隔离 + Provider + Model + 完整上下文（system + 所有 user）+ 分桶参数 */
+export function cacheHash(req: ChatCompletionRequest, model: string, provider: string, tenantId?: string | null): string {
   const fullText = allMessagesText(req);
   const tempBucket = bucketNumber(req.temperature, 1);
   const topPBucket = bucketNumber(req.top_p, 1);
-  const text = `${provider}|${model}|${fullText}|t${tempBucket}|p${topPBucket}`;
+  const text = `${provider}|${model}|${tenantId ?? "global"}|${fullText}|t${tempBucket}|p${topPBucket}`;
   return createHash("sha256").update(text).digest("hex");
 }
 
@@ -147,6 +147,7 @@ export class SemanticCache {
     req: ChatCompletionRequest,
     model: string,
     provider: string | undefined,
+    tenantId?: string | null,
   ): Promise<CacheLookupResult> {
     try {
       const raw = rawLastUser(req);
@@ -154,7 +155,7 @@ export class SemanticCache {
       // 短上下文词句禁用缓存
       if (!isCacheable(raw, canonical)) return { hit: false };
 
-      const hash = cacheHash(req, model, provider ?? "unknown");
+      const hash = cacheHash(req, model, provider ?? "unknown", tenantId);
       const now = new Date();
 
       const rows = await db
@@ -226,7 +227,7 @@ export class SemanticCache {
       }
       if ((response as any)?.error) return;
 
-      const hash = cacheHash(req, model, provider ?? "unknown");
+      const hash = cacheHash(req, model, provider ?? "unknown", tenantId);
       const ttl = classifyTtl(canonical, this.defaultTtl);
       const expiresAt = new Date(Date.now() + ttl * 1000);
       const preview = canonical.slice(0, 200);

@@ -39,6 +39,7 @@ export class CacheGate {
     req: ChatCompletionRequest,
     model: string,
     provider: string,
+    tenantId?: string | null,
   ): Promise<CacheGateResult> {
     const cache = getSemanticCache();
     const confidence = getCacheConfidence();
@@ -54,7 +55,7 @@ export class CacheGate {
     const topCandidate = screening.candidates[0]!;
 
     // 查找精确缓存
-    const cacheResult = await cache.lookup(req, model, provider);
+    const cacheResult = await cache.lookup(req, model, provider, tenantId);
     if (!cacheResult.hit || !cacheResult.response) {
       return { hit: false, asyncRefresh: false, confidence: 0, reason: "cache miss" };
     }

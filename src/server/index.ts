@@ -39,12 +39,14 @@ app.use("*", cors({
 }));
 
 // 健康检查（无需认证）
-app.route("/metrics", metricsRoute);
 app.route("/health", healthRoute);
 
 // 认证保护的所有 API
 const api = new Hono<AppEnv>();
 api.use("*", authMiddleware);
+
+// 指标（仅 master key 可访问，防公网探测）
+api.route("/metrics", metricsRoute);
 
 // OpenAI 兼容路由
 api.route("/v1/chat/completions", chatRoute);

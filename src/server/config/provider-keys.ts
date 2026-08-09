@@ -137,7 +137,7 @@ export async function deleteProviderKey(type: ProviderType, tenantId?: string | 
 
 /** 按租户解析 Provider Key：租户专用优先 → 全局 → .env → null */
 export async function resolveProviderKey(provider: ProviderType, tenantId?: string | null): Promise<string | null> {
-  // 1. 租户专用
+  // 1. 租户专用（BYOK：租户必须配自己的 key，**不回退全局**，防止白嫖 master 账户成本）
   if (tenantId) {
     const [tenantRow] = await db
       .select()
@@ -147,6 +147,7 @@ export async function resolveProviderKey(provider: ProviderType, tenantId?: stri
     if (tenantRow) {
       try { return decryptSecret(tenantRow.apiKey); } catch { /* fall through */ }
     }
+    return null;
   }
   // 2. 全局（master）
   const [globalRow] = await db
