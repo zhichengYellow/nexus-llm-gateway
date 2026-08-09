@@ -356,6 +356,36 @@ export class ApiClient {
     }>("/admin/optimization/recommend", { prompt });
   }
 
+  // ===== 用户端 API（API Key 访问）=====
+  async getUserOverview() {
+    return this.get<{
+      today: { requests: number; tokens: number; cacheHits: number };
+      month: { tokens: number };
+      cacheHitRate: string;
+    }>("/user/overview");
+  }
+
+  async getUserTimeline(range: "1h" | "24h" | "7d" = "24h") {
+    return this.get<{
+      window: string;
+      timeline: Array<{ hour: string; totalRequests: number; totalTokens: number; cacheHits: number }>;
+    }>(`/user/usage/timeline?range=${range}`);
+  }
+
+  async getUserProviderKeys() {
+    return this.get<{
+      providers: Array<{ provider: string; configured: boolean; source: string; masked?: string }>;
+    }>("/user/providers/keys");
+  }
+
+  async setUserProviderKey(provider: string, apiKey: string) {
+    return this.post<{ ok: boolean; provider: string }>(`/user/providers/${provider}/key`, { apiKey });
+  }
+
+  async deleteUserProviderKey(provider: string) {
+    return this.del<{ ok: boolean; provider: string }>(`/user/providers/${provider}/key`);
+  }
+
   // ===== Provider 测速 =====
   async speedTest() {
     return this.post<{

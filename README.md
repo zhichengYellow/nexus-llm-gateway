@@ -233,6 +233,28 @@ curl http://localhost:8787/v1/chat/completions \
 
 ---
 
+## 🌐 开放注册（BYOK 模式）
+
+Nexus 支持开放注册，允许他人自建账号并使用**自己的** Provider API Key：
+
+```bash
+# 1. 开启注册（默认关闭）
+REGISTRATION_ENABLED=true
+
+# 2. 用户通过看板注册或直接调用 API
+curl -X POST http://localhost:8787/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice","password":"mypassword123"}'
+# → 返回 API Key（仅显示一次，请立即保存）
+
+# 3. 用户用 API Key 登录看板，在「我的 Provider」配置自己的 Key
+# 4. 调用 API（租户专用 Provider Key 优先 → 回退全局 → 回退 .env）
+```
+
+> ⚠️ **BYOK 模式核心原则**：注册用户自带 Provider API Key，成本完全自理。Nexus **不提供任何免费额度**。未配置 Provider Key 时调用会返回明确错误提示。
+
+---
+
 ## 📡 使用 OpenAI SDK 接入
 
 ```python

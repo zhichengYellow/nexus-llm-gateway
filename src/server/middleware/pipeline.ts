@@ -13,6 +13,7 @@ import { getSemanticCache } from "../../optimizer/cache/semantic-cache.js";
 import { checkRateLimit, checkQuota } from "../quota/rate-limiter.js";
 import { getCircuitBreakerRegistry } from "../middleware/circuit-breaker.js";
 import { withRetry } from "../middleware/retry.js";
+import type { ProviderType } from "../../shared/types.js";
 import { trackRequest } from "../middleware/metrics.js";
 import { recordUsage } from "../billing/usage.js";
 import { ProviderError, type ChatCompletionResponse } from "../../shared/types.js";
@@ -203,6 +204,23 @@ export const providerMiddleware: MiddlewareHandler = {
     for (let i = 0; i < chain.length; i++) {
       const node = chain[i];
       if (!node?.provider) continue;
+
+      // BYOK: 非 master 租户没有 Provider Key 时返回明确错误
+      if (!ctx.isMaster && tenantId) {
+        const { resolveProviderKey } = await import("../config/provider-keys.js");
+        const tenantKey = await resolveProviderKey(node.providerType as ProviderType, tenantId);
+        if (!tenantKey) {
+          const { getConfig } = await import("../../shared/config.js");
+          const envKey = getConfig().providers[node.providerType as ProviderType]?.apiKey;
+          if (!envKey) {
+            return {
+              break: true,
+              status: 402 as ContentfulStatusCode,
+              error: { message: `No provider key configured for ${node.providerType}. Please configure your own API key in the dashboard.`, type: "provider_key_required" },
+            };
+          }
+        }
+      }
 
       const breaker = breakers.get(`${node.providerType}:${node.upstreamModel}`);
       if (!breaker.allowRequest()) {

@@ -15,6 +15,7 @@ import { logger } from "../../shared/logger.js";
 import { getPromptRouter } from "../../optimizer/prompt/router.js";
 import { getOptimizationSettings } from "../../optimizer/optimization-switch.js";
 import { getPromptCompressor } from "../../optimizer/prompt/compression.js";
+import { getProfile, type ProfileName } from "../../optimizer/cost/optimization-profile.js";
 import { getConversationCompressor } from "../../optimizer/prompt/conversation-compressor.js";
 import { getAdaptiveContext } from "../../optimizer/prompt/adaptive-context.js";
 import { getCacheGate } from "../../optimizer/cache/cache-gate.js";
@@ -92,6 +93,10 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   // 控制台优化开关（压缩/缓存/路由/预算封锁，持久化 DB，env 默认）
   const opt = await getOptimizationSettings();
 
+  // Optimization Profile：请求头 x-nexus-profile 或 DB 设置
+  const profileName = (c.req.header("x-nexus-profile") ?? opt.profile ?? "balanced") as ProfileName;
+  const profile = getProfile(profileName);
+
   // ===== C1.6: 门控逃生开关 =====
   if (bypassOptimize) {
     logger.info({ requestId }, "optimization bypassed via x-nexus-no-optimize header");
@@ -134,10 +139,10 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
     messages = ctxResult.filteredMessages as any;
     logger.debug({ requestId, type: ctxResult.type, kept: messages.length }, "adaptive context applied");
 
-    // Prompt Compression: 礼貌语删除
+    // Prompt Compression: 按 profile 的 compressionStrength 控制强度
     const compressor = getPromptCompressor();
     const userMsg = messages.filter((m: any) => m.role === "user").map((m: any) => normalizeContent(m.content)).join("\n");
-    const compResult = compressor.compress(userMsg);
+    const compResult = compressor.compress(userMsg, profile.compressionStrength);
     savedTokens += compResult.originalTokens - compResult.compressedTokens;
     if (compResult.steps.length > 0) {
       logger.debug({ requestId, saved: compResult.originalTokens - compResult.compressedTokens }, "prompt compressed");
@@ -172,6 +177,14 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   }
   if (model === "auto" && !bypassOptimize && opt.smartRoutingEnabled) {
     const smartRouting = getSmartRoutingEngine();
+    // 按 Optimization Profile 设置降级策略（routingPreference → degradation）
+    if (profile.routingPreference === "cost") {
+      smartRouting.setDegradation({ type: "cheap_only", maxCost: 0.002, maxLatency: profile.maxLatencyMs, minQuality: profile.minQuality });
+    } else if (profile.routingPreference === "quality") {
+      smartRouting.setDegradation({ type: "none", maxCost: Infinity, maxLatency: profile.maxLatencyMs, minQuality: profile.minQuality });
+    } else {
+      smartRouting.setDegradation({ type: "none", maxCost: Infinity, maxLatency: profile.maxLatencyMs, minQuality: profile.minQuality });
+    }
     const userPrompt = (messages as any[]).filter((m: any) => m.role === "user").map((m: any) => normalizeContent(m.content)).join("\n");
     const promptRouter = getPromptRouter();
     intentResult = promptRouter.classify(userPrompt);

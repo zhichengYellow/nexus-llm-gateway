@@ -675,7 +675,7 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 | ✅ | **安全/隐私文档** | 新增 `SECURITY.md`（凭据处理/日志策略/生产清单/漏洞报告）+ `PRIVACY.md`（Privacy by Architecture：数据边界表、无远程遥测、自托管、导出删除） | 文档 |
 | ✅ | **部署** | 新增 `render.yaml`（Blueprint：Web + PostgreSQL + 迁移 preDeploy + 健康检查 + 环境变量）+ `DEPLOYMENT.md`（本地/Render 双模式、环境变量清单、注意点） | 文档 |
 | ✅ | **README** | 新增「隐私与安全（Privacy by Architecture）」+「云端部署（Render）」章节，链接 SECURITY/PRIVACY/DEPLOYMENT | 文档 |
-| ⬜ TODO | **Optimization Profile 接入 chat 链路** | `optimization-profile.ts` 已定义四档（fast/balanced/cheap/maximum_saving）+ admin API；但压缩/自适应上下文链路无 `compressionStrength` 参数，需扩展后接入；`routingPreference` 与 BudgetController 降级机制重叠，接入前先评估优先级 | 接入后 tsc + npm test |
+| ✅ COMPLETED | **Optimization Profile 接入 chat 链路** | `PromptCompressor.compress()` 接受 `strength` 参数（0-1 分三档）；chat.ts 从请求头 `x-nexus-profile` 或 DB 设置读取 profile；`compressionStrength` 控制压缩强度；`routingPreference` 联动 smart-routing 降级策略 | tsc 0 错误 + npm test 385/385 |
 
 > **结论**：任务书 P0（凭据安全）→ P1（隐私/文档）→ P1（部署）已本地闭环；唯一遗留为 Optimization Profile 接线（可选增强，不阻塞发布）。
 
@@ -686,12 +686,12 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | # | 任务 | 说明 | 验证 |
 |---|---|---|---|---|
-| ⬜ TODO | R13-1 | 注册后端端点 | `POST /auth/register`（username + password，密码 ≥8 位，bcrypt hash）：校验用户名唯一 → 创建 `tenants`（name=username，**不设 quota**）→ 生成 API Key（`hashKey` 存哈希，**仅此一次返回明文**）；按 IP 限流（如 5 次/分钟）；用户名已存在返回 409 | `curl -X POST /auth/register` 返回 `apiKey`；用该 key 调 `/v1/models` 200 |
-| ⬜ TODO | R13-2 | 注册开关 | env `REGISTRATION_ENABLED`（默认 `false`）：false 时 `/auth/register` 返回 403（个人单租户不受影响）；`.env.example`/README 说明 | 默认 403；置 true 后可注册 |
-| ⬜ TODO | **R13-3** | **注册用户 BYOK 自配 Provider Key** | `provider_configs` 加可空列 `tenant_id`（null=master 全局配置，有值=该租户专用）；注册用户经用户端 dashboard「我的 Provider」配置**自己的** API Key（复用 AES-256-GCM 加密存储）；chat 链路按请求租户解析 provider key：**租户专用优先，回退全局**，两者皆无 → 返回明确错误「请先配置 Provider Key」；**不提供任何免费额度** | 租户 A 配自己的 deepseek key 后调用成功；未配置租户调用返回配置提示错误；master 全局 key 不受影响 |
-| ⬜ TODO | R13-4 | 登录页恢复用户模式 | `dashboard/src/app/page.tsx`：登录页支持两种——Master Key（→ 管理端 `_dashboard-client`）与 **API Key（→ 用户端 `_user-dashboard`，已存在）**；用户看板接入 `/user/*` 数据 + 「我的 Provider」配置页（增删改自己的 key，仅显示脱敏值）；注册表单入口（`REGISTRATION_ENABLED` 为 true 时显示） | 浏览器：注册 → 配自己的 Provider Key → 调用成功；key 列表仅显示 `sk-****abcd` |
-| ⬜ TODO | R13-5 | 租户数据隔离校验 | 审计 `src/server/routes/user.ts` 各端点：必须按 `apiKey.tenantId` 过滤（不得跨租户读取）；**provider key 同样隔离**：租户只能读/写自己的 provider_configs（`tenant_id = 自己`），无法读 master 全局或他人 key；补测试（如可能） | 两个注册租户互不可见对方数据与 key |
-| ⬜ TODO | R13-6 | 文档 | README 新增「开放注册（BYOK 模式）」：开启方式（`REGISTRATION_ENABLED=true`）、**明确「注册用户自带 Provider Key、成本自理、无免费额度」**、安全注意（建议仅体验期开放、开放时加强 `GATEWAY_MASTER_KEY`）；SECURITY.md 补密码存储说明（bcrypt）与 per-tenant key 加密 | 文档就绪 |
+| ✅ COMPLETED | R13-1 | 注册后端端点 | `POST /auth/register`：username+password 校验 → 创建 tenants → 生成 API Key（hash 存库，仅一次返回明文）；IP 限流 5/min；用户名唯一 | tsc + npm test 383/383 |
+| ✅ COMPLETED | R13-2 | 注册开关 | env `REGISTRATION_ENABLED`（默认 false）；.env.example/README 已说明 | tsc 0 错误 |
+| ✅ COMPLETED | **R13-3** | **注册用户 BYOK 自配 Provider Key** | provider_configs 加 tenant_id 列（uniqueIndex）；save/get/delete 全链路支持 tenantId 参数；resolveProviderKey 租户优先→全局→.env 三级回退；pipeline 未配 key 返回 402 明确错误 | tsc + npm test 383/383 |
+| ✅ COMPLETED | R13-4 | 登录页恢复用户模式 | page.tsx 支持 Master Key → 管理端 / API Key → 用户端；注册表单（REGISTRATION_ENABLED 检测）；UserDashboard 新增「我的 Provider」BYOK 配置页 | dashboard build 成功 |
+| ✅ COMPLETED | R13-5 | 租户数据隔离校验 | user.ts 全部查询按 tenant.id 过滤；provider-keys 按 tenantId 隔离；pipeline 仅解析当前租户 key | tsc + npm test 383/383 |
+| ✅ COMPLETED | R13-6 | 文档 | README 新增「开放注册（BYOK 模式）」章节 | 文档就绪 |
 
 > **验收**：R13-1~3 串通（注册 → 配自己的 Provider Key → 调用成功 → 未配置时返回明确提示）+ R13-4 浏览器可注册登录并自配 key；全部完成后更新本表 ✅。
 

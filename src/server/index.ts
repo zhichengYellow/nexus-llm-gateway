@@ -18,6 +18,7 @@ import { metricsRoute } from "./middleware/metrics.js";
 import { adminRoute } from "./routes/admin.js";
 import { userRoute } from "./routes/user.js";
 import { batchRoute } from "./routes/batch.js";
+import { authRoute } from "./routes/auth.js";
 
 type AppEnv = AuthEnv & LoggingEnv;
 
@@ -58,6 +59,9 @@ api.route("/admin", adminRoute);
 api.route("/user", userRoute);
 
 app.route("/", api);
+
+// 注册路由（无需认证）
+app.route("/auth", authRoute);
 
 // 启动
 const config = getConfig();

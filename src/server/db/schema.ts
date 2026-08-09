@@ -216,10 +216,14 @@ export const auditLogs = pgTable("audit_logs", {
 }));
 
 export const providerConfigs = pgTable("provider_configs", {
-  provider: text("provider").primaryKey(),       // ProviderType: deepseek / openai / gemini / ...
+  id: uuid("id").primaryKey().defaultRandom(),
+  provider: text("provider").notNull(),          // ProviderType: deepseek / openai / gemini / ...
   apiKey: text("api_key").notNull(),             // UI 配置的 Provider API Key（AES-256-GCM 加密）
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => ({
+  providerTenantUnique: uniqueIndex("provider_configs_tenant_unique").on(t.provider, t.tenantId),
+}));
 
 /** 优化开关设置（单行，控制台可读写） */
 export const optimizationSettings = pgTable("optimization_settings", {

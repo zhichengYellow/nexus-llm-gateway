@@ -50,33 +50,43 @@ const REDUNDANT_MODIFIERS = [
 export class PromptCompressor {
   /**
    * 压缩 Prompt
+   * @param text 原始文本
+   * @param strength 压缩强度 0-1（0=不压缩，1=最大压缩）；默认 0.5
    */
-  compress(text: string): CompressionResult {
+  compress(text: string, strength: number = 0.5): CompressionResult {
     const original = text;
     const steps: string[] = [];
     let compressed = text;
 
-    // Step 1: 礼貌语删除
-    let before = compressed;
-    for (const { pattern, replacement } of POLITENESS_PATTERNS) {
-      compressed = compressed.replace(pattern, replacement);
-    }
-    compressed = compressed.replace(/\s{2,}/g, " ").trim();
-    if (compressed !== before) {
-      steps.push(`politeness: ${before.length - compressed.length} chars removed`);
+    if (strength <= 0) {
+      return { original, compressed: text, originalTokens: Math.ceil(text.length / 4), compressedTokens: Math.ceil(text.length / 4), ratio: 1, steps: ["skipped (strength=0)"] };
     }
 
-    // Step 2: 冗余修饰词删除
-    before = compressed;
-    for (const mod of REDUNDANT_MODIFIERS) {
-      compressed = compressed.replace(new RegExp(mod, "g"), "");
+    // Step 1: 礼貌语删除（strength >= 0.3 时启用）
+    if (strength >= 0.3) {
+      let before = compressed;
+      for (const { pattern, replacement } of POLITENESS_PATTERNS) {
+        compressed = compressed.replace(pattern, replacement);
+      }
+      compressed = compressed.replace(/\s{2,}/g, " ").trim();
+      if (compressed !== before) {
+        steps.push(`politeness: ${before.length - compressed.length} chars removed`);
+      }
     }
-    if (compressed !== before) {
-      steps.push(`modifiers: ${before.length - compressed.length} chars removed`);
+
+    // Step 2: 冗余修饰词删除（strength >= 0.6 时启用）
+    if (strength >= 0.6) {
+      const before = compressed;
+      for (const mod of REDUNDANT_MODIFIERS) {
+        compressed = compressed.replace(new RegExp(mod, "g"), "");
+      }
+      if (compressed !== before) {
+        steps.push(`modifiers: ${before.length - compressed.length} chars removed`);
+      }
     }
 
     // Step 3: 多余空白清理
-    before = compressed;
+    const before = compressed;
     compressed = compressed.replace(/\s+/g, " ").trim();
     if (compressed !== before) {
       steps.push(`whitespace: normalized`);

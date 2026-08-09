@@ -5,7 +5,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { eq, sql, and, gte } from "drizzle-orm";
+import { eq, sql, and, gte, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "../db/client.js";
 import { apiKeys, tenants, usageLogs, modelRoutes, providerConfigs } from "../db/schema.js";
@@ -333,7 +333,7 @@ adminRoute.put("/optimization/switches", async (c) => {
 // ===== Provider API Key 配置(个人友好:UI 配置,存 DB 热生效) =====
 adminRoute.get("/providers/keys", async (c) => {
   const cfg = getConfig();
-  const rows = await db.select().from(providerConfigs);
+  const rows = await db.select().from(providerConfigs).where(isNull(providerConfigs.tenantId));
   const dbKeys = new Map(rows.map((r) => [r.provider, r.apiKey]));
   const providers = Object.entries(cfg.providers).map(([type, p]) => {
     const meta = dbKeys.has(type)

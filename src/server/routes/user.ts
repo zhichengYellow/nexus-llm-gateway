@@ -7,6 +7,8 @@ import { eq, sql, and, gte } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { usageLogs, tenants } from "../db/schema.js";
 import { getSemanticCache } from "../../optimizer/cache/semantic-cache.js";
+import { getTenantProviderKeys, saveProviderKey, deleteProviderKey } from "../config/provider-keys.js";
+import type { ProviderType } from "../../shared/types.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
 
@@ -140,4 +142,28 @@ userRoute.post("/premium/request", async (c) => {
   }
   await db.update(tenants).set({ cachePlan: "premium_pending", premiumRequestedAt: new Date() }).where(eq(tenants.id, tenant.id));
   return c.json({ tenant: { id: tenant.id, cachePlan: "premium_pending" } });
+});
+
+// ===== 我的 Provider Key（BYOK 自配）=====
+userRoute.get("/providers/keys", async (c) => {
+  const tenant = c.get("tenant")!;
+  const keys = await getTenantProviderKeys(tenant.id);
+  return c.json({ providers: keys });
+});
+
+userRoute.post("/providers/:type/key", async (c) => {
+  const tenant = c.get("tenant")!;
+  const type = c.req.param("type") as string;
+  const body = await c.req.json().catch(() => ({}));
+  const apiKey = (body?.apiKey ?? "").trim();
+  if (!apiKey) return c.json({ error: { message: "apiKey required", type: "validation_error" } }, 400);
+  await saveProviderKey(type as ProviderType, apiKey, tenant.id);
+  return c.json({ ok: true, provider: type });
+});
+
+userRoute.delete("/providers/:type/key", async (c) => {
+  const tenant = c.get("tenant")!;
+  const type = c.req.param("type") as string;
+  await deleteProviderKey(type as ProviderType, tenant.id);
+  return c.json({ ok: true, provider: type });
 });

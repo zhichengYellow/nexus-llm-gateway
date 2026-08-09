@@ -12,10 +12,24 @@ describe("PromptCompressor", () => {
     expect(result.compressedTokens).toBeLessThanOrEqual(result.originalTokens);
   });
 
-  it("删除冗余修饰词", () => {
+  it("删除冗余修饰词（strength>=0.6）", () => {
     const c = new PromptCompressor();
-    const result = c.compress("这个非常重要的问题");
+    const result = c.compress("这个非常重要的问题", 0.8);
     expect(result.compressed).not.toContain("非常");
+  });
+
+  it("strength=0.3 仅礼貌语不删修饰词", () => {
+    const c = new PromptCompressor();
+    const result = c.compress("这个非常麻烦的问题", 0.3);
+    expect(result.compressed).not.toContain("麻烦");  // 礼貌语删除
+    expect(result.compressed).toContain("非常");       // 修饰词保留
+  });
+
+  it("strength=0 跳过所有压缩", () => {
+    const c = new PromptCompressor();
+    const result = c.compress("请你帮我解释一下，谢谢！", 0);
+    expect(result.compressed).toContain("请");
+    expect(result.ratio).toBe(1);
   });
 
   it("无礼貌语时保持原样", () => {
