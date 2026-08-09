@@ -40,6 +40,8 @@ app.use("*", cors({
 
 // 健康检查（无需认证）
 app.route("/health", healthRoute);
+// 注册路由（无需认证，必须在 api 挂载之前注册，避免被 api 的 authMiddleware catch-all 拦截）
+app.route("/auth", authRoute);
 
 // 认证保护的所有 API
 const api = new Hono<AppEnv>();
@@ -61,9 +63,6 @@ api.route("/admin", adminRoute);
 api.route("/user", userRoute);
 
 app.route("/", api);
-
-// 注册路由（无需认证）
-app.route("/auth", authRoute);
 
 // 启动
 const config = getConfig();
