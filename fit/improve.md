@@ -648,93 +648,37 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 ---
 
-## GitHub Release 与 npm Package 完善（⬜ 全部 TODO，供远程 agent 执行）
+## 已完成归档（2026-08，R11~R15 全部 ✅，勿重复实现）
 
-> **现状**（2026-08-07 实测）：`package.json` version = 0.1.0（实际产品已 v2.2），缺 `main/types/files/exports/repository/license/bin`；无 `CHANGELOG.md`；git tag 仅 v1.1.1/v1.1.2；npm 未发布。**目标**：Release 可追溯、包可安装（npm 或本地构建），版本对齐 v2.2。
-> **关联**：「影响力建设」表中 Release 维护行完成后标 ✅。
+> 以下任务书已全部完成，实现见 git log（`docs/R14-COMPLETION.md` 有 R14 完整报告）。**远程 agent 不要重做这些**：
+> - **R11** Release 完善：v2.3.0 tag + GitHub Release + CHANGELOG + package.json 发布字段（`publishConfig.private`）
+> - **R12** 个人化重构：Provider Key AES-256-GCM 静态加密、日志脱敏（pino redact）、SECURITY/PRIVACY/DEPLOYMENT 文档、render.yaml
+> - **R13** 开放注册（BYOK）：`POST /auth/register`（scrypt 校验 + IP 限流 5/min + 用户名唯一 + `REGISTRATION_ENABLED` 开关）、注册用户自配 Provider Key（`provider_configs.tenant_id` + `resolveProviderKey` 租户优先→全局→.env）
+> - **R14** Token Optimization 产品化：Savings Engine（`src/analytics/savings-attribution.ts`——CACHE/COMPRESSION/ROUTING/REWRITE/NONE 互斥归因防 double counting + ACTUAL/ESTIMATED）、请求记录 cursor 分页 + 详情 Explainability、我的 Key(+Last Used)、测速防滥用、Optimization Profile 4 档接线、Privacy Center、真实数据核查（SingleFlight waiter 不重复计费、缓存命中节省落库）
+> - **R15** 注册交互完善：表单清空/退出回登录/中文报错/字段提示；**本地补充**（git `dc57d04`/`ee2b022`/`25447f8`）：测速重构（真实 chat 测速 + 单测/全测 + 中文错误映射）、注册防人机（算术验证码 + 同 IP 24h 上限 + 保留名黑名单 + 强制确认保存 Key + `GET /auth/status`）、**首次使用 4 步引导向导**（`dashboard/src/app/_onboarding-wizard.tsx`：Provider→档位→连接→首次请求）+ 概览来源占比去硬编码
 
-| 状态 | # | 任务 | 说明 | 验证 |
-|---|---|---|---|---|
-| ✅ COMPLETED | R11-1 | package.json 发布字段补全 | version → 2.2.0；补 main/files/exports/repository/license/bin/publishConfig | `npm pkg get version main files` 输出正确 |
-| ✅ COMPLETED | R11-2 | 构建产物验证 | `npm run build` → `dist/`；rootDir 改为 src 对齐路径 | `npm run build` 成功 |
-| ✅ COMPLETED | R11-3 | CHANGELOG.md | v0.x → v1.x → v2.0 → v2.1 → v2.2 全版本记录 | `CHANGELOG.md` 存在 |
-| ✅ COMPLETED | R11-4 | GitHub Release v2.2.0 | **Release 已创建**：`gh release create v2.2.0`（2026-08-07，本地补）——https://github.com/zhichengYellow/nexus-llm-gateway/releases/tag/v2.2.0 | `gh release view v2.2.0` 返回正常 |
-| ✅ COMPLETED | R11-5 | npm 发布决策 | 个人项目不发布 npm：`publishConfig.private=true` 防误发；README 补生产构建说明 | `npm pkg get publishConfig` 返回 `{"private":true}` |
+## R15.1 Onboarding 验收与首次价值打磨（⬜ 全部 TODO，供远程 agent 执行）
 
-> **执行约定**：R11-1 → R11-5 按序执行；每项完成跑 CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`）+ 更新本表状态为 ✅。R11-4 需要 GitHub 凭据（gh CLI / token）；无凭据时至少完成 tag + CHANGELOG，并在提交说明中注明。
-
-## R12 个人化重构增量（本地完成，2026-08-07）
-
-> **背景**：对照「Nexus v2.0 Personal Developer Edition 任务书」（BYOK + Privacy + Token Optimization）审计后，项目 6/9 个 Phase 已达成（v2.0 个人化/R5、Optimization Pipeline、Dashboard 价值化/R6 等）；以下为审计发现的真增量，已本地完成。
-
-| 状态 | 项 | 说明 | 验证 |
-|---|---|---|---|
-| ✅ | **Provider Key 静态加密** | AES-256-GCM（`src/shared/crypto.ts`），存储 `enc:v1:iv.tag.cipher`；密钥 `ENCRYPTION_KEY`（生产缺失拒绝保存）；旧明文懒迁移；`GET /admin/providers/keys` 返回 `masked`（`sk-****abcd`）不返回明文 | crypto.test.ts 7 用例 + tsc + npm test |
-| ✅ | **日志全局脱敏** | pino redact：`apiKey / api_key / authorization / password / secret`（含嵌套深度变体）一律 `[REDACTED]`（`src/shared/logger.ts`） | credential-security.test.ts 6 用例 |
-| ✅ | **隐私测试** | `credential-security.test.ts`：日志不落 apiKey/Authorization/嵌套凭据、加密存储无明文、脱敏不泄漏完整 key | 6 用例全过 |
-| ✅ | **安全/隐私文档** | 新增 `SECURITY.md`（凭据处理/日志策略/生产清单/漏洞报告）+ `PRIVACY.md`（Privacy by Architecture：数据边界表、无远程遥测、自托管、导出删除） | 文档 |
-| ✅ | **部署** | 新增 `render.yaml`（Blueprint：Web + PostgreSQL + 迁移 preDeploy + 健康检查 + 环境变量）+ `DEPLOYMENT.md`（本地/Render 双模式、环境变量清单、注意点） | 文档 |
-| ✅ | **README** | 新增「隐私与安全（Privacy by Architecture）」+「云端部署（Render）」章节，链接 SECURITY/PRIVACY/DEPLOYMENT | 文档 |
-| ✅ COMPLETED | **Optimization Profile 接入 chat 链路** | `PromptCompressor.compress()` 接受 `strength` 参数（0-1 分三档）；chat.ts 从请求头 `x-nexus-profile` 或 DB 设置读取 profile；`compressionStrength` 控制压缩强度；`routingPreference` 联动 smart-routing 降级策略 | tsc 0 错误 + npm test 385/385 |
-
-> **结论**：任务书 P0（凭据安全）→ P1（隐私/文档）→ P1（部署）已本地闭环；唯一遗留为 Optimization Profile 接线（可选增强，不阻塞发布）。
-
-## R13 开放体验——轻量用户注册（⬜ 全部 TODO，供远程 agent 执行）
-
-> **背景**：云端已部署（Render），他人体验需要注册。**基础设施已就绪**：`tenants`/`api_keys` 表、API Key 认证（`auth.ts` 已按 `key_hash` + tenants innerJoin 区分 master/租户）、`/user` 路由（`src/server/routes/user.ts`，已挂载）、用户端组件 `dashboard/src/app/_user-dashboard.tsx`（存在未用）。**缺的只是**：注册入口、登录分流、体验配额、注册开关。
-> **约束**：不恢复企业多租户 UI（租户管理/审批/套餐/RBAC）；仅轻量注册；**不给体验配额——注册用户 BYOK 自配 Provider Key，成本自理**（Nexus 不承担任何 token 费用，与「BYOK 核心模型」一致）；密码 bcrypt 存储；API Key 仅创建时明文返回一次；每项单 commit + CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22）。
+> **背景**（2026-08 本地完成 R15 引导向导后审计）：向导"功能"已就绪，但距"产品闭环"还差——真实调用验证、边界场景表达（无优化/缓存命中/去重）、Profile 是否真生效、冷启动体验、完成感、转化漏斗埋点。**核心验收点：一个第一次使用的开发者，不看 README，3~5 分钟内完成 Provider 配置 → 发出请求 → 明确看到 Nexus 帮他省了什么。**
+> **先审计再动代码**：读 `dashboard/src/app/_onboarding-wizard.tsx`、`src/server/routes/user.ts`（speed-test）、`src/server/routes/chat.ts`（pipeline 响应 `nexus` 字段）、`src/server/middleware/pipeline.ts`（cache/SingleFlight 标记）、`src/optimizer/`（压缩强度、路由降级）；已满足的直接验证并标 `ALREADY IMPLEMENTED`，不得重写。
+> **硬性约束**：① 全部按 `tenantId` 隔离；② 测速/调用用租户自己的 key（`apiKeyOverride`），禁止 fallback 全局；③ 不返回 prompt/response/API key 敏感内容；④ **真实数据**，禁止 fake/hardcode（尤其禁止硬凑 Savings 数字）；⑤ 不新增第三方依赖（验证码/邮箱/分析服务都不加）；⑥ 每功能单 commit + CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22）；⑦ 完成输出 `# R15.1 Completion Report`（Tests Before-After/Commits/CI/剩余风险/下一步）。
+> **禁止范围**：新 Provider、Billing、SSO、RBAC、K8s、插件市场、第三方验证码、邮箱验证、大规模重构。
 
 | 状态 | # | 任务 | 说明 | 验证 |
 |---|---|---|---|---|
-| ✅ COMPLETED | R13-1 | 注册后端端点 | `POST /auth/register`：username+password 校验 → 创建 tenants → 生成 API Key（hash 存库，仅一次返回明文）；IP 限流 5/min；用户名唯一 | tsc + npm test 383/383 |
-| ✅ COMPLETED | R13-2 | 注册开关 | env `REGISTRATION_ENABLED`（默认 false）；.env.example/README 已说明 | tsc 0 错误 |
-| ✅ COMPLETED | **R13-3** | **注册用户 BYOK 自配 Provider Key** | provider_configs 加 tenant_id 列（uniqueIndex）；save/get/delete 全链路支持 tenantId 参数；resolveProviderKey 租户优先→全局→.env 三级回退；pipeline 未配 key 返回 402 明确错误 | tsc + npm test 383/383 |
-| ✅ COMPLETED | R13-4 | 登录页恢复用户模式 | page.tsx 支持 Master Key → 管理端 / API Key → 用户端；注册表单（REGISTRATION_ENABLED 检测）；UserDashboard 新增「我的 Provider」BYOK 配置页 | dashboard build 成功 |
-| ✅ COMPLETED | R13-5 | 租户数据隔离校验 | user.ts 全部查询按 tenant.id 过滤；provider-keys 按 tenantId 隔离；pipeline 仅解析当前租户 key | tsc + npm test 383/383 |
-| ✅ COMPLETED | R13-6 | 文档 | README 新增「开放注册（BYOK 模式）」章节 | 文档就绪 |
+| ⬜ TODO | R15.1-1 | **Step①"保存并测试"必须是真实 Provider 调用** | 审计 `POST /user/speed-test/:provider` 链路：必须 = 用户选 provider + 输入 key → 真实 chat 请求该 provider 配置的模型（`resolveProviderKey` + `provider.chat(apiKeyOverride)`）→ 验证 key 有效 + 记录延迟；与真实调用链路一致，**不允许出现"测试通过但真正调用失败"** | 用无效 key 测速 → 报错；有效 key → 延迟 |
+| ⬜ TODO | R15.1-2 | **Step④ 优化结果卡验收** | 第一次请求后一眼可见：Original / Optimized / Saved / Reduction% / Source / Latency(Overhead)；**禁止只显示"请求成功"**；数据来自 `GET /user/requests/:id`（真实归因） | 发长消息 → 卡片完整 |
+| ⬜ TODO | R15.1-3 | **无优化场景专业表达** | 短消息（如"你好"）不压缩时：显示 `No optimization applied` + 原因（prompt below threshold / cache miss / compression skipped），**禁止硬凑 Savings 数字** | 短消息 → 明确"未优化"+原因 |
+| ⬜ TODO | R15.1-4 | **Cache Hit 单独解释** | 第二次相同问题：`⚡ Cache Hit / Upstream request avoided / Provider request avoided`（比"Cache saved X tokens"更易理解） | 相同问题发两次 → 第二次显示命中 |
+| ⬜ TODO | R15.1-5 | **SingleFlight 去重表达** | 并发相同请求：`🔗 Request Deduplicated / shared an in-flight upstream request / Provider request avoided`；**禁止显示 Saved: 0 tokens**（waiter 已不重复计费，要把"去重"产品化表达） | 并发 3 个相同请求 → 2 个显示 Deduplicated |
+| ⬜ TODO | R15.1-6 | **Profile 切换必须真的改变行为** | 验证 4 档实际影响：fast=低 overhead（弱压缩）、cheap/maximum_saving=更激进压缩 + 成本倾向路由；禁止只是"localStorage 存了个值"；若发现接线缺口（压缩强度/路由偏好未按 profile 生效）需修复 | 同一消息在不同档位下发 → overhead/压缩比有差异 |
+| ⬜ TODO | R15.1-7 | **Onboarding 不重复弹** | 边界：第一次登录 → 跳过 → 下次登录**不再强制弹**；侧边栏"新手引导"仍可重开（现有 `nexus_onboarding_done` localStorage，验收确认） | 跳过后再登录不弹 |
+| ⬜ TODO | R15.1-8 | **Render 冷启动体验** | 首屏先渲染 UI，`GET providers/overview/status` 异步加载；后端未醒时显示 `Connecting to Nexus...` 加载态而非白屏/报错 | 冷启动刷新无白屏 |
+| ⬜ TODO | R15.1-9 | **Onboarding 完成感** | 顶部步骤条完成态 ✓；最后一步完成后 `🎉 You're ready / Nexus is now optimizing your requests` + `[Go to Dashboard]`（现有步骤条基础上补完成态与结尾） | 走完 4 步见 🎉 |
+| ⬜ TODO | R15.1-10 | **Onboarding 转化漏斗埋点** | 只存系统元数据（`tenantId + event + timestamp`，**不含 prompt/response/key**），事件：`registered`(注册时已可记) / `onboarding_started` / `provider_connected` / `profile_selected` / `first_request` / `first_optimization`；新建表 + 埋点 API（如 `POST /user/events`）+ 前端在向导各步与首次请求处上报；管理端可查漏斗（注册→开始→连 Provider→首次请求→触发优化） | 漏斗查询出真实转化数 |
 
-> **验收**：R13-1~3 串通（注册 → 配自己的 Provider Key → 调用成功 → 未配置时返回明确提示）+ R13-4 浏览器可注册登录并自配 key；全部完成后更新本表 ✅。
-
-## R14 Token Optimization 产品化增强（⬜ 全部 TODO，供远程 agent 执行）
-
-> **核心目标**：把「省 Token」从宣传概念变成**可计算、可解释、可追踪、可验证的数据闭环**——Request → Optimization Pipeline → Savings Attribution → Savings Record → Overview → Request Detail，用户能回答「这次请求为什么省了这些 Token」。
-> **先审计再动代码**（Phase A）：阅读 README / 本文件 / schema / git 状态；搜索 `savedTokens / savedCostMicro / costMicro / usage / cache / compression / routing / profile / requests / tenantId`；输出简短「现状审计」；**已满足的要求直接验证并标记 `ALREADY IMPLEMENTED`，不得重写**（例：`savedCostMicro` 已在 schema/chat/usage/cost-report/daily-stats/e2e-metrics 使用，Savings Engine 应统一而非再造）。
-> **硬性约束**：① 全部按 `tenantId` 隔离，不跨租户查询、不读 master 全局数据；② 测速/调用一律用**租户自己的 key**（`resolveProviderKey(provider, tenantId)` + `apiKeyOverride`），**禁止 fallback 全局 key**；③ 不返回 prompt/response/API key 敏感内容（仅元数据）；④ 真实数据，禁止 mock/hardcode/fake 统计、禁止估算冒充 actual；⑤ schema 改动先看 migration/索引，不用危险的 `push --force`、不删约束、可回滚；⑥ 每功能单 commit + CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22）；⑦ 完成输出 `# R14+ Completion Report`（新增 API/DB 变化/Savings 公式/Attribution/Actual vs Estimated/Privacy/Tests Before-After/Commits/CI/剩余风险/下阶段建议）。
-> **禁止范围**：MCP Gateway、Plugin Marketplace、Enterprise Billing、RBAC、K8s/Helm、多区域、审批流、大规模重构、新 Provider。
-
-| 状态 | # | 任务 | 说明 | 验证 |
-|---|---|---|---|---|
-| ✅ COMPLETED | R14-1 | **用户端测速(+防滥用)** | `POST /user/speed-test`：测该租户已配 key 的 provider；并发≤5；30s 冷却；8s 超时；UI 测速按钮+结果 | tsc + npm test 395/395 |
-| ✅ COMPLETED | R14-2 | **请求记录(+分页)** | `GET /user/requests?limit=50&cursor=xxx`：cursor 分页（tenantId+createdAt）；UI 请求列表+Load More | tsc + npm test 395/395 |
-| ✅ COMPLETED | R14-3 | **节省统计(来源拆分)** | `/user/overview` 扩展 savedTokens/savedCostMicro + 来源拆分(compression/cache/routing)；UI Hero「You saved X tokens」+ 来源卡片 | tsc + npm test 395/395 |
-| ✅ COMPLETED | R14-4 | **用量导出 CSV** | `GET /user/export?format=csv`：本租户 usage_logs 导出（无内容）；UI「导出用量」按钮 | tsc + npm test 395/395 |
-| ✅ COMPLETED | R14-5 | **我的 Key(+Last Used)** | `GET /user/keys` + `PATCH /user/keys/:id/toggle`；UI Key 列表（前缀/状态/创建时间/Last used）；lastUsedAt 已在 auth.ts 异步更新 | tsc + npm test 395/395 |
-| ✅ COMPLETED | R14-6 | **接入体验(Onboarding)** | UserDashboard 完整：注册→配 Key→选 Profile→查看请求记录→导出 CSV；侧边导航 6 个标签 | dashboard build 成功 |
-| ✅ COMPLETED | R14-9 | **Optimization Profile 产品化** | UserDashboard 新增「优化档位」页：4 档（fast/balanced/cheap/maximum_saving）带英文描述；档位已接入 chat.ts pipeline（compressionStrength + routingPreference） | dashboard build 成功 |
-| ✅ COMPLETED | R14-10 | **Privacy Center** | UserDashboard 新增「隐私与安全」页：加密存储/元数据/租户隔离/Master 限制/导出删除 5 项说明 | dashboard build 成功 |
-| ✅ COMPLETED | R14-7 | **Savings Engine(统一计算+归因)** | 本地完成：`src/analytics/savings-attribution.ts`——`attributeSavings`(CACHE/COMPRESSION/ROUTING/REWRITE/NONE 互斥归因，防 double counting) + `summarizeSavings`(按来源分组) + ACTUAL/ESTIMATED 区分；6 用例 | tsc + 401/401 测试 |
-| ✅ COMPLETED | R14-8 | **Savings Explainability(请求级)** | 本地完成：`GET /user/requests/:id`(仅本租户，元数据+归因+成本/延迟拆分，无 prompt/response)+ 用户端请求列表点击行展示详情面板 | 浏览器点击请求见解释 |
-| ✅ COMPLETED | R14-11 | **Savings Data Integrity + Overhead** | 本地完成：缓存命中节省落库修复 + **SingleFlight waiter 不重复计费**(single-flight run 加 onWaiter,waiter usage 置空);失败/重试不记账已核查;Optimization Overhead 留待下阶段(见 docs/R14-COMPLETION.md risks) | 401/401 测试 |
-| ✅ COMPLETED | R14-12 | **真实数据一致性 + 测试 + 文档 + Report** | 本地完成：归因测试 6 用例(401/401 全绿)、无 fake 数据核查、README 用户端功能小节、CHANGELOG v2.3.0、`docs/R14-COMPLETION.md` 完整报告 | 测试全绿 + 文档就绪 |
-
-> **实施顺序**：现状审计 → Savings Engine(7) → Data Integrity(11) → Explainability(8) → Profile(9) → Privacy(10) → Pagination(2) → SpeedTest(1) → Key LastUsed(5) → Onboarding(6) → 前端统一优化 → 完整测试 → 文档/报告。
-> **最终验收**（10 问）：今天/本月省了多少 Token？省自什么机制？这次请求为什么省？Actual 还是 Estimated？Nexus 增加多少优化开销？Net Saving？数据是否严格隔离？Provider Key 是否安全？用户 5 分钟内能否接入？
-
-## R15 注册业务逻辑完善（⬜ 全部 TODO，供远程 agent 执行）
-
-> **背景**：注册已上线，但用户体验有 4 处硬伤（已核实）：① 退出/返回登录后**再次进入注册表单残留上次输入**（`page.tsx` 的 `regUser/regPass` 未清空）；② 注册失败时**报错为空**——后端 zod 校验失败返回 `{success:false,error:{issues:[...]}}`（非标准 `error.message` 格式），前端 `data.error?.message` 取到 undefined；③ 用户名已存在返回**英文** `"username already taken"`；④ 输入规范无前端提示。
-> **约束**：后端错误统一为 `{ error: { message: "中文提示", type: "..." } }` 标准格式（与现有 API 一致）；每项单 commit + CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`）；完成后更新本表 ✅。
-
-| 状态 | # | 任务 | 说明 | 验证 |
-|---|---|---|---|---|
-| ✅ COMPLETED | R15-1 | **退出/返回后表单清空** | `page.tsx`：`clearRegForm()` 清空 regUser/regPass/regResult + setShowRegister(false)；所有离开注册视图路径调用 | tsc + npm test 395/395 |
-| ✅ COMPLETED | R15-2 | **退出回到 API 登录页** | handleLogout 调用 clearRegForm + 清 localStorage；退出后显示登录页 + 注册按钮（regEnabled 重新检测） | tsc + dashboard build |
-| ✅ COMPLETED | R15-3 | **后端统一中文报错** | auth.ts：zod 校验失败转 `{error:{message:"中文",type:"validation_error"}}`；注册关闭/限流/用户名已存在/创建失败全部中文 | tsc + npm test 395/395 |
-| ✅ COMPLETED | R15-4 | **前端字段级提示** | 注册表单下加实时格式提示（2-30位/字母数字_-；≥8位）；后端报错展示在表单上方红色 | dashboard build 成功 |
-| ✅ COMPLETED | R15-5 | 测试 | `auth.test.ts`：5 个测例（用户名短/非法字符/密码短/空输入/有效输入） | 53 files / 395 tests 全绿 |
-
-> **说明**：当前注册密码不做存储（登录凭证是 API Key，`auth.ts` 注释已注明"预留字段"）；如需"用户名+密码登录"另立任务，本次不涉及。
-> **验收**：浏览器完整走一遍——注册(非法输入→中文报错)→注册成功→使用 key 登录→退出→再点注册(表单为空)。
+> **实施顺序**：审计(1/6 现状) → 表达层(2/3/4/5/9) → 行为验证与修复(1/6) → 体验(7/8) → 埋点(10) → 完整测试 → Completion Report。
+> **最终验收**：新用户不看 README，3~5 分钟完成"注册→配 Provider→发请求→看到节省"；无优化/缓存/去重三种场景都有专业表达；Profile 真实生效；冷启动不白屏；漏斗有数据。
 
 ## v2.4 Token Efficiency 任务书（⬜ 全部 TODO，供远程 agent 执行）
 
