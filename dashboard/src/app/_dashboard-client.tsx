@@ -12,7 +12,7 @@ import SavingsPage from "./_savings-page";
 import {
   LayoutDashboard, KeyRound, Route, Zap, Activity, Search, ChevronLeft, LogOut,
   ArrowUpRight, Gauge, Timer, Server, BarChart3, TrendingDown, DollarSign, Coins, Database,
-  TrendingUp, Layers, PiggyBank, ArrowUp,
+  TrendingUp, Layers, PiggyBank, ArrowUp, ToggleLeft,
 } from "lucide-react";
 
 interface Props {
@@ -47,6 +47,7 @@ const NAV_ITEMS = [
   { id: "providers", label: "Provider", icon: Server },
   { id: "routes", label: "模型路由", icon: Route },
   { id: "keys", label: "个人 Key", icon: KeyRound },
+  { id: "switches", label: "优化开关", icon: ToggleLeft },
 ] as const;
 
 type TabId = (typeof NAV_ITEMS)[number]["id"];
@@ -68,6 +69,8 @@ export default function Dashboard({ client, onLogout }: Props) {
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyResult, setNewKeyResult] = useState<any>(null);
   const [providersKeys, setProvidersKeys] = useState<Array<{ provider: string; configured: boolean; source: string }>>([]);
+  const [switches, setSwitches] = useState<any>(null);
+  const [switchesSaving, setSwitchesSaving] = useState(false);
   const [keyInputs, setKeyInputs] = useState<Record<string, string>>({});
   const [keySaving, setKeySaving] = useState<Record<string, boolean>>({});
   const [newRouteAlias, setNewRouteAlias] = useState("");
@@ -105,6 +108,7 @@ export default function Dashboard({ client, onLogout }: Props) {
       client.getOptimizationStats().then((o) => setOptStats(o)).catch(() => {});
       client.getAnalyticsReport("day").then((a) => setAnalytics(a)).catch(() => {});
       client.getCostReport("day").then((cr) => setCostReport(cr)).catch(() => {});
+      client.getOptimizationSwitches().then((s2) => setSwitches(s2.settings)).catch(() => {});
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -639,6 +643,75 @@ export default function Dashboard({ client, onLogout }: Props) {
                     );
                   })}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== 优化开关 Tab ===== */}
+          {activeTab === "switches" && (
+            <div className="space-y-6">
+              <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6">
+                <h3 className="font-semibold text-sm text-zinc-200 mb-1">优化开关</h3>
+                <p className="text-xs text-zinc-500 mb-4">即时生效，无需重启。单请求逃生仍可用请求头 <code className="text-emerald-400">x-nexus-no-optimize: 1</code></p>
+                {!switches ? (
+                  <p className="text-sm text-zinc-500">加载中…</p>
+                ) : (
+                  <div className="space-y-3">
+                    {([
+                      ["compressionEnabled", "Prompt 压缩", "礼貌语删除 + 对话摘要 + 自适应上下文"],
+                      ["semanticCacheEnabled", "语义缓存", "相似请求命中缓存（省 Token 核心）"],
+                      ["smartRoutingEnabled", "智能路由", "model=auto 按意图/价格/质量选模型"],
+                      ["budgetBlockEnabled", "预算封锁", "超出预算阈值时拒绝请求（402）"],
+                    ] as const).map(([key, label, desc]) => (
+                      <div key={key} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/60">
+                        <div>
+                          <p className="text-sm font-medium text-zinc-200">{label}</p>
+                          <p className="text-xs text-zinc-500">{desc}</p>
+                        </div>
+                        <button
+                          onClick={() => setSwitches({ ...switches, [key]: !switches[key] })}
+                          className={`w-11 h-6 rounded-full transition-colors relative ${switches[key] ? "bg-emerald-500/80" : "bg-zinc-700"}`}
+                        >
+                          <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${switches[key] ? "left-[22px]" : "left-0.5"}`} />
+                        </button>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/60">
+                      <div>
+                        <p className="text-sm font-medium text-zinc-200">优化档位（Profile）</p>
+                        <p className="text-xs text-zinc-500">fast / balanced / cheap / maximum_saving</p>
+                      </div>
+                      <select
+                        value={switches.profile ?? "balanced"}
+                        onChange={(e) => setSwitches({ ...switches, profile: e.target.value })}
+                        className="px-3 py-1.5 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-sm text-zinc-200 focus:outline-none"
+                      >
+                        <option value="fast">fast · 极速</option>
+                        <option value="balanced">balanced · 均衡</option>
+                        <option value="cheap">cheap · 省钱</option>
+                        <option value="maximum_saving">maximum_saving · 极致省钱</option>
+                      </select>
+                    </div>
+                    <button
+                      disabled={switchesSaving}
+                      onClick={async () => {
+                        setSwitchesSaving(true);
+                        try {
+                          const r = await client.updateOptimizationSwitches(switches);
+                          setSwitches(r.settings);
+                          setError("");
+                        } catch (e) {
+                          setError((e as Error).message);
+                        } finally {
+                          setSwitchesSaving(false);
+                        }
+                      }}
+                      className="px-4 py-2 bg-emerald-500/90 hover:bg-emerald-500 text-zinc-950 text-sm font-medium rounded-lg disabled:opacity-50 transition"
+                    >
+                      {switchesSaving ? "保存中…" : "保存开关"}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}

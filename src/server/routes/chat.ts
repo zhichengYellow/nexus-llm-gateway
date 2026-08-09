@@ -13,6 +13,7 @@ import { getRegistry } from "../../providers/registry.js";
 import type { ProviderType } from "../../shared/types.js";
 import { logger } from "../../shared/logger.js";
 import { getPromptRouter } from "../../optimizer/prompt/router.js";
+import { getOptimizationSettings } from "../../optimizer/optimization-switch.js";
 import { getPromptCompressor } from "../../optimizer/prompt/compression.js";
 import { getConversationCompressor } from "../../optimizer/prompt/conversation-compressor.js";
 import { getAdaptiveContext } from "../../optimizer/prompt/adaptive-context.js";
@@ -88,13 +89,15 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   const requestId = c.get("requestId");
   const tenant = c.get("tenant");
   const apiKey = c.get("apiKey");
+  // 控制台优化开关（压缩/缓存/路由/预算封锁，持久化 DB，env 默认）
+  const opt = await getOptimizationSettings();
 
   // ===== C1.6: 门控逃生开关 =====
   if (bypassOptimize) {
     logger.info({ requestId }, "optimization bypassed via x-nexus-no-optimize header");
   }
 
-  // ===== 预算与限流检查（不受 no-optimize 影响） =====
+  // ===== 预算与限流检查（不受 no-optimize 影响；预算封锁受开关控制） =====
   if (!c.get("isMaster") && tenant) {
     // 限流检查
     const { checkRateLimit } = await import("../quota/rate-limiter.js");
@@ -102,12 +105,14 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
     if (!rl.allowed) {
       return c.json({ error: { message: `rate limit exceeded, retry in ${rl.resetIn}s`, type: "rate_limit_error" } }, 429);
     }
-    // 预算检查
+    // 预算检查（可由控制台开关关闭）
     const budgetCtrl = getBudgetController();
     const costOptimizer = getCostOptimizer();
     const userPrompt = raw.messages.map((m: any) => normalizeContent(m.content)).join("\n");
     const estimatedCost = costOptimizer.estimateCost(userPrompt, raw.model as any, raw.model);
-    const budgetResult = budgetCtrl.recordSpending(tenant.id, estimatedCost);
+    const budgetResult = opt.budgetBlockEnabled
+      ? budgetCtrl.recordSpending(tenant.id, estimatedCost)
+      : { allowed: true as const, reason: "" };
     if (!budgetResult.allowed) {
       return c.json({ error: { message: budgetResult.reason, type: "budget_error" } }, 402);
     }
@@ -122,7 +127,7 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   let messages = raw.messages.map((m) => ({ ...m, content: normalizeContent(m.content) }));
   let savedTokens = 0;
 
-  if (!bypassOptimize) {
+  if (!bypassOptimize && opt.compressionEnabled) {
     // Adaptive Context: 动态截断历史
     const adaptiveCtx = getAdaptiveContext();
     const ctxResult = adaptiveCtx.analyze(messages as any);
@@ -165,7 +170,7 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
       model = "auto"; // 归一化,走智能路由
     }
   }
-  if (model === "auto" && !bypassOptimize) {
+  if (model === "auto" && !bypassOptimize && opt.smartRoutingEnabled) {
     const smartRouting = getSmartRoutingEngine();
     const userPrompt = (messages as any[]).filter((m: any) => m.role === "user").map((m: any) => normalizeContent(m.content)).join("\n");
     const promptRouter = getPromptRouter();
@@ -215,7 +220,7 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
   };
 
   // ===== C1.2: 缓存门控接入 =====
-  if (!bypassOptimize && !c.req.header("x-nexus-no-cache")) {
+  if (!bypassOptimize && opt.semanticCacheEnabled && !c.req.header("x-nexus-no-cache")) {
     const cacheGate = getCacheGate();
     const gateResult = await cacheGate.evaluate(req as ChatCompletionRequest, model, cacheProvider);
     if (gateResult.hit && gateResult.response) {

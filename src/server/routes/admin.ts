@@ -310,6 +310,26 @@ adminRoute.post("/speed-test", async (c) => {
 });
 
 // ===== 缓存统计 =====
+// ===== 优化开关（控制台可控制，立即生效） =====
+adminRoute.get("/optimization/switches", async (c) => {
+  const { getOptimizationSettings } = await import("../../optimizer/optimization-switch.js");
+  return c.json({ settings: await getOptimizationSettings() });
+});
+
+adminRoute.put("/optimization/switches", async (c) => {
+  const { updateOptimizationSettings } = await import("../../optimizer/optimization-switch.js");
+  const body = await c.req.json().catch(() => ({}));
+  const partial: Record<string, unknown> = {};
+  for (const k of ["compressionEnabled", "semanticCacheEnabled", "smartRoutingEnabled", "budgetBlockEnabled"]) {
+    if (typeof body?.[k] === "boolean") partial[k] = body[k];
+  }
+  if (typeof body?.profile === "string" && ["fast", "balanced", "cheap", "maximum_saving"].includes(body.profile)) {
+    partial.profile = body.profile;
+  }
+  const settings = await updateOptimizationSettings(partial);
+  return c.json({ settings });
+});
+
 // ===== Provider API Key 配置(个人友好:UI 配置,存 DB 热生效) =====
 adminRoute.get("/providers/keys", async (c) => {
   const cfg = getConfig();

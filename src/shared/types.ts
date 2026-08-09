@@ -134,6 +134,15 @@ export type ProviderType =
   | "zhipu"
   | "gemini";
 
+/** 优化开关设置（控制台可控制，持久化 DB，env 提供默认值） */
+export interface OptimizationSettings {
+  compressionEnabled: boolean;
+  semanticCacheEnabled: boolean;
+  smartRoutingEnabled: boolean;
+  budgetBlockEnabled: boolean;
+  profile: "fast" | "balanced" | "cheap" | "maximum_saving";
+}
+
 export interface ProviderConfig {
   type: ProviderType;
   baseUrl: string;

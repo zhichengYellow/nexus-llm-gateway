@@ -6,6 +6,7 @@ import { pgTable, text, timestamp, integer, boolean, jsonb, uuid, index, uniqueI
 import { sql } from "drizzle-orm";
 
 import { customType } from "drizzle-orm/pg-core";
+import type { OptimizationSettings } from "../../shared/types.js";
 
 const vector = customType<{ data: number[]; driverData: string }>({
   dataType() {
@@ -216,7 +217,14 @@ export const auditLogs = pgTable("audit_logs", {
 
 export const providerConfigs = pgTable("provider_configs", {
   provider: text("provider").primaryKey(),       // ProviderType: deepseek / openai / gemini / ...
-  apiKey: text("api_key").notNull(),             // UI 配置的 Provider API Key
+  apiKey: text("api_key").notNull(),             // UI 配置的 Provider API Key（AES-256-GCM 加密）
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** 优化开关设置（单行，控制台可读写） */
+export const optimizationSettings = pgTable("optimization_settings", {
+  id: integer("id").primaryKey().default(1),
+  settings: jsonb("settings").notNull().$type<OptimizationSettings>(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

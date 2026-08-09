@@ -51,6 +51,19 @@ export class ApiClient {
     return res.json();
   }
 
+  async put<T>(path: string, body: unknown): Promise<T> {
+    const res = await fetch(`${this.apiUrl}${path}`, {
+      method: "PUT",
+      headers: this.headers(),
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: { message: res.statusText } }));
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
   async patch<T>(path: string): Promise<T> {
     const res = await fetch(`${this.apiUrl}${path}`, {
       method: "PATCH",
@@ -61,6 +74,14 @@ export class ApiClient {
       throw new Error(err.error?.message || `HTTP ${res.status}`);
     }
     return res.json();
+  }
+
+  // ===== 优化开关 =====
+  async getOptimizationSwitches() {
+    return this.get<{ settings: any }>("/admin/optimization/switches");
+  }
+  async updateOptimizationSwitches(partial: Record<string, unknown>) {
+    return this.put<{ settings: any }>("/admin/optimization/switches", partial);
   }
 
   // ===== 用量 =====
