@@ -695,7 +695,6 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 > **验收**：R13-1~3 串通（注册 → 配自己的 Provider Key → 调用成功 → 未配置时返回明确提示）+ R13-4 浏览器可注册登录并自配 key；全部完成后更新本表 ✅。
 
-## R14 用户端体验增强（⬜ 全部 TODO，供远程 agent 执行）
 ## R14 Token Optimization 产品化增强（⬜ 全部 TODO，供远程 agent 执行）
 
 > **核心目标**：把「省 Token」从宣传概念变成**可计算、可解释、可追踪、可验证的数据闭环**——Request → Optimization Pipeline → Savings Attribution → Savings Record → Overview → Request Detail，用户能回答「这次请求为什么省了这些 Token」。
