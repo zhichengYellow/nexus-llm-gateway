@@ -682,18 +682,18 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 ## R13 开放体验——轻量用户注册（⬜ 全部 TODO，供远程 agent 执行）
 
 > **背景**：云端已部署（Render），他人体验需要注册。**基础设施已就绪**：`tenants`/`api_keys` 表、API Key 认证（`auth.ts` 已按 `key_hash` + tenants innerJoin 区分 master/租户）、`/user` 路由（`src/server/routes/user.ts`，已挂载）、用户端组件 `dashboard/src/app/_user-dashboard.tsx`（存在未用）。**缺的只是**：注册入口、登录分流、体验配额、注册开关。
-> **约束**：不恢复企业多租户 UI（租户管理/审批/套餐/RBAC）；仅轻量注册体验；密码 bcrypt 存储；API Key 仅创建时明文返回一次；每项单 commit + CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22）。
+> **约束**：不恢复企业多租户 UI（租户管理/审批/套餐/RBAC）；仅轻量注册；**不给体验配额——注册用户 BYOK 自配 Provider Key，成本自理**（Nexus 不承担任何 token 费用，与「BYOK 核心模型」一致）；密码 bcrypt 存储；API Key 仅创建时明文返回一次；每项单 commit + CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22）。
 
 | 状态 | # | 任务 | 说明 | 验证 |
 |---|---|---|---|---|
-| ⬜ TODO | R13-1 | 注册后端端点 | `POST /auth/register`（username + password，密码 ≥8 位，bcrypt hash）：校验用户名唯一 → 创建 `tenants`（name=username, monthlyTokenQuota=FREE_TRIAL_MONTHLY_TOKENS）→ 生成 API Key（`hashKey` 存哈希，**仅此一次返回明文**）；按 IP 限流（如 5 次/分钟）；用户名已存在返回 409 | `curl -X POST /auth/register` 返回 `apiKey`；用该 key 调 `/v1/models` 200 |
+| ⬜ TODO | R13-1 | 注册后端端点 | `POST /auth/register`（username + password，密码 ≥8 位，bcrypt hash）：校验用户名唯一 → 创建 `tenants`（name=username，**不设 quota**）→ 生成 API Key（`hashKey` 存哈希，**仅此一次返回明文**）；按 IP 限流（如 5 次/分钟）；用户名已存在返回 409 | `curl -X POST /auth/register` 返回 `apiKey`；用该 key 调 `/v1/models` 200 |
 | ⬜ TODO | R13-2 | 注册开关 | env `REGISTRATION_ENABLED`（默认 `false`）：false 时 `/auth/register` 返回 403（个人单租户不受影响）；`.env.example`/README 说明 | 默认 403；置 true 后可注册 |
-| ⬜ TODO | R13-3 | 体验配额 | env `FREE_TRIAL_MONTHLY_TOKENS`（默认 500_000）写入新租户 `monthlyTokenQuota`；确认 `chat.ts` 预算检查（`budgetCtrl`，按月 quota 拦截）对新注册租户生效；超配额返回 402 `budget_error` | 新注册租户请求超配额 → 402 |
-| ⬜ TODO | R13-4 | 登录页恢复用户模式 | `dashboard/src/app/page.tsx`：登录页支持两种——Master Key（→ 管理端 `_dashboard-client`）与 **API Key（→ 用户端 `_user-dashboard`，已存在）**；用户看板接入 `/user/*` 数据（overview / timeline）；注册表单入口（`REGISTRATION_ENABLED` 为 true 时显示） | 浏览器：注册 → 用返回 key 登录 → 用户看板显示自己的用量 |
-| ⬜ TODO | R13-5 | 用户数据隔离校验 | 审计 `src/server/routes/user.ts` 各端点：必须按 `apiKey.tenantId` 过滤（不得跨租户读取）；`GET /user/overview`、`/user/timeline` 仅返回本租户数据；补测试（如可能） | 两个注册租户互不可见对方数据 |
-| ⬜ TODO | R13-6 | 文档 | README 新增「开放注册（体验模式）」：开启方式（`REGISTRATION_ENABLED=true`）、配额说明、安全注意（建议仅体验期开放、开放时加强 `GATEWAY_MASTER_KEY`）；SECURITY.md 补密码存储说明（bcrypt） | 文档就绪 |
+| ⬜ TODO | **R13-3** | **注册用户 BYOK 自配 Provider Key** | `provider_configs` 加可空列 `tenant_id`（null=master 全局配置，有值=该租户专用）；注册用户经用户端 dashboard「我的 Provider」配置**自己的** API Key（复用 AES-256-GCM 加密存储）；chat 链路按请求租户解析 provider key：**租户专用优先，回退全局**，两者皆无 → 返回明确错误「请先配置 Provider Key」；**不提供任何免费额度** | 租户 A 配自己的 deepseek key 后调用成功；未配置租户调用返回配置提示错误；master 全局 key 不受影响 |
+| ⬜ TODO | R13-4 | 登录页恢复用户模式 | `dashboard/src/app/page.tsx`：登录页支持两种——Master Key（→ 管理端 `_dashboard-client`）与 **API Key（→ 用户端 `_user-dashboard`，已存在）**；用户看板接入 `/user/*` 数据 + 「我的 Provider」配置页（增删改自己的 key，仅显示脱敏值）；注册表单入口（`REGISTRATION_ENABLED` 为 true 时显示） | 浏览器：注册 → 配自己的 Provider Key → 调用成功；key 列表仅显示 `sk-****abcd` |
+| ⬜ TODO | R13-5 | 租户数据隔离校验 | 审计 `src/server/routes/user.ts` 各端点：必须按 `apiKey.tenantId` 过滤（不得跨租户读取）；**provider key 同样隔离**：租户只能读/写自己的 provider_configs（`tenant_id = 自己`），无法读 master 全局或他人 key；补测试（如可能） | 两个注册租户互不可见对方数据与 key |
+| ⬜ TODO | R13-6 | 文档 | README 新增「开放注册（BYOK 模式）」：开启方式（`REGISTRATION_ENABLED=true`）、**明确「注册用户自带 Provider Key、成本自理、无免费额度」**、安全注意（建议仅体验期开放、开放时加强 `GATEWAY_MASTER_KEY`）；SECURITY.md 补密码存储说明（bcrypt）与 per-tenant key 加密 | 文档就绪 |
 
-> **验收**：R13-1~3 串通（注册 → 拿 key → 调用 → 配额拦截）+ R13-4 浏览器可注册登录；全部完成后更新本表 ✅。
+> **验收**：R13-1~3 串通（注册 → 配自己的 Provider Key → 调用成功 → 未配置时返回明确提示）+ R13-4 浏览器可注册登录并自配 key；全部完成后更新本表 ✅。
 
 ---
 
