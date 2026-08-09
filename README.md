@@ -332,7 +332,7 @@ docker compose up -d && npm ci && npx drizzle-kit push && npm run dev
 
 ```bash
 nvm use 22 && npm test
-# → 350 个测试全过（46 个测试文件：缓存/容错/路由/压缩/成本/质量/DSL/Agent/Workflow 等）
+# → 401 个测试全过（54 个测试文件：缓存/容错/路由/压缩/成本/质量/DSL/Agent/Workflow/注册/归因 等）
 ```
 
 ```bash
@@ -382,10 +382,11 @@ src/
 
 > 完整路线见 [`fit/improve.md`](fit/improve.md)。以 TRR/CSR/QPS 为北极星指标。
 
-- [x] **v2.0** ✅ 目录重构 + Dashboard + RBAC + Audit + Embedding 初筛 + E2E 指标（46 tests / 350 passed）
-- [ ] **v2.1** Billing / SSO / Webhook（外部集成）
-- [ ] **v2.2** VSCode / JetBrains / LangChain 集成（生态建设）
-- [ ] **v2.3** 技术博客 / Release 维护 / 社区运营
+- [x] **v2.0** ✅ 目录重构 + Optimization Pipeline 全链路接线 + Dashboard 价值化（Hero「Today You Saved」）
+- [x] **v2.1** ✅ 生产审计修复（P0-P2：流式崩溃/超时/计价/SSRF/硬编码 key）
+- [x] **v2.2** ✅ 巡检修复 + Release v2.2.0 + 凭据加密 + 安全/隐私/部署文档 + render.yaml
+- [x] **v2.3** ✅ 开放注册（BYOK）+ 用户端体验（测速/请求记录/导出/Key 管理）+ **Savings Engine**（统一归因，防 double counting）+ Profile 产品化 + Privacy Center + 闲置清理（401 tests）
+- [ ] **v2.4** Optimization Overhead 计量 / 月度预测（PROJECTED）/ 生态集成（LangChain 等）
 
 ---
 
