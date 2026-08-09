@@ -118,6 +118,18 @@ export class ProviderRegistry {
     return p as ChatProvider & EmbeddingProvider;
   }
 
+  /** 移除 provider（删除 key 后调用：空 key 的 registerProvider 会被跳过导致旧实例残留，必须显式移除） */
+  removeProvider(type: ProviderType): void {
+    const removed = this.chatProviders.delete(type) || this.embedProviders.delete(type);
+    this.chatProviders.delete(type);
+    this.embedProviders.delete(type);
+    // 同步清理模型映射
+    for (const [alias, meta] of this.modelMap) {
+      if (meta.providerType === type) this.modelMap.delete(alias);
+    }
+    if (removed) logger.info({ providerType: type }, "provider removed from registry");
+  }
+
   /** 列出所有对外暴露的模型 */
   listAllModels(): ModelInfo[] {
     const all: ModelInfo[] = [];

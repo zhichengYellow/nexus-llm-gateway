@@ -122,7 +122,7 @@ export async function getAllProviderKeysMeta(tenantId?: string | null): Promise<
   return providers.map((p, i) => ({ provider: p, ...results[i]! }));
 }
 
-/** 删除 Provider Key(恢复为 .env 配置) */
+/** 删除 Provider Key（清除暴露风险）：删 DB + 从 registry 移除实例（env 有 key 时用 env 重新注册） */
 export async function deleteProviderKey(type: ProviderType, tenantId?: string | null): Promise<void> {
   if (tenantId) {
     await db
@@ -132,7 +132,14 @@ export async function deleteProviderKey(type: ProviderType, tenantId?: string | 
     await db.delete(providerConfigs).where(and(eq(providerConfigs.provider, type), isNull(providerConfigs.tenantId)));
   }
   const cfg = (await import("../../shared/config.js")).getConfig();
-  getRegistry().updateProviderKey(type, cfg.providers[type]?.apiKey ?? "");
+  const envKey = cfg.providers[type]?.apiKey;
+  if (envKey) {
+    // env 有 key：用 env key 重建实例
+    getRegistry().updateProviderKey(type, envKey);
+  } else {
+    // env 无 key：真正移除 provider（空 key 的 registerProvider 会被跳过导致旧实例残留）
+    getRegistry().removeProvider(type);
+  }
 }
 
 /** 按租户解析 Provider Key：租户专用优先 → 全局 → .env → null */
