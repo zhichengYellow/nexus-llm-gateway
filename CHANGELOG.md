@@ -2,6 +2,23 @@
 
 All notable changes to Nexus LLM Gateway.
 
+## [2.3.0] - 2026-08-09
+
+### Added
+- 开放注册（BYOK）：`POST /auth/register`、注册开关 `REGISTRATION_ENABLED`、中文校验报错、表单重置
+- 用户端体验：请求记录（cursor 分页）、我的 Key（启停）、测速（并发/冷却防滥用）、用量导出 CSV、请求详情（Savings Explainability）
+- **Savings Engine**：统一节省归因（CACHE/COMPRESSION/ROUTING/REWRITE 互斥，防 double counting；ACTUAL vs ESTIMATED）
+- 优化档位产品化：fast / balanced / cheap / maximum_saving 真正影响压缩与路由
+- Privacy Center（用户端）
+- 闲置租户数据定期清理（默认 30 天，`IDLE_TENANT_CLEANUP_DAYS`）
+
+### Fixed
+- **缓存命中节省从未落库**：pipeline 缓存分支 usage 全 0 且不传 savedTokens → 改用缓存响应真实 usage，节省真实累计
+- **SingleFlight waiter 重复计费**：waiter 未打上游却记 full cost → waiter 置空 usage，不重复计费
+- provider_configs 表结构迁移（id 主键 + tenant_id）
+- /auth/register 被 api catch-all 拦截（路由顺序）
+- DELETE provider key 后 registry 旧实例残留（`removeProvider`）
+
 ## [2.2.0] - 2026-08-07
 
 ### Fixed (二轮巡检修复)

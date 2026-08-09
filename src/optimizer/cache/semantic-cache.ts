@@ -110,10 +110,14 @@ class SingleFlight {
   /**
    * 同步检查 + 立即存 promise，避免微任务竞态窗口：
    * 并发请求必须在此同步段内先 get；第一个先 set，后续直接命中。
+   * onWaiter：existing 命中(等待者)时回调——用于区分 origin/waiter，避免重复计费。
    */
-  run<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  run<T>(key: string, fn: () => Promise<T>, onWaiter?: () => void): Promise<T> {
     const existing = this.inflight.get(key);
-    if (existing) return existing;
+    if (existing) {
+      onWaiter?.();
+      return existing;
+    }
 
     const promise = Promise.resolve()
       .then(() => fn())
@@ -139,8 +143,8 @@ export class SemanticCache {
   }
 
   /** 供 chat 路由在并发缺失时使用 SingleFlight：同 key 只打一次上游 */
-  deduplicate<T>(key: string, fn: () => Promise<T>): Promise<T> {
-    return this.singleFlight.run(key, fn);
+  deduplicate<T>(key: string, fn: () => Promise<T>, onWaiter?: () => void): Promise<T> {
+    return this.singleFlight.run(key, fn, onWaiter);
   }
 
   async lookup(

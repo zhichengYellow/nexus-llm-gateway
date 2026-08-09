@@ -253,6 +253,21 @@ curl -X POST http://localhost:8787/auth/register \
 
 > ⚠️ **BYOK 模式核心原则**：注册用户自带 Provider API Key，成本完全自理。Nexus **不提供任何免费额度**。未配置 Provider Key 时调用会返回明确错误提示。
 
+## 👤 用户端功能
+
+注册用户登录后可使用（全部按租户隔离，仅自己的数据）：
+
+- **概览**：今日/本月请求、Token、缓存命中率、节省 Token（按来源拆分）
+- **请求记录**：最近请求列表（cursor 分页）+ 点击查看**请求详情**（原始/优化 Token、节省来源 CACHE/COMPRESSION/ROUTING、成本、延迟）
+- **测速**：用自己的 Provider Key 测试各模型延迟（并发/冷却防滥用，不消耗 master 额度）
+- **我的 Key**：Gateway Key 列表 + 启停（停用后立即 401）
+- **我的 Provider**：配置自己的 Provider API Key（AES-256-GCM 加密，仅显示脱敏值）
+- **用量导出**：CSV 下载
+- **优化档位**：fast / balanced / cheap / maximum_saving（真正影响压缩与路由）
+- **隐私与安全**：数据边界说明（元数据存储、无 prompt/response 历史、tenant 隔离）
+
+> 闲置租户（默认 30 天无活跃）数据自动清理（`IDLE_TENANT_CLEANUP_DAYS`）。
+
 ---
 
 ## 📡 使用 OpenAI SDK 接入

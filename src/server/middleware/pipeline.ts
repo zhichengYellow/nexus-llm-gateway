@@ -244,6 +244,7 @@ export const providerMiddleware: MiddlewareHandler = {
             maxRetries: 2,
             baseDelayMs: 500,
           }),
+          () => { (ctx.meta as Record<string, unknown>).singleFlightWaiter = true; },
         );
 
         breaker.recordSuccess();
@@ -252,6 +253,8 @@ export const providerMiddleware: MiddlewareHandler = {
         res.nexus.requestId = ctx.requestId;
 
         const compressionSaved = (ctx.meta.savedTokens as number) ?? 0;
+        // SingleFlight waiter：未打上游，不重复计费（usage 置空 → costMicro=0，也不重复记节省）
+        const isWaiter = (ctx.meta as Record<string, unknown>).singleFlightWaiter === true;
         recordUsage({
           requestId: ctx.requestId,
           tenantId,
@@ -259,12 +262,12 @@ export const providerMiddleware: MiddlewareHandler = {
           provider: node.providerType,
           model: ctx.model,
           upstreamModel: node.upstreamModel,
-          usage: res.usage,
+          usage: isWaiter ? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } : res.usage,
           latencyMs,
           cached: false,
           stream: false,
           status: 200,
-          savedTokens: compressionSaved,
+          savedTokens: isWaiter ? 0 : compressionSaved,
         });
 
         await cache.store(ctx.request, ctx.model, node.providerType, res, tenantId).catch(() => undefined);

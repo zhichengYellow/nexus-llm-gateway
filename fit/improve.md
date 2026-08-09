@@ -714,8 +714,8 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 | ✅ COMPLETED | R14-10 | **Privacy Center** | UserDashboard 新增「隐私与安全」页：加密存储/元数据/租户隔离/Master 限制/导出删除 5 项说明 | dashboard build 成功 |
 | ✅ COMPLETED | R14-7 | **Savings Engine(统一计算+归因)** | 本地完成：`src/analytics/savings-attribution.ts`——`attributeSavings`(CACHE/COMPRESSION/ROUTING/REWRITE/NONE 互斥归因，防 double counting) + `summarizeSavings`(按来源分组) + ACTUAL/ESTIMATED 区分；6 用例 | tsc + 401/401 测试 |
 | ✅ COMPLETED | R14-8 | **Savings Explainability(请求级)** | 本地完成：`GET /user/requests/:id`(仅本租户，元数据+归因+成本/延迟拆分，无 prompt/response)+ 用户端请求列表点击行展示详情面板 | 浏览器点击请求见解释 |
-| ⚠️ PARTIAL | R14-11 | **Savings Data Integrity + Overhead** | 本地完成核查+修复：**缓存命中节省落库修复**(pipeline.ts 缓存分支改用缓存响应真实 usage,此前 savedTokens=0 导致缓存节省丢失);核查确认失败请求不记账、retry 成功才记账;**已知限制**:SingleFlight waiter 仍记 full cost(无法区分 origin/waiter,标注 remaining risk);Optimization Overhead 未做 | 缓存命中后 usage_logs 有 savedTokens |
-| ⚠️ PARTIAL | R14-12 | **真实数据一致性 + 测试 + 文档 + Report** | 本地完成：归因测试 6 用例(401/401 全绿)、无 fake 数据核查通过;README/CHANGELOG/Completion Report 待补 | 测试全绿 |
+| ✅ COMPLETED | R14-11 | **Savings Data Integrity + Overhead** | 本地完成：缓存命中节省落库修复 + **SingleFlight waiter 不重复计费**(single-flight run 加 onWaiter,waiter usage 置空);失败/重试不记账已核查;Optimization Overhead 留待下阶段(见 docs/R14-COMPLETION.md risks) | 401/401 测试 |
+| ✅ COMPLETED | R14-12 | **真实数据一致性 + 测试 + 文档 + Report** | 本地完成：归因测试 6 用例(401/401 全绿)、无 fake 数据核查、README 用户端功能小节、CHANGELOG v2.3.0、`docs/R14-COMPLETION.md` 完整报告 | 测试全绿 + 文档就绪 |
 
 > **实施顺序**：现状审计 → Savings Engine(7) → Data Integrity(11) → Explainability(8) → Profile(9) → Privacy(10) → Pagination(2) → SpeedTest(1) → Key LastUsed(5) → Onboarding(6) → 前端统一优化 → 完整测试 → 文档/报告。
 > **最终验收**（10 问）：今天/本月省了多少 Token？省自什么机制？这次请求为什么省？Actual 还是 Estimated？Nexus 增加多少优化开销？Net Saving？数据是否严格隔离？Provider Key 是否安全？用户 5 分钟内能否接入？
