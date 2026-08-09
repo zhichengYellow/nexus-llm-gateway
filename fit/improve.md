@@ -695,6 +695,24 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 > **验收**：R13-1~3 串通（注册 → 配自己的 Provider Key → 调用成功 → 未配置时返回明确提示）+ R13-4 浏览器可注册登录并自配 key；全部完成后更新本表 ✅。
 
+## R14 用户端体验增强（⬜ 全部 TODO，供远程 agent 执行）
+
+> **背景**：注册/BYOK 已上线，但用户端看板（`_user-dashboard.tsx`）只有「概览 + 我的 Provider」两个 tab，功能单薄。以下从用户体验角度补齐**全面实在**的能力（测速/请求记录/节省/导出/Key 管理/接入说明）。
+> **可参照**：管理端已有实现——测速 `POST /admin/speed-test`（admin.ts，8s 超时并行）、Key 管理 `GET/PATCH/DELETE /admin/api-keys`（admin.ts）、请求列表（`_dashboard-client.tsx` 活跃请求）。
+> **硬性约束**：① 所有新端点必须按 `apiKey.tenantId` 过滤，**不得读取/暴露 master 全局数据**；② 不返回 prompt/response 等敏感内容（仅元数据）；③ 测速必须用**租户自己的 key**（`resolveProviderKey(provider, tenantId)` + `provider.chat(..., apiKeyOverride)`），**不得用 registry 全局 key**（防白嫖）；④ 每项单 commit + CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22）；⑤ 完成后更新本表 ✅。
+
+| 状态 | # | 任务 | 说明 | 验证 |
+|---|---|---|---|---|
+| ⬜ TODO | R14-1 | **用户端测速** | 后端 `POST /user/speed-test`：对**该租户已配置 key 的 provider** 的模型做 chat("hi", max_tokens=1) 测速（租户 key + 8s 超时 + 并行，参照 `/admin/speed-test`；未配 key 的 provider 返回 `skipped`，绝不 fallback 全局 key）；UI：`_user-dashboard`「我的 Provider」页加「测速」按钮 + 结果列表（模型 / 状态 / 延迟） | 租户配 deepseek key → 测速返回 ok+延迟；未配 provider → skipped；其他租户数据不可见 |
+| ⬜ TODO | R14-2 | **请求记录** | 后端 `GET /user/requests?limit=50`：该租户最近 usage_logs（时间/模型/provider/缓存命中/延迟/状态/token），按 `tenantId` 过滤 + `createdAt desc`；UI：概览页加「最近请求」列表（只展示元数据，无 prompt） | curl 返回本租户最近请求；两租户互不可见 |
+| ⬜ TODO | R14-3 | **节省统计** | 后端 `/user/overview` 响应扩展：`month.savedTokens` / `month.savedCostMicro`（该租户汇总）；UI：概览加「本月节省 Token / 成本（估算）」卡片，成本标注「估算」 | overview 含节省字段；数字与 usage_logs 一致 |
+| ⬜ TODO | R14-4 | **用量导出 CSV** | 后端 `GET /user/export?format=csv`：该租户 usage_logs 导出 CSV（时间/模型/provider/缓存/token/节省/延迟/状态，不含内容）；UI：概览「导出用量」按钮下载 | 下载 CSV 内容正确且仅本租户 |
+| ⬜ TODO | R14-5 | **我的 Key 管理** | 后端 `GET /user/keys`（本租户 api_keys：名称/keyPrefix/创建时间/enabled）+ `PATCH /user/keys/:id/toggle`（启停，参照 `/admin/api-keys/:id/toggle`）；UI：新增「我的 Key」tab（列表 + 启停开关） | 只显示本租户 key；停用后该 key 调用 401 |
+| ⬜ TODO | R14-6 | **接入说明增强** | `_user-dashboard` 使用说明补：curl / Python(OpenAI SDK) 示例、模型档位（`auto-strong` / `auto-cheap` / `auto:cheap`）说明、缓存命中如何生效（相同请求第二次命中） | 文档就绪 |
+| ⬜ TODO | R14-7 | 测试与文档 | 新端点隔离测试（如可能，纯函数/无 DB 部分）；README 加「用户端功能」说明（测速/请求记录/导出/Key 管理） | tsc + npm test 全绿 + README 更新 |
+
+> **验收**：R14-1~6 在浏览器对注册租户全部可用（测速跑通、请求记录展示、导出下载、Key 启停生效）；全部完成后更新本表 ✅。
+
 ---
 
 ## 季度路线
