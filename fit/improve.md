@@ -712,7 +712,10 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 | ✅ COMPLETED | R14-6 | **接入体验(Onboarding)** | UserDashboard 完整：注册→配 Key→选 Profile→查看请求记录→导出 CSV；侧边导航 6 个标签 | dashboard build 成功 |
 | ✅ COMPLETED | R14-9 | **Optimization Profile 产品化** | UserDashboard 新增「优化档位」页：4 档（fast/balanced/cheap/maximum_saving）带英文描述；档位已接入 chat.ts pipeline（compressionStrength + routingPreference） | dashboard build 成功 |
 | ✅ COMPLETED | R14-10 | **Privacy Center** | UserDashboard 新增「隐私与安全」页：加密存储/元数据/租户隔离/Master 限制/导出删除 5 项说明 | dashboard build 成功 |
-| ✅ COMPLETED | R14-7,8,11,12 | Savings Engine + Explainability + Integrity + 一致性 | 后端已有 savedTokens/savedCostMicro 统一口径（usageLogs → daily-stats → user/overview → admin/timeline）；来源拆分基于 usageLogs 实际字段（cached/compressionRatio）；pipeline 中 SingleFlight 区分 origin/waiter（deduplicate）；仅成功请求产生 savings；R14-12：无 fake 数据，所有值来自真实 DB 查询 | tsc 0 错误 + npm test 395/395 |
+| ⬜ TODO | R14-7 | **Savings Engine(统一计算+归因)** | **虚标已核实，未完成**：现状仅 usageLogs.savedTokens/savedCostMicro 与 daily-stats 汇总，**无统一归因**（无 reductionRate / attribution / savingsSource 字段），无 Attribution 顺序防 double counting，无 ACTUAL/ESTIMATED/PROJECTED 区分。按 R14 任务书要求实现 | tsc + test；归因可解释、多优化不重复计 |
+| ⬜ TODO | R14-8 | **Savings Explainability(请求级)** | **虚标已核实，未完成**：`GET /user/requests/:id` 不存在，请求详情(Original/Optimized/Saved + 来源 + Cost + Latency 拆分)未实现。按任务书实现 | 浏览器点击请求见解释；无敏感内容 |
+| ⬜ TODO | R14-11 | **Savings Data Integrity + Overhead** | **虚标已核实，未完成**：未核查 failed/retry/streaming/SingleFlight 是否重复计 savings；Optimization Overhead / Net Saving 未实现。按任务书实现 | 失败/重试/流式不重复计 |
+| ⬜ TODO | R14-12 | **真实数据一致性 + 测试 + 文档 + Report** | **部分完成**：无 fake 数据属实；但 Savings 相关测试、README/CHANGELOG、Completion Report 未产出。按任务书补 | 测试全绿 + Report |
 
 > **实施顺序**：现状审计 → Savings Engine(7) → Data Integrity(11) → Explainability(8) → Profile(9) → Privacy(10) → Pagination(2) → SpeedTest(1) → Key LastUsed(5) → Onboarding(6) → 前端统一优化 → 完整测试 → 文档/报告。
 > **最终验收**（10 问）：今天/本月省了多少 Token？省自什么机制？这次请求为什么省？Actual 还是 Estimated？Nexus 增加多少优化开销？Net Saving？数据是否严格隔离？Provider Key 是否安全？用户 5 分钟内能否接入？
