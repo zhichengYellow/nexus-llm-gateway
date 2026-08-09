@@ -736,6 +736,23 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 > **说明**：当前注册密码不做存储（登录凭证是 API Key，`auth.ts` 注释已注明"预留字段"）；如需"用户名+密码登录"另立任务，本次不涉及。
 > **验收**：浏览器完整走一遍——注册(非法输入→中文报错)→注册成功→使用 key 登录→退出→再点注册(表单为空)。
 
+## v2.4 Token Efficiency 任务书（⬜ 全部 TODO，供远程 agent 执行）
+
+> **背景**（已对照现状审计）：v2.4 主题 = **Token Efficiency & Proof**——让 Nexus 能真实、透明、可验证地证明自己省了 Token/成本。**以下项已在 R14 实现，勿重做**：Savings Attribution 互斥归因（`savings-attribution.ts`，CACHE/COMPRESSION/ROUTING/REWRITE，ACTUAL/ESTIMATED）、Privacy Center、Request cursor 分页、Speed Test 并发/冷却防滥用、Optimization Profile 4 档接线、Gateway Key Last Used、真实数据核查。**本阶段真增量如下**。
+> **主线纪律**：禁止功能堆砌——新功能必须直接提升 Token Reduction / Cost Reduction / Optimization Transparency / Reliability / Developer Experience 之一；MCP/Billing/SSO/RBAC/K8s/Plugin Marketplace 全部冻结。先输出 `# Pre-Implementation Audit`（Existing/Reusable/Missing/Conflicts）再编码；每功能单 commit + CI 三步；完成后输出 `# Nexus Development Completion Report`（Version/Completed/Savings 逻辑/Attribution/Actual vs Estimated vs Projected/Overhead/Net Saving/Privacy/Benchmark Readiness/Tests Before-After/CI/Commits/Remaining Risks/Next Step）。
+
+| 状态 | # | 任务 | 说明 | 验证 |
+|---|---|---|---|---|
+| ⬜ TODO | V2.4-1 | **Optimization Overhead(阶段计时)** | 对实际 pipeline 各阶段计时（Cache Lookup / Intent Router / Compression / Routing / Provider / Response），只记录真实执行的阶段；数据结构扩展 `usage_logs`（或现有记录）增加 `optimizationLatencyMs` / `providerLatencyMs` / `totalLatencyMs` 与 stage-level；**Optimization Overhead Ratio = Optimization / Total**；UI 用户端展示 Overhead(ms) | 单测：无优化/cache/压缩/多优化组合的延迟拆分 |
+| ⬜ TODO | V2.4-2 | **Net Saving(成本开销)** | Gross Saving − Optimization Cost = Net Saving（优化自身若调模型记 Optimization Cost，否则 0）；禁止负 savings（负值仅标 loss/overhead）；UI：Today You Saved 卡片展示 Gross / Optimization Cost / Net / Overhead | 测试：optimization cost > gross saving 场景 |
+| ⬜ TODO | V2.4-3 | **PROJECTED 月度预测** | 基于当月 usage + 近 7/30 天趋势预测本月节省，**严格标 PROJECTED 与 ACTUAL 分离**（不混入 savedCost）；UI 明确区分 Actual / Projected | 预测值 = 趋势推导；测试不混字段 |
+| ⬜ TODO | V2.4-4 | **SingleFlight Dedup 可视化** | 请求分类：`ORIGIN / DEDUP_WAITER / CACHE_HIT / UPSTREAM`（pipeline 已标记 waiter，补 usage_logs 分类字段或派生）；请求列表 DEDUP_WAITER 显示「Deduplicated · Shared an in-flight request」，不当作普通 cache hit | 并发请求后列表出现 dedup 徽标 |
+| ⬜ TODO | V2.4-5 | **Savings Source 可视化** | 用户端概览按来源图（Cache/Compression/Routing/Rewrite 真实占比，复用 `summarizeSavings`），禁止前端 fake 百分比 | 图表与 usage_logs 一致 |
+| ⬜ TODO | V2.4-6 | **Benchmark 设计(v2.5 前置)** | 固定数据集 8 类（Short QA/Long Context/Coding/Chinese/English/Conversation/Repeated Prompt/Document QA）；Runner：Provider Direct(baseline) vs Nexus(balanced/cheap/maximum_saving)；输出 token reduction / latency(overhead+provider) / cost(gross+opt+net) / quality；产物 `benchmark-report.json/md`；**结果如实记录，不删不理想数据，可重复** | runner 可跑出报告 |
+| ⬜ TODO | V2.4-7 | **DEDUP/MULTI 归因补全** | `savings-attribution.ts` 补 `DEDUP`（waiter 场景，可选）与 `MULTI`（多来源组合标注）枚举，不破坏现有互斥归因 | 归因测试保持全绿 |
+
+> **验收**（路线 30 条最终标准）：Nexus 能回答——今天/本月省了多少 Token？来自 Cache/Compression/Routing/Rewrite/Dedup？Gross/Optimization Cost/Net Saving？Overhead 与 Overhead Ratio？哪个阶段最慢？质量影响？Privacy 是否 tenant isolated？Benchmark 是否可重复？用户能否 5 分钟完成首次请求？
+
 ---
 
 ## 季度路线
