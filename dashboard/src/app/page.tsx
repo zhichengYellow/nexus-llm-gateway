@@ -118,9 +118,14 @@ export default function Home() {
     }
   };
 
+  const clearRegForm = () => {
+    setRegUser(""); setRegPass(""); setRegResult(null); setShowRegister(false);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("nexus_api_key");
     setClient(null); setApiKey(""); setIsMaster(false);
+    clearRegForm();
   };
 
   if (client && isMaster) return <ManagerDashboard client={client} onLogout={handleLogout} />;
@@ -201,15 +206,14 @@ export default function Home() {
               <button
                 onClick={() => {
                   setApiKey(regResult.apiKey);
-                  setShowRegister(false);
-                  setRegResult(null);
+                  clearRegForm();
                 }}
                 className="w-full py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-500 transition"
               >
                 使用此 Key 登录
               </button>
               <button
-                onClick={() => { setShowRegister(false); setRegResult(null); }}
+                onClick={clearRegForm}
                 className="w-full mt-2 py-2 text-xs text-zinc-500 hover:text-zinc-300 transition"
               >
                 返回登录
@@ -220,16 +224,22 @@ export default function Home() {
           <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-2xl p-8 shadow-2xl hover:border-zinc-700 transition-all duration-200">
             <h3 className="text-sm font-semibold text-zinc-200 mb-4 text-center">注册新账号（BYOK 模式）</h3>
             <div className="space-y-3">
-              <input
-                type="text" value={regUser} onChange={(e) => setRegUser(e.target.value)}
-                className="w-full px-4 py-2.5 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50"
-                placeholder="用户名（字母/数字/_-）"
-              />
-              <input
-                type="password" value={regPass} onChange={(e) => setRegPass(e.target.value)}
-                className="w-full px-4 py-2.5 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50"
-                placeholder="密码（至少 8 位）"
-              />
+              <div>
+                <input
+                  type="text" value={regUser} onChange={(e) => setRegUser(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50"
+                  placeholder="用户名"
+                />
+                <p className="text-[10px] text-zinc-600 mt-1 ml-1">2-30 位，仅允许字母、数字、下划线、短横</p>
+              </div>
+              <div>
+                <input
+                  type="password" value={regPass} onChange={(e) => setRegPass(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50"
+                  placeholder="密码"
+                />
+                <p className="text-[10px] text-zinc-600 mt-1 ml-1">至少 8 位</p>
+              </div>
               {error && (
                 <div className="text-rose-400 text-sm bg-rose-500/10 rounded-lg px-3 py-2 border border-rose-500/20">{error}</div>
               )}
@@ -241,7 +251,7 @@ export default function Home() {
                 {regLoading ? "注册中..." : "注册"}
               </button>
               <button
-                onClick={() => { setShowRegister(false); setError(""); }}
+                onClick={clearRegForm}
                 className="w-full py-2 text-xs text-zinc-500 hover:text-zinc-300 transition"
               >
                 返回登录

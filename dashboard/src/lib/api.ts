@@ -386,6 +386,39 @@ export class ApiClient {
     return this.del<{ ok: boolean; provider: string }>(`/user/providers/${provider}/key`);
   }
 
+  async getUserRequests(limit = 50, cursor?: string) {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) params.set("cursor", cursor);
+    return this.get<{
+      requests: Array<{ requestId: string; time: string; model: string; provider: string; tokens: number; savedTokens: number; latencyMs: number; cached: boolean; status: number }>;
+      hasMore: boolean;
+      nextCursor: string | null;
+    }>(`/user/requests?${params}`);
+  }
+
+  async getUserSpeedTest() {
+    return this.post<{
+      results: Array<{ provider: string; status: string; latencyMs?: number; error?: string }>;
+      message?: string;
+    }>("/user/speed-test", {});
+  }
+
+  async getUserKeys() {
+    return this.get<{
+      keys: Array<{ id: string; name: string; keyPrefix: string; enabled: boolean; createdAt: string; lastUsedAt: string | null }>;
+    }>("/user/keys");
+  }
+
+  async toggleUserKey(id: string) {
+    return this.patch<{ ok: boolean; enabled: boolean }>(`/user/keys/${id}/toggle`);
+  }
+
+  async exportUserUsage() {
+    const res = await fetch(`${this.apiUrl}/user/export`, { headers: this.headers() });
+    if (!res.ok) throw new Error("export failed");
+    return res.text();
+  }
+
   // ===== Provider 测速 =====
   async speedTest() {
     return this.post<{

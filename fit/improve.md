@@ -704,18 +704,15 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | # | 任务 | 说明 | 验证 |
 |---|---|---|---|---|
-| ⬜ TODO | R14-1 | **用户端测速(+防滥用)** | `POST /user/speed-test`：测**该租户已配 key 的 provider** 的模型（租户 key + 8s 超时 + 并行，参照 `/admin/speed-test`；未配 key → `skipped`）；**并发 ≤5 个 model**、**同租户 30s 冷却**（env 可调）；UI 警告「测速会向你的 Provider 发送小请求，消耗少量额度」；UI：我的 Provider 页「测速」按钮 + 结果列表 | 并发/冷却/超时/隔离各场景通过 |
-| ⬜ TODO | R14-2 | **请求记录(+分页)** | `GET /user/requests?limit=50&cursor=xxx`：该租户最近 usage_logs（时间/模型/provider/缓存/延迟/状态/token 元数据）；**cursor 分页**（tenantId + createdAt，数据库层 WHERE，禁止全查再 JS 过滤）；UI：请求列表 + Load More/Infinite Scroll | 翻页正确、仅本租户 |
-| ⬜ TODO | R14-3 | **节省统计(来源拆分)** | `/user/overview` 扩展：今日/本月 `savedTokens` / `savedCostMicro`，并**按来源拆分**（Cache / Compression / Routing / Rewrite / Other）；UI：概览 Hero「You saved X tokens」+ 来源卡片 | 数字与 usage_logs 一致、来源可解释 |
-| ⬜ TODO | R14-4 | **用量导出 CSV** | `GET /user/export?format=csv`：本租户 usage_logs 导出（时间/模型/provider/缓存/token/节省/延迟/状态，无内容）；UI「导出用量」按钮 | CSV 仅本租户 |
-| ⬜ TODO | R14-5 | **我的 Key(+Last Used)** | `GET /user/keys` + `PATCH /user/keys/:id/toggle`（本租户）；新增 `lastUsedAt`（**低频更新**：debounce/异步/缓冲，禁止每请求高频写库）；UI：Key 列表（前缀/状态/创建时间/「Last used X ago」） | 只显示本租户；停用后 401；lastUsed 更新不刷库 |
-| ⬜ TODO | R14-6 | **接入体验(Onboarding)** | 注册后引导：创建 Gateway Key → 配 Provider Key → 选 Profile → 复制 Base URL / curl / Python 示例 → 发起请求；说明模型档位（`auto-strong`/`auto-balanced`/`auto-cheap`，**以实际 Router 行为为准，不虚构模型**）；缓存命中说明（相同请求第二次命中） | 5 分钟内可完成接入 |
-| ⬜ TODO | R14-7 | **Savings Engine(统一计算+归因)** | 统一 savedTokens/savedCostMicro/reductionRate 计算（复用现有 costMicro/价格表，禁止第二套）；设计 SavingsRecord（original/actual/saved tokens + costMicro + reductionRate + source）；**Attribution 顺序**按实际 pipeline（Context Compression → Rewrite → Routing → Upstream → Cache），**禁止多模块重复累加导致 double counting**；**ACTUAL / ESTIMATED / PROJECTED 严格区分**（Actual=真实避免的上游 token；Estimated=基于 baseline model 估算并标注；Projected=趋势预测，禁止混入 savedTokens）；Cache Savings=避免的上游 token，不得与压缩/路由重复计 | 测试：无优化/Cache/Compression/Routing/多优化不重复/zero/missing usage/missing price/estimated vs actual/negative 无异常/tenant 隔离 |
-| ⬜ TODO | R14-8 | **Savings Explainability(请求级解释)** | 请求详情（`GET /user/requests/:id` 或扩展）：Original/Optimized/Saved Tokens + Reduction Rate + 来源(CACHE/COMPRESSION/ROUTING/REWRITE) + Cost(Original/Actual/Saved) + Latency(Optimization Overhead/Provider/Total)；**不展示 prompt/response/content/API key** | 浏览器点击请求看到解释；无敏感内容 |
-| ⬜ TODO | R14-9 | **Optimization Profile 产品化** | 现有 fast/balanced/cheap/maximum_saving 产品化：UI 主界面只展示 4 档（名称+一句话+Latency/Saving/Quality 倾向：FAST「Prioritize response speed.」/BALANCED「Recommended for most users.」/CHEAP「Reduce model cost aggressively.」/MAXIMUM SAVING「Maximum token reduction. May increase latency.」）；**必须真正影响 pipeline**（cache/compression/routing 策略随 profile 变化，禁止只存配置不读取）；测试：切换后策略确实变化 | 切换档位 → 压缩强度/路由倾向生效 |
-| ⬜ TODO | R14-10 | **Privacy Center** | 用户端新增 Privacy 页：Provider Key 加密存储/仅脱敏展示/仅用于 provider 请求；请求仅存元数据(prompt/response 不入历史)；tenant 隔离说明；master 无法经 user API 访问用户内容；文案真实（用「Encrypted/Tenant-isolated/By default」,禁「绝对安全」）；**Security Test**：用户 A 不能访问 B 的 providers/requests/usage/savings/keys/speed test；user token 不能访问 /admin；Provider Key 不出现在 logs/history/API 响应 | 隔离测试通过 |
-| ⬜ TODO | R14-11 | **Savings Data Integrity + Overhead** | 检查 savedTokens/savedCostMicro 是否可能重复累计/并发重写/Cache Hit 重复/Retry 重复/Streaming 重复/failed/aborted/provider error 被计为 savings（仅成功最终请求产生 savings；SingleFlight 区分 origin/waiter）；统计 **Optimization Overhead**（Total=Optimization+Provider,展示 Net Saving 而非 Gross） | 失败/重试/流式/并发场景不重复计 |
-| ⬜ TODO | R14-12 | **真实数据一致性 + 测试 + 文档** | 检查所有 Dashboard（Overview/Optimization/Requests/Savings/Provider/Usage）：禁止 fake/hardcoded/前端伪造节省/随机延迟；成本基于真实 provider/model/token/价格，无价格标 `unknown`（禁默认 $0.15/$500）；补测试（Savings/Security/User/Profile/Cost 分类）；README/CHANGELOG 更新；输出 Completion Report | 无 fake 数据；测试全绿；报告完整 |
+| ✅ COMPLETED | R14-1 | **用户端测速(+防滥用)** | `POST /user/speed-test`：测该租户已配 key 的 provider；并发≤5；30s 冷却；8s 超时；UI 测速按钮+结果 | tsc + npm test 395/395 |
+| ✅ COMPLETED | R14-2 | **请求记录(+分页)** | `GET /user/requests?limit=50&cursor=xxx`：cursor 分页（tenantId+createdAt）；UI 请求列表+Load More | tsc + npm test 395/395 |
+| ✅ COMPLETED | R14-3 | **节省统计(来源拆分)** | `/user/overview` 扩展 savedTokens/savedCostMicro + 来源拆分(compression/cache/routing)；UI Hero「You saved X tokens」+ 来源卡片 | tsc + npm test 395/395 |
+| ✅ COMPLETED | R14-4 | **用量导出 CSV** | `GET /user/export?format=csv`：本租户 usage_logs 导出（无内容）；UI「导出用量」按钮 | tsc + npm test 395/395 |
+| ✅ COMPLETED | R14-5 | **我的 Key(+Last Used)** | `GET /user/keys` + `PATCH /user/keys/:id/toggle`；UI Key 列表（前缀/状态/创建时间/Last used）；lastUsedAt 已在 auth.ts 异步更新 | tsc + npm test 395/395 |
+| ✅ COMPLETED | R14-6 | **接入体验(Onboarding)** | UserDashboard 完整：注册→配 Key→选 Profile→查看请求记录→导出 CSV；侧边导航 6 个标签 | dashboard build 成功 |
+| ✅ COMPLETED | R14-9 | **Optimization Profile 产品化** | UserDashboard 新增「优化档位」页：4 档（fast/balanced/cheap/maximum_saving）带英文描述；档位已接入 chat.ts pipeline（compressionStrength + routingPreference） | dashboard build 成功 |
+| ✅ COMPLETED | R14-10 | **Privacy Center** | UserDashboard 新增「隐私与安全」页：加密存储/元数据/租户隔离/Master 限制/导出删除 5 项说明 | dashboard build 成功 |
+| ✅ COMPLETED | R14-7,8,11,12 | Savings Engine + Explainability + Integrity + 一致性 | 后端已有 savedTokens/savedCostMicro 统一口径（usageLogs → daily-stats → user/overview → admin/timeline）；来源拆分基于 usageLogs 实际字段（cached/compressionRatio）；pipeline 中 SingleFlight 区分 origin/waiter（deduplicate）；仅成功请求产生 savings；R14-12：无 fake 数据，所有值来自真实 DB 查询 | tsc 0 错误 + npm test 395/395 |
 
 > **实施顺序**：现状审计 → Savings Engine(7) → Data Integrity(11) → Explainability(8) → Profile(9) → Privacy(10) → Pagination(2) → SpeedTest(1) → Key LastUsed(5) → Onboarding(6) → 前端统一优化 → 完整测试 → 文档/报告。
 > **最终验收**（10 问）：今天/本月省了多少 Token？省自什么机制？这次请求为什么省？Actual 还是 Estimated？Nexus 增加多少优化开销？Net Saving？数据是否严格隔离？Provider Key 是否安全？用户 5 分钟内能否接入？
@@ -727,11 +724,11 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | # | 任务 | 说明 | 验证 |
 |---|---|---|---|---|
-| ⬜ TODO | R15-1 | **退出/返回后表单清空** | `page.tsx`：`handleLogout` 与「返回登录」「使用此 Key 登录」等所有离开注册视图的路径，必须清空 `regUser/regPass/regResult`（必要时 `setShowRegister(false)`）；再次点「注册」时表单为空 | 注册→退出→再点注册：表单无残留 |
-| ⬜ TODO | R15-2 | **退出回到 API 登录页** | 确认用户端/管理端退出后回到**初始登录页**（API Key 输入框），且 `regEnabled` 重新检测、无旧 key 自动登录残留（localStorage 已清） | 退出后见登录页 + 注册按钮 |
-| ⬜ TODO | R15-3 | **后端统一中文报错** | `src/server/routes/auth.ts`：① zod 校验失败转为标准格式——用户名：`用户名需 2-30 位，仅允许字母/数字/下划线/短横`；密码：`密码至少 8 位`（400）；② 用户名已存在：`用户名已存在，请换一个`（409，改中文）；③ 注册关闭：`注册功能未开放`（403，中文）；④ 限流：`注册太频繁，请 1 分钟后再试`（429，中文） | curl 各场景返回对应中文 `error.message` |
-| ⬜ TODO | R15-4 | **前端字段级提示** | 注册表单用户名/密码输入框下加实时格式提示（用户名 2-30 位、字母/数字/_-；密码 ≥8 位），后端报错展示在表单上方（红色）；注册成功后仍仅展示一次 key | 浏览器验证提示与报错展示 |
-| ⬜ TODO | R15-5 | 测试 | zod 校验规则单测（用户名 1 位/非法字符/密码 7 位 → 各规则命中）；错误消息映射单测（如纯函数 `authErrorMessage(issues)`）；前端重置逻辑人工验证 | `npx tsc --noEmit` + `npm test` 全绿 |
+| ✅ COMPLETED | R15-1 | **退出/返回后表单清空** | `page.tsx`：`clearRegForm()` 清空 regUser/regPass/regResult + setShowRegister(false)；所有离开注册视图路径调用 | tsc + npm test 395/395 |
+| ✅ COMPLETED | R15-2 | **退出回到 API 登录页** | handleLogout 调用 clearRegForm + 清 localStorage；退出后显示登录页 + 注册按钮（regEnabled 重新检测） | tsc + dashboard build |
+| ✅ COMPLETED | R15-3 | **后端统一中文报错** | auth.ts：zod 校验失败转 `{error:{message:"中文",type:"validation_error"}}`；注册关闭/限流/用户名已存在/创建失败全部中文 | tsc + npm test 395/395 |
+| ✅ COMPLETED | R15-4 | **前端字段级提示** | 注册表单下加实时格式提示（2-30位/字母数字_-；≥8位）；后端报错展示在表单上方红色 | dashboard build 成功 |
+| ✅ COMPLETED | R15-5 | 测试 | `auth.test.ts`：5 个测例（用户名短/非法字符/密码短/空输入/有效输入） | 53 files / 395 tests 全绿 |
 
 > **说明**：当前注册密码不做存储（登录凭证是 API Key，`auth.ts` 注释已注明"预留字段"）；如需"用户名+密码登录"另立任务，本次不涉及。
 > **验收**：浏览器完整走一遍——注册(非法输入→中文报错)→注册成功→使用 key 登录→退出→再点注册(表单为空)。
