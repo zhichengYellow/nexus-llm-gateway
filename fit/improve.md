@@ -696,22 +696,30 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 > **验收**：R13-1~3 串通（注册 → 配自己的 Provider Key → 调用成功 → 未配置时返回明确提示）+ R13-4 浏览器可注册登录并自配 key；全部完成后更新本表 ✅。
 
 ## R14 用户端体验增强（⬜ 全部 TODO，供远程 agent 执行）
+## R14 Token Optimization 产品化增强（⬜ 全部 TODO，供远程 agent 执行）
 
-> **背景**：注册/BYOK 已上线，但用户端看板（`_user-dashboard.tsx`）只有「概览 + 我的 Provider」两个 tab，功能单薄。以下从用户体验角度补齐**全面实在**的能力（测速/请求记录/节省/导出/Key 管理/接入说明）。
-> **可参照**：管理端已有实现——测速 `POST /admin/speed-test`（admin.ts，8s 超时并行）、Key 管理 `GET/PATCH/DELETE /admin/api-keys`（admin.ts）、请求列表（`_dashboard-client.tsx` 活跃请求）。
-> **硬性约束**：① 所有新端点必须按 `apiKey.tenantId` 过滤，**不得读取/暴露 master 全局数据**；② 不返回 prompt/response 等敏感内容（仅元数据）；③ 测速必须用**租户自己的 key**（`resolveProviderKey(provider, tenantId)` + `provider.chat(..., apiKeyOverride)`），**不得用 registry 全局 key**（防白嫖）；④ 每项单 commit + CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22）；⑤ 完成后更新本表 ✅。
+> **核心目标**：把「省 Token」从宣传概念变成**可计算、可解释、可追踪、可验证的数据闭环**——Request → Optimization Pipeline → Savings Attribution → Savings Record → Overview → Request Detail，用户能回答「这次请求为什么省了这些 Token」。
+> **先审计再动代码**（Phase A）：阅读 README / 本文件 / schema / git 状态；搜索 `savedTokens / savedCostMicro / costMicro / usage / cache / compression / routing / profile / requests / tenantId`；输出简短「现状审计」；**已满足的要求直接验证并标记 `ALREADY IMPLEMENTED`，不得重写**（例：`savedCostMicro` 已在 schema/chat/usage/cost-report/daily-stats/e2e-metrics 使用，Savings Engine 应统一而非再造）。
+> **硬性约束**：① 全部按 `tenantId` 隔离，不跨租户查询、不读 master 全局数据；② 测速/调用一律用**租户自己的 key**（`resolveProviderKey(provider, tenantId)` + `apiKeyOverride`），**禁止 fallback 全局 key**；③ 不返回 prompt/response/API key 敏感内容（仅元数据）；④ 真实数据，禁止 mock/hardcode/fake 统计、禁止估算冒充 actual；⑤ schema 改动先看 migration/索引，不用危险的 `push --force`、不删约束、可回滚；⑥ 每功能单 commit + CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22）；⑦ 完成输出 `# R14+ Completion Report`（新增 API/DB 变化/Savings 公式/Attribution/Actual vs Estimated/Privacy/Tests Before-After/Commits/CI/剩余风险/下阶段建议）。
+> **禁止范围**：MCP Gateway、Plugin Marketplace、Enterprise Billing、RBAC、K8s/Helm、多区域、审批流、大规模重构、新 Provider。
 
 | 状态 | # | 任务 | 说明 | 验证 |
 |---|---|---|---|---|
-| ⬜ TODO | R14-1 | **用户端测速** | 后端 `POST /user/speed-test`：对**该租户已配置 key 的 provider** 的模型做 chat("hi", max_tokens=1) 测速（租户 key + 8s 超时 + 并行，参照 `/admin/speed-test`；未配 key 的 provider 返回 `skipped`，绝不 fallback 全局 key）；UI：`_user-dashboard`「我的 Provider」页加「测速」按钮 + 结果列表（模型 / 状态 / 延迟） | 租户配 deepseek key → 测速返回 ok+延迟；未配 provider → skipped；其他租户数据不可见 |
-| ⬜ TODO | R14-2 | **请求记录** | 后端 `GET /user/requests?limit=50`：该租户最近 usage_logs（时间/模型/provider/缓存命中/延迟/状态/token），按 `tenantId` 过滤 + `createdAt desc`；UI：概览页加「最近请求」列表（只展示元数据，无 prompt） | curl 返回本租户最近请求；两租户互不可见 |
-| ⬜ TODO | R14-3 | **节省统计** | 后端 `/user/overview` 响应扩展：`month.savedTokens` / `month.savedCostMicro`（该租户汇总）；UI：概览加「本月节省 Token / 成本（估算）」卡片，成本标注「估算」 | overview 含节省字段；数字与 usage_logs 一致 |
-| ⬜ TODO | R14-4 | **用量导出 CSV** | 后端 `GET /user/export?format=csv`：该租户 usage_logs 导出 CSV（时间/模型/provider/缓存/token/节省/延迟/状态，不含内容）；UI：概览「导出用量」按钮下载 | 下载 CSV 内容正确且仅本租户 |
-| ⬜ TODO | R14-5 | **我的 Key 管理** | 后端 `GET /user/keys`（本租户 api_keys：名称/keyPrefix/创建时间/enabled）+ `PATCH /user/keys/:id/toggle`（启停，参照 `/admin/api-keys/:id/toggle`）；UI：新增「我的 Key」tab（列表 + 启停开关） | 只显示本租户 key；停用后该 key 调用 401 |
-| ⬜ TODO | R14-6 | **接入说明增强** | `_user-dashboard` 使用说明补：curl / Python(OpenAI SDK) 示例、模型档位（`auto-strong` / `auto-cheap` / `auto:cheap`）说明、缓存命中如何生效（相同请求第二次命中） | 文档就绪 |
-| ⬜ TODO | R14-7 | 测试与文档 | 新端点隔离测试（如可能，纯函数/无 DB 部分）；README 加「用户端功能」说明（测速/请求记录/导出/Key 管理） | tsc + npm test 全绿 + README 更新 |
+| ⬜ TODO | R14-1 | **用户端测速(+防滥用)** | `POST /user/speed-test`：测**该租户已配 key 的 provider** 的模型（租户 key + 8s 超时 + 并行，参照 `/admin/speed-test`；未配 key → `skipped`）；**并发 ≤5 个 model**、**同租户 30s 冷却**（env 可调）；UI 警告「测速会向你的 Provider 发送小请求，消耗少量额度」；UI：我的 Provider 页「测速」按钮 + 结果列表 | 并发/冷却/超时/隔离各场景通过 |
+| ⬜ TODO | R14-2 | **请求记录(+分页)** | `GET /user/requests?limit=50&cursor=xxx`：该租户最近 usage_logs（时间/模型/provider/缓存/延迟/状态/token 元数据）；**cursor 分页**（tenantId + createdAt，数据库层 WHERE，禁止全查再 JS 过滤）；UI：请求列表 + Load More/Infinite Scroll | 翻页正确、仅本租户 |
+| ⬜ TODO | R14-3 | **节省统计(来源拆分)** | `/user/overview` 扩展：今日/本月 `savedTokens` / `savedCostMicro`，并**按来源拆分**（Cache / Compression / Routing / Rewrite / Other）；UI：概览 Hero「You saved X tokens」+ 来源卡片 | 数字与 usage_logs 一致、来源可解释 |
+| ⬜ TODO | R14-4 | **用量导出 CSV** | `GET /user/export?format=csv`：本租户 usage_logs 导出（时间/模型/provider/缓存/token/节省/延迟/状态，无内容）；UI「导出用量」按钮 | CSV 仅本租户 |
+| ⬜ TODO | R14-5 | **我的 Key(+Last Used)** | `GET /user/keys` + `PATCH /user/keys/:id/toggle`（本租户）；新增 `lastUsedAt`（**低频更新**：debounce/异步/缓冲，禁止每请求高频写库）；UI：Key 列表（前缀/状态/创建时间/「Last used X ago」） | 只显示本租户；停用后 401；lastUsed 更新不刷库 |
+| ⬜ TODO | R14-6 | **接入体验(Onboarding)** | 注册后引导：创建 Gateway Key → 配 Provider Key → 选 Profile → 复制 Base URL / curl / Python 示例 → 发起请求；说明模型档位（`auto-strong`/`auto-balanced`/`auto-cheap`，**以实际 Router 行为为准，不虚构模型**）；缓存命中说明（相同请求第二次命中） | 5 分钟内可完成接入 |
+| ⬜ TODO | R14-7 | **Savings Engine(统一计算+归因)** | 统一 savedTokens/savedCostMicro/reductionRate 计算（复用现有 costMicro/价格表，禁止第二套）；设计 SavingsRecord（original/actual/saved tokens + costMicro + reductionRate + source）；**Attribution 顺序**按实际 pipeline（Context Compression → Rewrite → Routing → Upstream → Cache），**禁止多模块重复累加导致 double counting**；**ACTUAL / ESTIMATED / PROJECTED 严格区分**（Actual=真实避免的上游 token；Estimated=基于 baseline model 估算并标注；Projected=趋势预测，禁止混入 savedTokens）；Cache Savings=避免的上游 token，不得与压缩/路由重复计 | 测试：无优化/Cache/Compression/Routing/多优化不重复/zero/missing usage/missing price/estimated vs actual/negative 无异常/tenant 隔离 |
+| ⬜ TODO | R14-8 | **Savings Explainability(请求级解释)** | 请求详情（`GET /user/requests/:id` 或扩展）：Original/Optimized/Saved Tokens + Reduction Rate + 来源(CACHE/COMPRESSION/ROUTING/REWRITE) + Cost(Original/Actual/Saved) + Latency(Optimization Overhead/Provider/Total)；**不展示 prompt/response/content/API key** | 浏览器点击请求看到解释；无敏感内容 |
+| ⬜ TODO | R14-9 | **Optimization Profile 产品化** | 现有 fast/balanced/cheap/maximum_saving 产品化：UI 主界面只展示 4 档（名称+一句话+Latency/Saving/Quality 倾向：FAST「Prioritize response speed.」/BALANCED「Recommended for most users.」/CHEAP「Reduce model cost aggressively.」/MAXIMUM SAVING「Maximum token reduction. May increase latency.」）；**必须真正影响 pipeline**（cache/compression/routing 策略随 profile 变化，禁止只存配置不读取）；测试：切换后策略确实变化 | 切换档位 → 压缩强度/路由倾向生效 |
+| ⬜ TODO | R14-10 | **Privacy Center** | 用户端新增 Privacy 页：Provider Key 加密存储/仅脱敏展示/仅用于 provider 请求；请求仅存元数据(prompt/response 不入历史)；tenant 隔离说明；master 无法经 user API 访问用户内容；文案真实（用「Encrypted/Tenant-isolated/By default」,禁「绝对安全」）；**Security Test**：用户 A 不能访问 B 的 providers/requests/usage/savings/keys/speed test；user token 不能访问 /admin；Provider Key 不出现在 logs/history/API 响应 | 隔离测试通过 |
+| ⬜ TODO | R14-11 | **Savings Data Integrity + Overhead** | 检查 savedTokens/savedCostMicro 是否可能重复累计/并发重写/Cache Hit 重复/Retry 重复/Streaming 重复/failed/aborted/provider error 被计为 savings（仅成功最终请求产生 savings；SingleFlight 区分 origin/waiter）；统计 **Optimization Overhead**（Total=Optimization+Provider,展示 Net Saving 而非 Gross） | 失败/重试/流式/并发场景不重复计 |
+| ⬜ TODO | R14-12 | **真实数据一致性 + 测试 + 文档** | 检查所有 Dashboard（Overview/Optimization/Requests/Savings/Provider/Usage）：禁止 fake/hardcoded/前端伪造节省/随机延迟；成本基于真实 provider/model/token/价格，无价格标 `unknown`（禁默认 $0.15/$500）；补测试（Savings/Security/User/Profile/Cost 分类）；README/CHANGELOG 更新；输出 Completion Report | 无 fake 数据；测试全绿；报告完整 |
 
-> **验收**：R14-1~6 在浏览器对注册租户全部可用（测速跑通、请求记录展示、导出下载、Key 启停生效）；全部完成后更新本表 ✅。
+> **实施顺序**：现状审计 → Savings Engine(7) → Data Integrity(11) → Explainability(8) → Profile(9) → Privacy(10) → Pagination(2) → SpeedTest(1) → Key LastUsed(5) → Onboarding(6) → 前端统一优化 → 完整测试 → 文档/报告。
+> **最终验收**（10 问）：今天/本月省了多少 Token？省自什么机制？这次请求为什么省？Actual 还是 Estimated？Nexus 增加多少优化开销？Net Saving？数据是否严格隔离？Provider Key 是否安全？用户 5 分钟内能否接入？
 
 ## R15 注册业务逻辑完善（⬜ 全部 TODO，供远程 agent 执行）
 
