@@ -400,11 +400,18 @@ export class ApiClient {
     return this.get<{ request: any }>(`/user/requests/${encodeURIComponent(id)}`);
   }
 
-  async getUserSpeedTest() {
+  async getUserSpeedTest(providers?: string[]) {
     return this.post<{
-      results: Array<{ provider: string; status: string; latencyMs?: number; error?: string }>;
+      results: Array<{ provider: string; model?: string; status: string; totalMs?: number; tokensPerSec?: number; totalTokens?: number; error?: string }>;
       message?: string;
-    }>("/user/speed-test", {});
+    }>("/user/speed-test", { providers: providers ?? [] });
+  }
+
+  async postUserSpeedTest(provider: string) {
+    return this.post<{ result: { provider: string; model?: string; status: string; totalMs?: number; tokensPerSec?: number; totalTokens?: number; error?: string } }>(
+      `/user/speed-test/${encodeURIComponent(provider)}`,
+      {},
+    );
   }
 
   async getUserKeys() {

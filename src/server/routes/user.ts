@@ -325,58 +325,115 @@ userRoute.patch("/keys/:id/toggle", async (c) => {
 });
 
 // ===== 用户端测速 =====
-const speedCooldowns = new Map<string, number>();
+const SPEED_COOLDOWN_MS = 10_000;
+const speedCooldowns = new Map<string, number>(); // key: `${tenantId}:${provider}`
 
-userRoute.post("/speed-test", async (c) => {
+/** 把上游错误映射成用户看得懂的中文 */
+function mapSpeedError(status: number | undefined, raw: string): string {
+  if (!status) {
+    if (/abort|timeout/i.test(raw)) return "请求超时（8 秒）";
+    if (/fetch|ENOTFOUND|ECONNREFUSED|socket/i.test(raw)) return "无法连接 Provider（网络/地址异常）";
+    return raw;
+  }
+  if (status === 401 || status === 403) return "API Key 无效或权限不足";
+  if (status === 404) return "接口或模型不存在";
+  if (status === 429) return "Provider 限流，请稍后再试";
+  if (status >= 500) return `Provider 服务异常（HTTP ${status}）`;
+  return `HTTP ${status}`;
+}
+
+/** 单 provider 真实测速：最小 chat 请求（max_tokens=1），测端到端延迟与吞吐 */
+async function speedTestProvider(providerType: ProviderType, tenantId: string, requestedModel?: string) {
+  const base = { provider: providerType as string };
+
+  const { resolveProviderKey } = await import("../config/provider-keys.js");
+  const apiKey = await resolveProviderKey(providerType, tenantId);
+  if (!apiKey) return { ...base, status: "skipped", error: "未配置 API Key" };
+
+  const { getRegistry } = await import("../../providers/registry.js");
+  const provider = getRegistry().getProvider(providerType);
+  if (!provider) return { ...base, status: "error", error: "Provider 未注册" };
+
+  const { getConfig } = await import("../../shared/config.js");
+  const cfgModels = getConfig().providers[providerType]?.models ?? {};
+  const model = requestedModel ?? Object.values(cfgModels)[0];
+  if (!model) return { ...base, status: "error", error: "未配置测速模型" };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8_000);
+  const start = Date.now();
+  try {
+    // 直接调用 provider（不经过优化链路），用租户自己的 key
+    const res = await provider.chat(
+      {
+        model,
+        messages: [{ role: "user", content: "ping" }],
+        max_tokens: 1,
+        temperature: 0,
+      },
+      model,
+      apiKey,
+    );
+    const totalMs = Date.now() - start;
+    const totalTokens = res.usage?.total_tokens ?? 0;
+    const tokensPerSec = totalMs > 0 ? Math.round((totalTokens * 1000) / totalMs) : 0;
+    return { ...base, model, status: "ok", totalMs, tokensPerSec, totalTokens };
+  } catch (e) {
+    const err = e as any;
+    const status = typeof err?.status === "number" ? err.status : err?.response?.status;
+    const raw = err?.message ?? String(e);
+    return { ...base, status: "error", error: mapSpeedError(status, raw) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// 单 provider 测速（前端逐条调用，有进度反馈）
+userRoute.post("/speed-test/:provider", async (c) => {
   const tenant = c.get("tenant")!;
+  const providerType = c.req.param("provider") as ProviderType;
   const now = Date.now();
 
-  // 30s 冷却
-  const last = speedCooldowns.get(tenant.id);
-  if (last && now - last < 30_000) {
-    return c.json({ error: { message: "测速太频繁，请 30 秒后再试" } }, 429);
+  // 按 tenant+provider 独立冷却
+  const key = `${tenant.id}:${providerType}`;
+  const last = speedCooldowns.get(key);
+  if (last && now - last < SPEED_COOLDOWN_MS) {
+    const retryAfterSec = Math.ceil((SPEED_COOLDOWN_MS - (now - last)) / 1000);
+    return c.json({ error: { message: `测速太频繁，请 ${retryAfterSec} 秒后再试`, retryAfterSec } }, 429);
   }
-  speedCooldowns.set(tenant.id, now);
+  speedCooldowns.set(key, now);
 
-  // 获取该租户已配 key 的 provider
+  const body = await c.req.json().catch(() => ({}));
+  const result = await speedTestProvider(providerType, tenant.id, typeof body?.model === "string" ? body.model : undefined);
+  return c.json({ result });
+});
+
+// 批量测速（不传 providers = 测全部已配置；传了则按传入顺序逐个测）
+userRoute.post("/speed-test", async (c) => {
+  const tenant = c.get("tenant")!;
+  const body = await c.req.json().catch(() => ({}));
+  const requested: string[] | undefined = Array.isArray(body?.providers) ? body.providers : undefined;
+
   const allKeys = await getTenantProviderKeys(tenant.id);
-  const configuredProviders = allKeys.filter((k) => k.configured);
-  if (configuredProviders.length === 0) {
-    return c.json({ results: [], message: "请先配置至少一个 Provider API Key" });
+  const configured = allKeys.filter((k) => k.configured).map((k) => k.provider as ProviderType);
+  const targets = requested && requested.length > 0 ? requested.filter((p) => configured.includes(p as ProviderType)) as ProviderType[] : configured;
+
+  if (targets.length === 0) {
+    return c.json({ results: [], message: requested?.length ? "所选 Provider 未配置 API Key" : "请先配置至少一个 Provider API Key" });
   }
 
-  // 并发测速（≤5 个 model，8s 超时）
-  const tasks = configuredProviders.slice(0, 5).map(async (pk) => {
-    try {
-      const { resolveProviderKey } = await import("../config/provider-keys.js");
-      const apiKey = await resolveProviderKey(pk.provider as ProviderType, tenant.id);
-      if (!apiKey) return { provider: pk.provider, status: "skipped", error: "no key configured" };
-
-      const { getRegistry } = await import("../../providers/registry.js");
-      const provider = getRegistry().getProvider(pk.provider as ProviderType);
-      if (!provider) return { provider: pk.provider, status: "error", error: "provider not available" };
-
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 8000);
-      const start = Date.now();
-      try {
-        const res = await fetch(`${process.env[`${pk.provider.toUpperCase()}_BASE_URL`] ?? ""}/v1/models`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-          signal: controller.signal,
-        });
-        const latencyMs = Date.now() - start;
-        return { provider: pk.provider, status: res.ok ? "ok" : "error", latencyMs, error: res.ok ? undefined : `HTTP ${res.status}` };
-      } catch (e) {
-        return { provider: pk.provider, status: "error", latencyMs: Date.now() - start, error: (e as Error).message };
-      } finally {
-        clearTimeout(timer);
-      }
-    } catch {
-      return { provider: pk.provider, status: "error", error: "internal error" };
+  const now = Date.now();
+  const results = [];
+  for (const p of targets) {
+    const key = `${tenant.id}:${p}`;
+    const last = speedCooldowns.get(key);
+    if (last && now - last < SPEED_COOLDOWN_MS) {
+      results.push({ provider: p, status: "cooldown", error: "冷却中（10 秒内已测过）" });
+      continue;
     }
-  });
-
-  const results = await Promise.all(tasks);
+    speedCooldowns.set(key, now);
+    results.push(await speedTestProvider(p, tenant.id));
+  }
   return c.json({ results });
 });
 

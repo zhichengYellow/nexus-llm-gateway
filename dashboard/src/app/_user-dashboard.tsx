@@ -56,8 +56,8 @@ export default function UserDashboard({ client, onLogout }: Props) {
   const [reqHasMore, setReqHasMore] = useState(false);
   const [reqCursor, setReqCursor] = useState<string | null>(null);
   const [reqLoading, setReqLoading] = useState(false);
-  const [speedResults, setSpeedResults] = useState<any[] | null>(null);
-  const [speedLoading, setSpeedLoading] = useState(false);
+  const [speedState, setSpeedState] = useState<Record<string, { loading?: boolean; result?: any }>>({});
+  const [bulkTesting, setBulkTesting] = useState(false);
   const [userKeys, setUserKeys] = useState<any[]>([]);
   const [activeProfile, setActiveProfile] = useState("balanced");
 
@@ -323,23 +323,26 @@ export default function UserDashboard({ client, onLogout }: Props) {
                   <p className="text-xs text-zinc-500 mt-0.5">AES-256-GCM 加密存储。不配置则无法调用对应 Provider。</p>
                 </div>
                 <button onClick={async () => {
-                  setSpeedLoading(true); setSpeedResults(null);
-                  try { const r = await client.getUserSpeedTest(); setSpeedResults(r.results || []); } catch {}
-                  setSpeedLoading(false);
-                }} disabled={speedLoading}
-                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-500 disabled:opacity-50 transition flex items-center gap-1.5">
-                  <Gauge className="w-3.5 h-3.5" />{speedLoading ? "测速中..." : "测速"}
+                  const configured = providers.filter((k) => k.configured).map((k) => k.provider);
+                  if (configured.length === 0) { setError("请先配置至少一个 Provider API Key"); return; }
+                  setBulkTesting(true); setError("");
+                  try {
+                    for (const p of configured) {
+                      if (speedState[p]?.loading) continue;
+                      setSpeedState((s) => ({ ...s, [p]: { loading: true } }));
+                      try {
+                        const { result } = await client.postUserSpeedTest(p);
+                        setSpeedState((s) => ({ ...s, [p]: { loading: false, result } }));
+                      } catch (e) {
+                        setSpeedState((s) => ({ ...s, [p]: { loading: false, result: { status: "error", error: (e as Error).message } } }));
+                      }
+                    }
+                  } finally { setBulkTesting(false); }
+                }} disabled={bulkTesting}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-500 disabled:opacity-50 transition flex items-center gap-1.5 shrink-0">
+                  <Gauge className="w-3.5 h-3.5" />{bulkTesting ? `全部测速中… ${providers.filter((k) => k.configured && speedState[k.provider]?.result).length}/${providers.filter((k) => k.configured).length}` : "全部测速"}
                 </button>
               </div>
-              {speedResults && (
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  {speedResults.map((r: any) => (
-                    <div key={r.provider} className={`p-2 rounded-lg text-xs border ${r.status === "ok" ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-400" : "bg-rose-500/5 border-rose-500/20 text-rose-400"}`}>
-                      {r.provider}: {r.status === "ok" ? `${r.latencyMs}ms` : r.error || r.status}
-                    </div>
-                  ))}
-                </div>
-              )}
               <p className="text-[10px] text-amber-400/80 mb-3">⚠️ 测速会向你的 Provider 发送小请求，消耗少量额度</p>
               <div className="space-y-2">
                 {["deepseek", "openai", "gemini", "ollama", "qwen", "moonshot", "zhipu"].map((p) => {
@@ -352,6 +355,28 @@ export default function UserDashboard({ client, onLogout }: Props) {
                         onChange={(e) => setKeyInputs((s) => ({ ...s, [p]: e.target.value }))}
                         className="flex-1 px-2 py-1.5 bg-zinc-950/60 border border-zinc-700/50 rounded text-zinc-200 text-xs font-mono focus:outline-none focus:border-blue-500/50"
                         placeholder={existing?.configured ? `已配置 ${existing.masked || ""}` : "输入 API Key"} />
+                      {existing?.configured && (
+                        <button onClick={async () => {
+                          setError("");
+                          setSpeedState((s) => ({ ...s, [p]: { loading: true } }));
+                          try {
+                            const { result } = await client.postUserSpeedTest(p);
+                            setSpeedState((s) => ({ ...s, [p]: { loading: false, result } }));
+                          } catch (e) {
+                            setSpeedState((s) => ({ ...s, [p]: { loading: false, result: { status: "error", error: (e as Error).message } } }));
+                          }
+                        }} disabled={speedState[p]?.loading}
+                          className="px-2.5 py-1.5 bg-zinc-800 text-zinc-300 rounded text-xs hover:bg-zinc-700 disabled:opacity-50 shrink-0 flex items-center gap-1 border border-zinc-700/50">
+                          <Gauge className="w-3 h-3" />{speedState[p]?.loading ? "测速中…" : "测速"}
+                        </button>
+                      )}
+                      {speedState[p]?.result && (
+                        <span className={`shrink-0 text-[11px] font-mono px-2 py-1 rounded ${speedState[p].result.status === "ok" ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"}`}>
+                          {speedState[p].result.status === "ok"
+                            ? `${speedState[p].result.totalMs >= 1000 ? (speedState[p].result.totalMs / 1000).toFixed(1) + "s" : speedState[p].result.totalMs + "ms"} · ${speedState[p].result.tokensPerSec} tok/s`
+                            : speedState[p].result.error || speedState[p].result.status}
+                        </span>
+                      )}
                       <button onClick={async () => {
                         const val = (keyInputs[p] ?? "").trim();
                         setKeySaving((s) => ({ ...s, [p]: true }));

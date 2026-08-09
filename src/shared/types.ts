@@ -156,9 +156,9 @@ export interface ProviderConfig {
 export interface ChatProvider {
   type: ProviderType;
   /** 非流式 chat completion */
-  chat(req: ChatCompletionRequest, model: string): Promise<ChatCompletionResponse>;
+  chat(req: ChatCompletionRequest, model: string, apiKeyOverride?: string): Promise<ChatCompletionResponse>;
   /** 流式 chat completion，返回 async iterable */
-  chatStream(req: ChatCompletionRequest, model: string): AsyncIterable<ChatCompletionChunk>;
+  chatStream(req: ChatCompletionRequest, model: string, apiKeyOverride?: string): AsyncIterable<ChatCompletionChunk>;
   /** 列出该 provider 支持的模型 */
   listModels(): ModelInfo[];
 }
