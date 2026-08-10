@@ -698,7 +698,7 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 ## Recommended Next Step（只给下阶段建议，不要自动继续开发）
 ```
 
-## R15.1 Onboarding 验收与首次价值打磨（⬜ 全部 TODO，供远程 agent 执行）
+## R15.1 Onboarding 验收与首次价值打磨（✅ 全部完成：远程埋点 + 本地补做表达，2026-08，见 git 55b1b13）
 
 > **背景**（2026-08 本地完成 R15 引导向导后审计）：向导"功能"已就绪，但距"产品闭环"还差——真实调用验证、边界场景表达（无优化/缓存命中/去重）、Profile 是否真生效、冷启动体验、完成感、转化漏斗埋点。**核心验收点：一个第一次使用的开发者，不看 README，3~5 分钟内完成 Provider 配置 → 发出请求 → 明确看到 Nexus 帮他省了什么。**
 > **先审计再动代码**：读 `dashboard/src/app/_onboarding-wizard.tsx`、`src/server/routes/user.ts`（speed-test）、`src/server/routes/chat.ts`（pipeline 响应 `nexus` 字段）、`src/server/middleware/pipeline.ts`（cache/SingleFlight 标记）、`src/optimizer/`（压缩强度、路由降级）；已满足的直接验证并标 `ALREADY IMPLEMENTED`，不得重写。
@@ -747,7 +747,7 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 > **实施顺序**：README(1/2/3) → OSS 信号(4/5) → Benchmark(6) → 申请文本(7) → checklist(8)。
 > **与 v2.4 任务书关系**：R16-6 落地 benchmark 后，v2.4 的 **V2.4-6（Benchmark 设计）标记为 ALREADY IMPLEMENTED**（不重复实现）。
 
-## v2.4 Token Efficiency 任务书（⬜ 全部 TODO，供远程 agent 执行）
+## v2.4 Token Efficiency 任务书（✅ 本地补做完成，2026-08，见 git 55b1b13；V2.4-6 由 R16-6 覆盖）
 
 > **背景**（已对照现状审计）：v2.4 主题 = **Token Efficiency & Proof**——让 Nexus 能真实、透明、可验证地证明自己省了 Token/成本。**以下项已在 R14 实现，勿重做**：Savings Attribution 互斥归因（`savings-attribution.ts`，CACHE/COMPRESSION/ROUTING/REWRITE，ACTUAL/ESTIMATED）、Privacy Center、Request cursor 分页、Speed Test 并发/冷却防滥用、Optimization Profile 4 档接线、Gateway Key Last Used、真实数据核查。**本阶段真增量如下**。
 > **主线纪律**：禁止功能堆砌——新功能必须直接提升 Token Reduction / Cost Reduction / Optimization Transparency / Reliability / Developer Experience 之一；MCP/Billing/SSO/RBAC/K8s/Plugin Marketplace 全部冻结。先输出 `# Pre-Implementation Audit`（Existing/Reusable/Missing/Conflicts）再编码；每功能单 commit + CI 三步；完成后输出 `# Nexus Development Completion Report`（Version/Completed/Savings 逻辑/Attribution/Actual vs Estimated vs Projected/Overhead/Net Saving/Privacy/Benchmark Readiness/Tests Before-After/CI/Commits/Remaining Risks/Next Step）。
