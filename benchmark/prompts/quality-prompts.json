@@ -1,58 +1,302 @@
 [
-  {"id":"code-1","category":"code","text":"用 Python 写一个快速排序算法，要求包含注释"},
-  {"id":"code-2","category":"code","text":"用 JavaScript 实现一个二分查找函数"},
-  {"id":"code-3","category":"code","text":"写一个 React 组件，实现一个计数器功能"},
-  {"id":"code-4","category":"code","text":"用 TypeScript 写一个泛型链表"},
-  {"id":"code-5","category":"code","text":"实现一个 LRU 缓存类，包含 get 和 put 方法"},
-  {"id":"code-6","category":"code","text":"用 Rust 写一个斐波那契数列生成器"},
-  {"id":"code-7","category":"code","text":"用 Go 写一个并发安全的 map"},
-  {"id":"code-8","category":"code","text":"实现一个简单的 REST API 服务器，用 Express.js"},
-  {"id":"code-9","category":"code","text":"写一个 SQL 查询，找出表中重复的记录"},
-  {"id":"code-10","category":"code","text":"用 Python 实现一个装饰器，用于测量函数执行时间"},
-  {"id":"code-11","category":"code","text":"解释一下 Docker 和虚拟机的区别"},
-  {"id":"code-12","category":"code","text":"什么是 Git rebase？和 merge 有什么区别？"},
-  {"id":"code-13","category":"code","text":"如何优化数据库查询性能？给出 5 个建议"},
-  {"id":"code-14","category":"code","text":"解释一下微服务架构的优缺点"},
-  {"id":"code-15","category":"code","text":"如何设计一个分布式 ID 生成器？"},
-  {"id":"trans-1","category":"translation","text":"将以下英文翻译成中文：Artificial intelligence is transforming every industry"},
-  {"id":"trans-2","category":"translation","text":"翻译成英文：机器学习是人工智能的一个重要分支"},
-  {"id":"trans-3","category":"translation","text":"把这段日文翻译成中文：機械学習は人工知能の一分野です"},
-  {"id":"trans-4","category":"translation","text":"Translate to French: Hello, how are you today?"},
-  {"id":"trans-5","category":"translation","text":"翻译成中文：Deep learning has revolutionized computer vision"},
-  {"id":"trans-6","category":"translation","text":"用英文表达：今天天气真好，适合出去散步"},
-  {"id":"trans-7","category":"translation","text":"翻译成德语：软件开发是一个创造性的过程"},
-  {"id":"trans-8","category":"translation","text":"将以下中文翻译成韩语：人工智能的未来充满无限可能"},
-  {"id":"math-1","category":"math","text":"解释一下什么是微积分，并举一个实际应用的例子"},
-  {"id":"math-2","category":"math","text":"证明勾股定理 a² + b² = c²"},
-  {"id":"math-3","category":"math","text":"什么是贝叶斯定理？给出公式并举例说明"},
-  {"id":"math-4","category":"math","text":"解释线性回归和逻辑回归的区别"},
-  {"id":"math-5","category":"math","text":"什么是梯度下降算法？解释其工作原理"},
-  {"id":"math-6","category":"math","text":"计算积分 ∫x²dx 从 0 到 1"},
-  {"id":"math-7","category":"math","text":"什么是正态分布？解释其特性"},
-  {"id":"math-8","category":"math","text":"解释矩阵乘法的规则"},
-  {"id":"chat-1","category":"chat","text":"你好，请介绍一下你自己"},
-  {"id":"chat-2","category":"chat","text":"今天心情不好，给我讲个笑话吧"},
-  {"id":"chat-3","category":"chat","text":"推荐三本适合程序员的书籍"},
-  {"id":"chat-4","category":"chat","text":"给我一些提高工作效率的建议"},
-  {"id":"chat-5","category":"chat","text":"如何保持工作与生活的平衡？"},
-  {"id":"chat-6","category":"chat","text":"周末有什么好去处推荐？"},
-  {"id":"chat-7","category":"chat","text":"讲一个关于坚持的小故事"},
-  {"id":"chat-8","category":"chat","text":"如何缓解工作压力？"},
-  {"id":"agent-1","category":"agent","text":"搜索一下今天北京的天气，然后告诉我适不适合户外运动"},
-  {"id":"agent-2","category":"agent","text":"帮我计算一下 12345 × 67890，然后告诉我结果"},
-  {"id":"agent-3","category":"agent","text":"查询一下比特币的最新价格，然后告诉我是否适合买入"},
-  {"id":"agent-4","category":"agent","text":"搜索最新的 AI 新闻，并总结三条最重要的"},
-  {"id":"agent-5","category":"agent","text":"帮我分析一下 Python 和 Go 的性能差异"},
-  {"id":"rag-1","category":"rag","text":"根据你掌握的知识，总结一下 Transformer 架构的核心思想"},
-  {"id":"rag-2","category":"rag","text":"对比一下 RNN、LSTM 和 Transformer 的区别"},
-  {"id":"rag-3","category":"rag","text":"解释一下 BERT 和 GPT 在预训练方式上的不同"},
-  {"id":"rag-4","category":"rag","text":"什么是 Attention 机制？解释 Q、K、V 的含义"},
-  {"id":"rag-5","category":"rag","text":"大语言模型的涌现能力是什么？举例说明"},
-  {"id":"rag-6","category":"rag","text":"什么是 RLHF？它在 ChatGPT 训练中的作用是什么？"},
-  {"id":"rag-7","category":"rag","text":"解释一下 LoRA 微调的原理和优势"},
-  {"id":"rag-8","category":"rag","text":"什么是 MoE（混合专家）架构？"},
-  {"id":"rag-9","category":"rag","text":"解释一下 KV Cache 在推理加速中的作用"},
-  {"id":"rag-10","category":"rag","text":"什么是 Chain-of-Thought？给出一个例子"},
-  {"id":"rag-11","category":"rag","text":"对比一下 Zero-shot 和 Few-shot 的区别"},
-  {"id":"rag-12","category":"rag","text":"什么是幻觉（Hallucination）？如何减少？"}
+ {
+  "id": "code-1",
+  "category": "code",
+  "text": "用 Python 写一个快速排序算法，要求包含注释"
+ },
+ {
+  "id": "code-2",
+  "category": "code",
+  "text": "用 JavaScript 实现一个二分查找函数"
+ },
+ {
+  "id": "code-3",
+  "category": "code",
+  "text": "写一个 React 组件，实现一个计数器功能"
+ },
+ {
+  "id": "code-4",
+  "category": "code",
+  "text": "用 TypeScript 写一个泛型链表"
+ },
+ {
+  "id": "code-5",
+  "category": "code",
+  "text": "实现一个 LRU 缓存类，包含 get 和 put 方法"
+ },
+ {
+  "id": "code-6",
+  "category": "code",
+  "text": "用 Rust 写一个斐波那契数列生成器"
+ },
+ {
+  "id": "code-7",
+  "category": "code",
+  "text": "用 Go 写一个并发安全的 map"
+ },
+ {
+  "id": "code-8",
+  "category": "code",
+  "text": "实现一个简单的 REST API 服务器，用 Express.js"
+ },
+ {
+  "id": "code-9",
+  "category": "code",
+  "text": "写一个 SQL 查询，找出表中重复的记录"
+ },
+ {
+  "id": "code-10",
+  "category": "code",
+  "text": "用 Python 实现一个装饰器，用于测量函数执行时间"
+ },
+ {
+  "id": "code-11",
+  "category": "code",
+  "text": "解释一下 Docker 和虚拟机的区别"
+ },
+ {
+  "id": "code-12",
+  "category": "code",
+  "text": "什么是 Git rebase？和 merge 有什么区别？"
+ },
+ {
+  "id": "code-13",
+  "category": "code",
+  "text": "如何优化数据库查询性能？给出 5 个建议"
+ },
+ {
+  "id": "code-14",
+  "category": "code",
+  "text": "解释一下微服务架构的优缺点"
+ },
+ {
+  "id": "code-15",
+  "category": "code",
+  "text": "如何设计一个分布式 ID 生成器？"
+ },
+ {
+  "id": "trans-1",
+  "category": "translation",
+  "text": "将以下英文翻译成中文：Artificial intelligence is transforming every industry"
+ },
+ {
+  "id": "trans-2",
+  "category": "translation",
+  "text": "翻译成英文：机器学习是人工智能的一个重要分支"
+ },
+ {
+  "id": "trans-3",
+  "category": "translation",
+  "text": "把这段日文翻译成中文：機械学習は人工知能の一分野です"
+ },
+ {
+  "id": "trans-4",
+  "category": "translation",
+  "text": "Translate to French: Hello, how are you today?"
+ },
+ {
+  "id": "trans-5",
+  "category": "translation",
+  "text": "翻译成中文：Deep learning has revolutionized computer vision"
+ },
+ {
+  "id": "trans-6",
+  "category": "translation",
+  "text": "用英文表达：今天天气真好，适合出去散步"
+ },
+ {
+  "id": "trans-7",
+  "category": "translation",
+  "text": "翻译成德语：软件开发是一个创造性的过程"
+ },
+ {
+  "id": "trans-8",
+  "category": "translation",
+  "text": "将以下中文翻译成韩语：人工智能的未来充满无限可能"
+ },
+ {
+  "id": "math-1",
+  "category": "math",
+  "text": "解释一下什么是微积分，并举一个实际应用的例子"
+ },
+ {
+  "id": "math-2",
+  "category": "math",
+  "text": "证明勾股定理 a² + b² = c²"
+ },
+ {
+  "id": "math-3",
+  "category": "math",
+  "text": "什么是贝叶斯定理？给出公式并举例说明"
+ },
+ {
+  "id": "math-4",
+  "category": "math",
+  "text": "解释线性回归和逻辑回归的区别"
+ },
+ {
+  "id": "math-5",
+  "category": "math",
+  "text": "什么是梯度下降算法？解释其工作原理"
+ },
+ {
+  "id": "math-6",
+  "category": "math",
+  "text": "计算积分 ∫x²dx 从 0 到 1"
+ },
+ {
+  "id": "math-7",
+  "category": "math",
+  "text": "什么是正态分布？解释其特性"
+ },
+ {
+  "id": "math-8",
+  "category": "math",
+  "text": "解释矩阵乘法的规则"
+ },
+ {
+  "id": "chat-1",
+  "category": "chat",
+  "text": "你好，请介绍一下你自己"
+ },
+ {
+  "id": "chat-2",
+  "category": "chat",
+  "text": "今天心情不好，给我讲个笑话吧"
+ },
+ {
+  "id": "chat-3",
+  "category": "chat",
+  "text": "推荐三本适合程序员的书籍"
+ },
+ {
+  "id": "chat-4",
+  "category": "chat",
+  "text": "给我一些提高工作效率的建议"
+ },
+ {
+  "id": "chat-5",
+  "category": "chat",
+  "text": "如何保持工作与生活的平衡？"
+ },
+ {
+  "id": "chat-6",
+  "category": "chat",
+  "text": "周末有什么好去处推荐？"
+ },
+ {
+  "id": "chat-7",
+  "category": "chat",
+  "text": "讲一个关于坚持的小故事"
+ },
+ {
+  "id": "chat-8",
+  "category": "chat",
+  "text": "如何缓解工作压力？"
+ },
+ {
+  "id": "agent-1",
+  "category": "agent",
+  "text": "搜索一下今天北京的天气，然后告诉我适不适合户外运动"
+ },
+ {
+  "id": "agent-2",
+  "category": "agent",
+  "text": "帮我计算一下 12345 × 67890，然后告诉我结果"
+ },
+ {
+  "id": "agent-3",
+  "category": "agent",
+  "text": "查询一下比特币的最新价格，然后告诉我是否适合买入"
+ },
+ {
+  "id": "agent-4",
+  "category": "agent",
+  "text": "搜索最新的 AI 新闻，并总结三条最重要的"
+ },
+ {
+  "id": "agent-5",
+  "category": "agent",
+  "text": "帮我分析一下 Python 和 Go 的性能差异"
+ },
+ {
+  "id": "rag-1",
+  "category": "rag",
+  "text": "根据你掌握的知识，总结一下 Transformer 架构的核心思想"
+ },
+ {
+  "id": "rag-2",
+  "category": "rag",
+  "text": "对比一下 RNN、LSTM 和 Transformer 的区别"
+ },
+ {
+  "id": "rag-3",
+  "category": "rag",
+  "text": "解释一下 BERT 和 GPT 在预训练方式上的不同"
+ },
+ {
+  "id": "rag-4",
+  "category": "rag",
+  "text": "什么是 Attention 机制？解释 Q、K、V 的含义"
+ },
+ {
+  "id": "rag-5",
+  "category": "rag",
+  "text": "大语言模型的涌现能力是什么？举例说明"
+ },
+ {
+  "id": "rag-6",
+  "category": "rag",
+  "text": "什么是 RLHF？它在 ChatGPT 训练中的作用是什么？"
+ },
+ {
+  "id": "rag-7",
+  "category": "rag",
+  "text": "解释一下 LoRA 微调的原理和优势"
+ },
+ {
+  "id": "rag-8",
+  "category": "rag",
+  "text": "什么是 MoE（混合专家）架构？"
+ },
+ {
+  "id": "rag-9",
+  "category": "rag",
+  "text": "解释一下 KV Cache 在推理加速中的作用"
+ },
+ {
+  "id": "rag-10",
+  "category": "rag",
+  "text": "什么是 Chain-of-Thought？给出一个例子"
+ },
+ {
+  "id": "rag-11",
+  "category": "rag",
+  "text": "对比一下 Zero-shot 和 Few-shot 的区别"
+ },
+ {
+  "id": "rag-12",
+  "category": "rag",
+  "text": "什么是幻觉（Hallucination）？如何减少？"
+ },
+ {
+  "id": "long-1",
+  "category": "rag",
+  "text": "请根据以下长文档内容总结核心要点：神经网络（Neural Network）是一种受生物神经系统启发的机器学习模型，由大量相互连接的神经元（节点）组成，分为输入层、隐藏层和输出层。通过反向传播算法（Backpropagation）与梯度下降（Gradient Descent）不断调整权重，使模型在训练数据上逐步逼近目标函数。近年来，Transformer 架构通过自注意力机制（Self-Attention）取代了传统的循环结构，显著提升了长序列建模能力，并催生了 GPT、BERT 等一系列预训练大语言模型，推动了自然语言处理领域的快速发展。请用不超过 200 字概括上述内容并说明其工程意义。"
+ },
+ {
+  "id": "long-2",
+  "category": "rag",
+  "text": "阅读以下产品需求文档并提取关键验收标准：本系统需要实现一个支持多租户的 LLM API 网关，核心功能包括：1）统一的 OpenAI 兼容接口，支持流式与非流式响应；2）基于语义相似度的智能缓存，命中率不低于 30%；3）多 Provider 故障转移，任一上游不可用时自动切换且不中断服务；4）按租户隔离的用量统计与成本核算，误差不超过 5%；5）管理端可配置路由策略、缓存阈值与限流参数。所有功能必须通过自动化测试，测试覆盖率不低于 80%，并在 30 秒内完成冷启动。请列出最重要的 5 条验收标准。"
+ },
+ {
+  "id": "long-3",
+  "category": "translation",
+  "text": "Translate the following technical passage into Chinese, keeping all technical terms accurate: Microservices architecture decomposes a large application into small, independently deployable services that communicate over well-defined APIs. Each service owns its data and can be scaled, deployed, and evolved independently, which improves fault isolation and team autonomy. However, distributed systems introduce challenges such as network latency, partial failures, eventual consistency, and the complexity of observability. Modern practice mitigates these with service meshes, distributed tracing, circuit breakers, and saga-based transaction management. Provide a fluent Chinese translation with a brief note on the two most important trade-offs mentioned."
+ },
+ {
+  "id": "long-4",
+  "category": "chat",
+  "text": "我有一段很长的对话历史需要继续：用户之前询问了关于数据库索引的原理，助手解释了 B+ 树的结构、聚簇索引与非聚簇索引的区别、联合索引的最左前缀原则，以及覆盖索引的优化技巧；随后用户追问了 MySQL 与 PostgreSQL 在索引实现上的差异，包括 MVCC 机制、行级锁、vacuum 与 page 结构的不同；接着话题转向了慢查询优化，讨论了执行计划分析、索引下推、分区表与读写分离的适用场景。现在请基于以上上下文，继续回答：在高并发写入场景下，应该优先选择哪种索引策略，为什么？"
+ }
 ]
