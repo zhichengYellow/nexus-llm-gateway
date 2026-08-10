@@ -43,6 +43,8 @@ export interface ChatCompletionResponse {
     provider: string;
     /** 命中语义缓存时为 true */
     cached?: boolean;
+    /** SingleFlight 去重等待者（共享在途上游请求）时为 true */
+    deduped?: boolean;
     /** 实际调用的底层模型 */
     upstreamModel?: string;
     /** 请求追踪 ID */

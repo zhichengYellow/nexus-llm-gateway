@@ -253,6 +253,12 @@ export const providerMiddleware: MiddlewareHandler = {
           },
         );
 
+        // waiter 响应标记去重（对外可见，V2.4-4）
+        if ((ctx.meta as Record<string, unknown>).singleFlightWaiter === true && res) {
+          res.nexus ??= {} as any;
+          res.nexus.deduped = true;
+        }
+
         breaker.recordSuccess();
         const latencyMs = Date.now() - ctx.startTime;
         trackRequest(false, latencyMs, 0, res.usage && typeof res.usage === "object" ? res.usage.total_tokens : 0);
