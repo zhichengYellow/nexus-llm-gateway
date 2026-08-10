@@ -767,49 +767,35 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 ---
 
 ## 季度路线
+## 季度路线（2026-08 重定义：Phase 1-6，替代旧 Layer/季度表）
 
-### Q3（当前）—— 数据基础
+> **当前阶段判断（2026-08）**：Gateway/Token Optimization/Explainability/Security/Developer Experience 成熟度 ★★★★；OSS adoption ★★（真正短板）。**方向从 Feature Engineering 转向 Evidence Engineering + OSS Adoption**——不再堆功能，优先：真实 Benchmark → OSS 申请 → Community/Adoption → Optimization Engine。
 
-| 状态 | 任务 | 说明 |
-|------|------|------|
-| ✅ COMPLETED | Layer 0.1 | `src/server/db/schema.ts` + `src/server/analytics/daily-stats.ts` |
-| ✅ COMPLETED | Layer 0.2 | `CostReportEngine` + `/admin/cost/report` API 就绪，Dashboard 面板待前端 |
-| ✅ COMPLETED | Layer 0.3 | `DailyStatsEngine.generateRequestProfile` |
-| ⚠️ PARTIAL | Phase 1 | `CacheConfidence` + `CacheGate` + `CacheAutoRefresh` 完成，ANN/Sharding/WAL 待基础设施 |
+### Nexus Roadmap
 
-### Q4 —— Token 优化
+| Phase | 状态 | 内容 |
+|-------|------|------|
+| **Phase 1 — Gateway Foundation** | ✅ | OpenAI-compatible API / Multi-provider / BYOK / Routing / Retry / Circuit Breaker |
+| **Phase 2 — Token Optimization** | ✅ | Exact Cache / Semantic Cache / Compression / SingleFlight / Rewrite / Savings Attribution |
+| **Phase 3 — Explainable Optimization** | ✅ | Actual/Estimated / Optimization Overhead / Net Saving / Projected Saving / Request Explainability / User Dashboard |
+| **Phase 4 — Developer Experience** | ✅ | BYOK onboarding / Optimization Profiles / Request history / CSV export / Privacy center / 注册防人机 + 强制确认 Key |
+| **Phase 5 — OSS Ecosystem** | 🚧 | **Reproducible Benchmark**(runner 就绪,待真实数据) / SDK/examples / Integrations / Community contributions / Public optimization dataset |
+| **Phase 6 — Research** | 🔬 | Semantic Cache 2.0 / Cache Confidence / Adaptive optimization / Optimization policy engine / Benchmark suite |
 
-| 状态 | 任务 | 说明 |
-|------|------|------|
-| ✅ COMPLETED | Layer 1.1 | `src/server/prompt/compression.ts` |
-| ✅ COMPLETED | Layer 1.2 | `src/server/prompt/conversation-compressor.ts` |
-| ✅ COMPLETED | Layer 1.3 | `src/server/prompt/adaptive-context.ts` |
-| ✅ COMPLETED | Layer 1.4 | `ConversationCompressor.pruneByImportance` |
-| ✅ COMPLETED | Layer 1.5 | `src/server/prompt/chunk-cache.ts`（引擎已实现，**未接线**，见失实清单） |
+### Enterprise 路线（冻结，强化个人开发者定位）
 
-### Q1（明年）—— 成本优化
+| 方向 | 状态 |
+|------|------|
+| Enterprise Billing | ❌ Not planned |
+| SSO | ❌ Not planned |
+| Enterprise RBAC | ❌ Not planned |
+| Complex multi-org | ❌ Not planned |
+| Kubernetes / Helm | ❌ Not planned |
+| 插件市场 / MCP Marketplace | ❌ Not planned |
 
-| 状态 | 任务 | 说明 |
-|------|------|------|
-| ✅ COMPLETED | Layer 2.1 | `src/server/cost/cost-controller.ts` |
-| ✅ COMPLETED | Layer 2.2 | `src/server/routing/smart-routing.ts` + `multi-dim-router.ts` |
-| ✅ COMPLETED | Layer 2.3 | `BudgetController` block/cheap_only/warn 策略 |
-| ✅ COMPLETED | Layer 2.4 | `src/server/cost/cost-report.ts`（引擎已实现，**未接线**，见失实清单） |
-
-### Q2（明年）—— 质量 + 智能
-
-| 状态 | 任务 | 说明 |
-|------|------|------|
-| ✅ COMPLETED | Layer 3 | `JudgeEngine` + `QualityEvaluator` + `RequestJudge` + `SemanticJudge` 完成（**QualityEvaluator 未接线**，其余已接线） |
-| ✅ COMPLETED | Layer 4 | `IntentLearner` + `TrendAnalyzer` + `CacheAutoRefresh` + `SmartRoutingEngine` |
-
-### Q3（明年）—— 企业 + 生态
-
-| 状态 | 任务 | 说明 |
-|------|------|------|
-| ⚠️ PARTIAL | Layer 5 | `BudgetController` + `CostReport` + RBAC + Audit 完成，Billing/SSO 待外部集成 |
-| ⚠️ PARTIAL | Layer 6 | `examples/` + `sdk/` + `cli/` 完成，官方插件待发布 |
-| ⚠️ PARTIAL | Phase 12 | `pipeline` + `plugin-system` + `scheduler` + `dsl` + `compiler` + `executor` 模块已就绪，目录重构待进行 |
+> **Provider 冻结**：维持 7 家（DeepSeek/OpenAI/Gemini/Qwen/Moonshot/Zhipu/Ollama），新增走社区贡献 / issue-driven，不主动开发。
+> **长期方向（Phase 6 前不做大开发）**：Optimization Policy Engine——统一 Decision(Cache? Compress? Rewrite? Dedup? Route?)→ Execution → Attribution → Overhead → Evaluation，让 Nexus 回答"这次请求为什么被优化、优化值不值"。
+> **纪律**：Every optimization must be measurable——任何优化功能必须回答：省了多少 / 增加多少 latency / 增加多少计算成本 / 是否降质 / 为什么触发。
 
 ---
 
