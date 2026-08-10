@@ -298,7 +298,8 @@ export default function Home() {
               <div>
                 <div className="flex items-stretch gap-2">
                   <input
-                    type="text" value={regCaptchaAnswer} onChange={(e) => setRegCaptchaAnswer(e.target.value)}
+                    type="text" value={regCaptchaAnswer}
+                    onChange={(e) => setRegCaptchaAnswer(e.target.value.replace(/\D/g, "").slice(0, 3))}
                     inputMode="numeric" maxLength={3}
                     className="w-24 px-3 py-2.5 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50"
                     placeholder="答案"

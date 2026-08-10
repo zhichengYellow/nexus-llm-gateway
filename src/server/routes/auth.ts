@@ -28,17 +28,23 @@ function genApiKey(): { raw: string; prefix: string; hash: string } {
 }
 
 const registerSchema = z.object({
-  username: z.string().min(2, "用户名至少 2 位").max(30, "用户名最多 30 位").regex(/^[a-zA-Z0-9_-]+$/, "仅允许字母、数字、下划线、短横"),
-  password: z.string().min(8, "密码至少 8 位").max(100, "密码最多 100 位"),
-  captchaId: z.string().min(1, "验证码已失效，请刷新"),
-  captchaAnswer: z.number().int("请输入数字答案"),
+  username: z.string({ required_error: "请输入用户名" }).min(2, "用户名至少 2 位").max(30, "用户名最多 30 位").regex(/^[a-zA-Z0-9_-]+$/, "仅允许字母、数字、下划线、短横"),
+  password: z.string({ required_error: "请输入密码" }).min(8, "密码至少 8 位").max(100, "密码最多 100 位"),
+  captchaId: z.string({ required_error: "请输入验证码答案" }).min(1, "验证码已失效，请刷新"),
+  captchaAnswer: z.number({ required_error: "请输入验证码答案", invalid_type_error: "验证码答案必须是数字" }).int("验证码答案必须是整数"),
 });
 
-/** 将 zod 校验错误转为统一的中文 error.message 格式 */
+/** 将 zod 校验错误转为统一的中文 error.message 格式（含英文默认错误兜底） */
 export function authErrorMessage(errors: z.ZodIssue[]): string {
   const first = errors[0];
   if (!first) return "输入格式错误";
-  return first.message;
+  const msg = first.message;
+  // zod 未设置 required_error/invalid_type_error 时默认英文，兜底翻译
+  if (msg === "Required" || msg === "Invalid input" || msg === "Invalid") return "请填写完整后再提交";
+  if (/^Expected .*received/.test(msg)) return "输入格式不正确，请检查后重试";
+  if (/^String must contain/.test(msg)) return "输入内容不符合要求";
+  if (/^Number must/.test(msg)) return "请输入有效数字";
+  return msg;
 }
 
 // ===== 验证码（算术题，内存态、一次性、防人机） =====
