@@ -680,6 +680,32 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 > **实施顺序**：审计(1/6 现状) → 表达层(2/3/4/5/9) → 行为验证与修复(1/6) → 体验(7/8) → 埋点(10) → 完整测试 → Completion Report。
 > **最终验收**：新用户不看 README，3~5 分钟完成"注册→配 Provider→发请求→看到节省"；无优化/缓存/去重三种场景都有专业表达；Profile 真实生效；冷启动不白屏；漏斗有数据。
 
+## R16 OSS 申请准备（Codex for Open Source，⬜ 全部 TODO，供远程 agent 执行）
+
+> **背景**（2026-08 决策）：申请 OpenAI **Codex for OSS**（面向活跃开源项目维护者，审核看 meaningful usage / ecosystem importance / active maintenance，rolling review）。Nexus 强项 = **active maintenance**（401 tests / CI / releases / 安全修复 / 公开部署），弱项 = 外部 adoption 证据。**策略：不吹用户量，证明项目价值 + 活跃维护 + 可复现 benchmark。**
+> **核心定位句**（README 首屏 + 申请文本统一用）：**"Nexus is an open-source BYOK LLM Gateway that makes token efficiency measurable, explainable, and accessible to individual developers."**
+> **硬性约束**：① 诚实——**禁止编造** adoption/star/用户量，README 不写 "production ready / enterprise ready / used by thousands"（无证据）；② 不刷 star；③ 数字用真实值（测试数以 `npm test` 实测为准，当前 401）；④ 每项单 commit + CI 三步（`npm ci` → `npx tsc --noEmit` → `npm test`，Node 22）；⑤ README 首屏英文（面向国际审核），中文内容保留；⑥ 完成后输出 `# R16 Completion Report`（48h checklist 逐项确认 + Tests/Commits/CI/剩余风险）。
+> **禁止范围**：新功能开发、重构、刷 star、编造数据、整体翻译 README（仅首屏/新增区块英文）。
+
+| 状态 | # | 任务 | 说明 | 验证 |
+|---|---|---|---|---|
+| ⬜ TODO | R16-1 | **README 首屏重写（英文定位）** | 首屏：H1 + 核心定位句 + badges（CI / tests / release / license）+ 4 链接（GitHub/Docs/Demo/Releases）+ "Why Nexus?" 区块：*Most gateways optimize routing. Nexus focuses on something simpler: **USE FEWER TOKENS** → Cache → Dedup → Compression → Routing → Explainable Savings*；30 秒内看懂 | 首屏≤30s 理解 |
+| ⬜ TODO | R16-2 | **Project Status 区块** | README 加 `## Project Status`：actively developed；Current focus（Token optimization for individual developers / BYOK multi-provider / explainable savings / privacy tenant isolation）；Status 列表：CI passing / Automated tests: N+(实测) / Public deployment / Releases active（链接 demo 与 repo） | 区块含真实数字 |
+| ⬜ TODO | R16-3 | **LICENSE 文件 + 徽章** | 补 `LICENSE` 文件（MIT，与 package.json 一致）+ README license badge | LICENSE 存在 |
+| ⬜ TODO | R16-4 | **Issues 模板** | `.github/ISSUE_TEMPLATE/`：bug_report.md / feature_request.md / provider_request.md / optimization_discussion.md（轻量，含复现/检查清单） | 4 个模板文件 |
+| ⬜ TODO | R16-5 | **Discussions 引导 + CONTRIBUTING** | README 加 "Community & Discussions"（分类：Show and tell / Ideas / Q&A / Optimization benchmarks）；新增 `CONTRIBUTING.md`（如何跑测试/提交 PR/代码规范/测试要求） | 文档就绪 |
+| ⬜ TODO | R16-6 | **Benchmark 落地（可复现）** | 建立 8 类数据集（Short QA / Long Context / Coding / Chinese / English / Conversation / Repeated Prompt / Document QA；在 `benchmark/prompts/quality-prompts.json` 基础上扩充）；Runner：Provider Direct（baseline） vs Nexus（balanced / cheap / maximum_saving）；输出 `benchmark-report.json` + `benchmark-report.md`（表格：Workload / Baseline / Nexus / Saving%）；methodology 文档（模型/温度/数据集/日期/版本/参数）；**结果如实，不删不理想数据，脚本可复现** | 本地能跑出 report |
+| ⬜ TODO | R16-7 | **申请文本包** | `docs/CODEX-FOR-OSS-APPLICATION.md`：三问答案（≤500 chars each，模板见下方）+ 决策（角色 = Primary maintainer；Codex Security ✅；API credits ✅）+ 申请入口 URL + GitHub profile/repo 均 public 检查；文本供用户直接复制提交 | 每段≤500 chars 验证 |
+| ⬜ TODO | R16-8 | **提交前 48h checklist** | `docs/CODEX-FOR-OSS-CHECKLIST.md`：README 首屏 / repo public / badges / Releases 对齐（≥v2.3.0）/ CI 绿 / 测试数 / Issues+Discussions 开放 / CONTRIBUTING / LICENSE / Benchmark 结果 / 申请文本就绪；逐项 ✅ | checklist 全 ✅ |
+
+> **申请文本模板**（R16-7 直接采用，勿改风格；agent 可微调但保持 ≤500 chars 且诚实）：
+> - **Why does this repository qualify?**：*Nexus is an actively maintained open-source, OpenAI-compatible LLM gateway focused on reducing token consumption for individual developers through semantic caching, compression, request deduplication, adaptive routing, and explainable savings metrics. It supports BYOK providers including OpenAI, DeepSeek, Gemini, Qwen, Moonshot, Zhipu and Ollama, with CI, extensive automated tests, regular releases, and a publicly deployed instance.*
+> - **How will you use API credits?**：*I would use the credits as part of Nexus's ongoing open-source maintenance workflow: automated PR review, regression and security testing, issue investigation, release preparation, documentation updates, and CI-assisted refactoring. I also plan to use Codex to benchmark and improve Nexus's token-optimization pipeline while keeping tests and reproducible evaluation as release gates.*
+> - **Anything else?**：*Nexus is intentionally designed from an individual-developer perspective rather than as an enterprise billing platform. It uses BYOK, keeps users' provider credentials under their control, and exposes optimization results transparently instead of hiding them behind proprietary infrastructure. My goal is to make token efficiency a measurable, explainable property of an open-source gateway and to maintain the project as a transparent public OSS project.*
+
+> **实施顺序**：README(1/2/3) → OSS 信号(4/5) → Benchmark(6) → 申请文本(7) → checklist(8)。
+> **与 v2.4 任务书关系**：R16-6 落地 benchmark 后，v2.4 的 **V2.4-6（Benchmark 设计）标记为 ALREADY IMPLEMENTED**（不重复实现）。
+
 ## v2.4 Token Efficiency 任务书（⬜ 全部 TODO，供远程 agent 执行）
 
 > **背景**（已对照现状审计）：v2.4 主题 = **Token Efficiency & Proof**——让 Nexus 能真实、透明、可验证地证明自己省了 Token/成本。**以下项已在 R14 实现，勿重做**：Savings Attribution 互斥归因（`savings-attribution.ts`，CACHE/COMPRESSION/ROUTING/REWRITE，ACTUAL/ESTIMATED）、Privacy Center、Request cursor 分页、Speed Test 并发/冷却防滥用、Optimization Profile 4 档接线、Gateway Key Last Used、真实数据核查。**本阶段真增量如下**。
