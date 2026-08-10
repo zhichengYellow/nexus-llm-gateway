@@ -11,11 +11,11 @@ Nexus is an actively maintained open-source, OpenAI-compatible LLM gateway focus
 
 ## Q2: How will you use API credits?（≤500 chars）
 
-I would use the credits as part of Nexus's ongoing open-source maintenance workflow: automated PR review, regression and security testing, issue investigation, release preparation, documentation updates, and CI-assisted refactoring. I also plan to use Codex to extend the reproducible benchmark suite (8 workloads × baseline vs 3 optimization profiles, with raw results committed to the repo) and improve the token-optimization pipeline while keeping tests and reproducible evaluation as release gates.
+I would use the credits as part of Nexus's ongoing open-source maintenance workflow: automated PR review, regression and security testing, issue investigation, release preparation, documentation, and CI-assisted refactoring. I also plan to use Codex to extend the reproducible benchmark suite and improve the token-optimization pipeline while keeping tests and evaluation as release gates.
 
 ## Q3: Anything else?（≤500 chars）
 
-Nexus is intentionally designed from an individual-developer perspective rather than as an enterprise billing platform. It uses BYOK, keeps users' provider credentials under their control, and exposes optimization results transparently instead of hiding them behind proprietary infrastructure. Real benchmark on DeepSeek shows 100% token reduction on repeated prompts (cache), 47.9% on long context, 33.5% on conversation — and ~0% on short prompts, where optimization is intentionally not forced. My goal is to make token efficiency a measurable, explainable property of an open-source gateway.
+Nexus is intentionally designed from an individual-developer perspective rather than as an enterprise billing platform. It uses BYOK, keeps users' credentials under their control, and exposes optimization results transparently. Real DeepSeek benchmark shows 100% reduction on repeated prompts, 47.9% on long context, ~0% on short prompts where optimization is intentionally not forced. My goal is to make token efficiency measurable and explainable in open source.
 
 ---
 
