@@ -52,7 +52,7 @@ export default function Home() {
       clearTimeout(timer);
       if (res.ok) {
         const data = await res.json();
-        setRegCaptcha({ captchaId: data.captchaId, prompt: data.prompt });
+        setRegCaptcha({ captchaId: data.captchaId ?? data.id, prompt: data.prompt });
       } else if (retry < 3) {
         // 失败自动重试（最多 3 次，间隔 1s），避免冷启动/瞬时错误导致无验证码可用
         setTimeout(() => loadCaptcha(retry + 1), 1000);

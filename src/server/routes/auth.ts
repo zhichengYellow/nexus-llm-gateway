@@ -51,7 +51,7 @@ export function authErrorMessage(errors: z.ZodIssue[]): string {
 const captchaStore = new Map<string, { answer: number; expiresAt: number }>();
 const CAPTCHA_TTL_MS = 5 * 60_000;
 
-function newCaptcha(): { id: string; prompt: string } {
+function newCaptcha(): { captchaId: string; prompt: string } {
   // 只生成加法与非负减法，答案 0~18 一位数口算（乘法/负数心算门槛高，用户易"算错"）
   const x = 1 + Math.floor(Math.random() * 9);
   const y = 1 + Math.floor(Math.random() * 9);
@@ -65,7 +65,7 @@ function newCaptcha(): { id: string; prompt: string } {
     // 惰性清理过期项
     for (const [k, v] of captchaStore) if (v.expiresAt < Date.now()) captchaStore.delete(k);
   }
-  return { id, prompt: `${a} ${isAdd ? "+" : "-"} ${b} = ?` };
+  return { captchaId: id, prompt: `${a} ${isAdd ? "+" : "-"} ${b} = ?` };
 }
 
 /** 注册开关状态（前端探测用，不再占用注册限流配额） */
