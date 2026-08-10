@@ -43,15 +43,27 @@ export default function Home() {
     }
   };
 
-  const loadCaptcha = async () => {
+  const loadCaptcha = async (retry = 0) => {
     setCaptchaLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787"}/auth/captcha`);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787"}/auth/captcha`, { signal: controller.signal });
+      clearTimeout(timer);
       if (res.ok) {
         const data = await res.json();
         setRegCaptcha({ captchaId: data.captchaId, prompt: data.prompt });
+      } else if (retry < 3) {
+        // 失败自动重试（最多 3 次，间隔 1s），避免冷启动/瞬时错误导致无验证码可用
+        setTimeout(() => loadCaptcha(retry + 1), 1000);
       }
-    } catch {} finally {
+    } catch {
+      if (retry < 3) {
+        setTimeout(() => loadCaptcha(retry + 1), 1000);
+      } else {
+        setRegCaptcha(null);
+      }
+    } finally {
       setCaptchaLoading(false);
     }
   };
@@ -105,7 +117,12 @@ export default function Home() {
 
   const handleRegister = async () => {
     if (!regUser.trim() || !regPass.trim()) { setError("请填写用户名和密码"); return; }
-    if (!regCaptcha || !regCaptchaAnswer.trim()) { setError("请先完成验证码"); return; }
+    if (!regCaptcha || !regCaptchaAnswer.trim()) {
+      // 验证码还没加载出来：自动触发加载并提示，避免"卡死"
+      setError("验证码加载中，请稍候或点击题目刷新");
+      if (!regCaptcha) loadCaptcha();
+      return;
+    }
     setRegLoading(true); setError("");
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
@@ -122,13 +139,15 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) {
         setError(data.error?.message || "注册失败");
-        // 验证码错误/过期 → 刷新验证码并清答案
-        if (data.error?.type === "captcha_invalid") { setRegCaptchaAnswer(""); loadCaptcha(); }
+        // 验证码是一次性的：任何失败后都刷新验证码，保证下次提交必可用
+        setRegCaptchaAnswer("");
+        loadCaptcha();
         return;
       }
       setRegResult(data);
     } catch (e) {
       setError((e as Error).message || "网络错误");
+      loadCaptcha();
     } finally {
       setRegLoading(false);
     }
@@ -280,15 +299,16 @@ export default function Home() {
                 <div className="flex items-stretch gap-2">
                   <input
                     type="text" value={regCaptchaAnswer} onChange={(e) => setRegCaptchaAnswer(e.target.value)}
+                    inputMode="numeric" maxLength={3}
                     className="w-24 px-3 py-2.5 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50"
                     placeholder="答案"
                     onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                   />
                   <button
-                    type="button" onClick={loadCaptcha} disabled={captchaLoading}
+                    type="button" onClick={() => loadCaptcha()} disabled={captchaLoading}
                     className="flex-1 px-3 py-2.5 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-zinc-300 text-sm font-mono hover:bg-zinc-800 transition flex items-center justify-center gap-2 disabled:opacity-60"
                   >
-                    <span>{captchaLoading ? "加载中…" : (regCaptcha?.prompt ?? "点击获取验证码")}</span>
+                    <span>{captchaLoading ? "加载中…" : (regCaptcha?.prompt ?? "验证码加载失败，点击重试")}</span>
                     <RefreshCw className={`w-3 h-3 ${captchaLoading ? "animate-spin" : ""}`} />
                   </button>
                 </div>
