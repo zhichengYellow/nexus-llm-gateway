@@ -2,14 +2,14 @@
 
 ### AI Cost Optimization Gateway
 
-[![CI](https://github.com/bran-huang/nexus-llm-gateway/actions/workflows/ci.yml/badge.svg)](https://github.com/bran-huang/nexus-llm-gateway/actions)
-[![Tests](https://img.shields.io/badge/tests-395%20passed-brightgreen)](#)
-[![Release](https://img.shields.io/github/v/tag/bran-huang/nexus-llm-gateway?label=release)](https://github.com/bran-huang/nexus-llm-gateway/releases)
+[![CI](https://github.com/zhichengYellow/nexus-llm-gateway/actions/workflows/ci.yml/badge.svg)](https://github.com/zhichengYellow/nexus-llm-gateway/actions)
+[![Tests](https://img.shields.io/badge/tests-401%20passed-brightgreen)](#)
+[![Release](https://img.shields.io/github/v/tag/zhichengYellow/nexus-llm-gateway?label=release)](https://github.com/zhichengYellow/nexus-llm-gateway/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
 > **Use fewer tokens. Save 30-80% LLM cost. Zero configuration.**
 
-[GitHub](https://github.com/bran-huang/nexus-llm-gateway) · [Releases](https://github.com/bran-huang/nexus-llm-gateway/releases) · [CHANGELOG](./CHANGELOG.md) · [Contributing](./CONTRIBUTING.md)
+[GitHub](https://github.com/zhichengYellow/nexus-llm-gateway) · [Releases](https://github.com/zhichengYellow/nexus-llm-gateway/releases) · [CHANGELOG](./CHANGELOG.md) · [Contributing](./CONTRIBUTING.md)
 
 ---
 
@@ -37,9 +37,9 @@ Any OpenAI-compatible app changes one `baseURL` → Nexus automatically reduces 
 | Metric | Value |
 |--------|-------|
 | CI | Passing |
-| Automated tests | 395+ (53 files) |
+| Automated tests | 401+ (54 files) |
 | Deployment | Render (public) |
-| Releases | [v2.2.0](https://github.com/bran-huang/nexus-llm-gateway/releases) |
+| Releases | [v2.3.0](https://github.com/zhichengYellow/nexus-llm-gateway/releases) |
 
 ---
 
