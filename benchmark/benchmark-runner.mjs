@@ -29,6 +29,7 @@ const GATEWAY = process.env.GATEWAY_URL || "http://localhost:8787/v1";
 const KEY = process.env.GATEWAY_KEY || process.env.GATEWAY_MASTER_KEY || "";
 const TIMEOUT = Number(process.env.BENCH_TIMEOUT_MS || 20000);
 const REPS = Number(process.env.BENCH_REPS || 1); // 每个 prompt 重复次数（默认 1）
+const MODEL = process.env.BENCH_MODEL || "deepseek-v4-flash"; // 网关模型别名（默认 DeepSeek）
 
 const PROFILES = ["balanced", "cheap", "maximum_saving"];
 
@@ -43,7 +44,7 @@ const WORKLOADS = {
   "English": prompts.filter((p) => /^[A-Z]/.test(p.text || "")).slice(0, 5),
   "Conversation": prompts.filter((p) => p.category === "chat").slice(0, 5),
   "Document QA": prompts.filter((p) => p.category === "agent" || p.category === "rag").slice(0, 5),
-  "Repeated Prompt": [prompts[0], prompts[0], prompts[0]].map((p) => (typeof p === "string" ? p : p.text)),
+  "Repeated Prompt": ["5+7=? 只输出数字", "5+7=? 只输出数字", "5+7=? 只输出数字"],
   "Short Prompt": ["hi", "hello", "ok", "yes", "thanks"].map((t) => ({ text: t, category: "short" })),
 };
 
@@ -59,7 +60,7 @@ async function chat(prompt, { profile, bypass, concurrent = false }) {
     const res = await fetch(`${GATEWAY}/chat/completions`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ model: "auto", messages: [{ role: "user", content: prompt }], max_tokens: 100 }),
+      body: JSON.stringify({ model: MODEL, messages: [{ role: "user", content: prompt }], max_tokens: 300 }),
       signal: controller.signal,
     });
     const latency = Date.now() - start;
@@ -75,6 +76,7 @@ async function chat(prompt, { profile, bypass, concurrent = false }) {
       promptTokens: usage.prompt_tokens || 0,
       completionTokens: usage.completion_tokens || 0,
       cached: data.nexus?.cached || false,
+      deduped: data.nexus?.deduped || false,
       savedTokens: data.nexus?.savedTokens || 0,
       requestId: data.nexus?.requestId || null,
     };
@@ -113,6 +115,7 @@ async function runConcurrentDedup() {
     avgLatency: Math.round(results.reduce((a, r) => a + r.latency, 0) / results.length),
     latencies: results.map((r) => r.latency),
     cacheHits: results.filter((r) => r.cached).length,
+    deduped: results.filter((r) => r.deduped).length,
     errors: results.filter((r) => r.error).map((r) => r.error),
     note: "3 并发相同请求：若 SingleFlight 生效，后到请求延迟应显著低于首个（共享在途上游调用）",
   };
@@ -214,7 +217,7 @@ async function main() {
   md += `## Methodology\n\n`;
   md += `- **Baseline**：${report.methodology.baseline}\n`;
   md += `- **Nexus**：${report.methodology.nexus}\n`;
-  md += `- 每个 workload 在 baseline 与每个 profile 下各执行 ${wPrompts?.length ?? "N"} 个 prompt${REPS > 1 ? ` × ${REPS} 次` : ""}。\n`;
+  md += `- 每个 workload 在 baseline 与每个 profile 下各执行 ${Object.values(WORKLOADS).reduce((a, w) => a + (w?.length ?? 0), 0)} 个 prompt（按场景分配）${REPS > 1 ? ` × ${REPS} 次` : ""}。\n`;
   md += `- 原始数据：\`benchmark/results/${date}.json\`（每请求明细，可复现）。\n`;
   md += `- 重跑：\`GATEWAY_URL=<网关/v1> GATEWAY_KEY=<key> node benchmark/benchmark-runner.mjs\`\n\n`;
   md += `## Results\n\n`;

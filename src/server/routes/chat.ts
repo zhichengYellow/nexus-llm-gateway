@@ -256,6 +256,7 @@ chatRoute.post("/", zValidator("json", chatSchema), async (c) => {
       const cachedTokenCount = cachedUsage.total_tokens
         ?? ((cachedUsage.prompt_tokens ?? 0) + (cachedUsage.completion_tokens ?? 0));
       if (cachedTokenCount > 0) {
+        gateResult.response.nexus.savedTokens = cachedTokenCount; // 对调用方可见：本次缓存命中避免了 X tokens 上游调用
         const { recordUsage } = await import("../billing/usage.js");
         recordUsage({
           requestId, tenantId: tenant?.id ?? null, apiKeyId: apiKey?.id ?? null,

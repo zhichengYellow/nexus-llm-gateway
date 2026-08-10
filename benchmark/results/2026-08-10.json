@@ -1,0 +1,2222 @@
+{
+  "date": "2026-08-10",
+  "gateway": "https://nexus-llm-gateway-5te0.onrender.com/v1",
+  "version": "2.2.0",
+  "commit": "d2aabd8",
+  "environment": {
+    "model": "auto (网关路由)",
+    "temperature": "默认",
+    "maxTokens": 100,
+    "reps": 1,
+    "timeoutMs": 40000
+  },
+  "methodology": {
+    "baseline": "x-nexus-profile: fast + x-nexus-no-cache: 1（接近直连：不压缩、不缓存、不重写；仍经网关最小处理）",
+    "nexus": "完整优化链路（默认 balanced / cheap / maximum_saving 三档）",
+    "note": "Repeated Prompt 用相同 prompt 多次请求验证缓存；Concurrent Duplicate 用并发相同请求验证 SingleFlight；Short Prompt 验证短消息不强行优化"
+  },
+  "results": [
+    {
+      "name": "Short QA",
+      "profile": "baseline",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1574,
+      "savedTokens": 0,
+      "avgLatency": 3459,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "用 Python 写一个快速排序算法，要求包含注释",
+          "latency": 4431,
+          "tokens": 316,
+          "promptTokens": 16,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_a3y_NcLBSLsIgIS4"
+        },
+        {
+          "prompt": "用 JavaScript 实现一个二分查找函数",
+          "latency": 3299,
+          "tokens": 312,
+          "promptTokens": 12,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_efZuEvNzf5VO6NbA"
+        },
+        {
+          "prompt": "写一个 React 组件，实现一个计数器功能",
+          "latency": 3175,
+          "tokens": 314,
+          "promptTokens": 14,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_8AzxRhuJEdc36k5n"
+        },
+        {
+          "prompt": "用 TypeScript 写一个泛型链表",
+          "latency": 3030,
+          "tokens": 313,
+          "promptTokens": 13,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_v54w6DzuG1jSiT2y"
+        },
+        {
+          "prompt": "实现一个 LRU 缓存类，包含 get 和 put 方法",
+          "latency": 3358,
+          "tokens": 319,
+          "promptTokens": 19,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_XmFisIMuMEaqkcRz"
+        }
+      ]
+    },
+    {
+      "name": "Short QA",
+      "profile": "balanced",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1574,
+      "savedTokens": 0,
+      "avgLatency": 3365,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "用 Python 写一个快速排序算法，要求包含注释",
+          "latency": 4100,
+          "tokens": 316,
+          "promptTokens": 16,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_dBxn6P4gpcEHABfk"
+        },
+        {
+          "prompt": "用 JavaScript 实现一个二分查找函数",
+          "latency": 3177,
+          "tokens": 312,
+          "promptTokens": 12,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_33DDPifS-eER6ERV"
+        },
+        {
+          "prompt": "写一个 React 组件，实现一个计数器功能",
+          "latency": 3487,
+          "tokens": 314,
+          "promptTokens": 14,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_IkPjVZWIsLTEE0RU"
+        },
+        {
+          "prompt": "用 TypeScript 写一个泛型链表",
+          "latency": 3076,
+          "tokens": 313,
+          "promptTokens": 13,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req__-_wMO6c1hpmyZBG"
+        },
+        {
+          "prompt": "实现一个 LRU 缓存类，包含 get 和 put 方法",
+          "latency": 2984,
+          "tokens": 319,
+          "promptTokens": 19,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_WzXw6MDxj7dndD9D"
+        }
+      ]
+    },
+    {
+      "name": "Short QA",
+      "profile": "cheap",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1574,
+      "savedTokens": 0,
+      "avgLatency": 3175,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "用 Python 写一个快速排序算法，要求包含注释",
+          "latency": 3390,
+          "tokens": 316,
+          "promptTokens": 16,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_JP5bg-tr1f6zyWNE"
+        },
+        {
+          "prompt": "用 JavaScript 实现一个二分查找函数",
+          "latency": 3688,
+          "tokens": 312,
+          "promptTokens": 12,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_L1l6Wuh1J_osOdIw"
+        },
+        {
+          "prompt": "写一个 React 组件，实现一个计数器功能",
+          "latency": 2841,
+          "tokens": 314,
+          "promptTokens": 14,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_LOw8vVQMhAKWvGTe"
+        },
+        {
+          "prompt": "用 TypeScript 写一个泛型链表",
+          "latency": 2797,
+          "tokens": 313,
+          "promptTokens": 13,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_mSuFo9ChlQsbSFk7"
+        },
+        {
+          "prompt": "实现一个 LRU 缓存类，包含 get 和 put 方法",
+          "latency": 3158,
+          "tokens": 319,
+          "promptTokens": 19,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_vCC_HysYAdXZ8mkc"
+        }
+      ]
+    },
+    {
+      "name": "Short QA",
+      "profile": "maximum_saving",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1574,
+      "savedTokens": 0,
+      "avgLatency": 3387,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "用 Python 写一个快速排序算法，要求包含注释",
+          "latency": 4121,
+          "tokens": 316,
+          "promptTokens": 16,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_9g8J_HzDXUnlGOib"
+        },
+        {
+          "prompt": "用 JavaScript 实现一个二分查找函数",
+          "latency": 3177,
+          "tokens": 312,
+          "promptTokens": 12,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_X7XBPZL_AJ3Rwecm"
+        },
+        {
+          "prompt": "写一个 React 组件，实现一个计数器功能",
+          "latency": 3077,
+          "tokens": 314,
+          "promptTokens": 14,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Z5d-kaQy8_Csoq6e"
+        },
+        {
+          "prompt": "用 TypeScript 写一个泛型链表",
+          "latency": 2821,
+          "tokens": 313,
+          "promptTokens": 13,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Nym_HM-7IOCK8F3H"
+        },
+        {
+          "prompt": "实现一个 LRU 缓存类，包含 get 和 put 方法",
+          "latency": 3740,
+          "tokens": 319,
+          "promptTokens": 19,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Q9SuEC8W4R12YsKf"
+        }
+      ]
+    },
+    {
+      "name": "Long Context",
+      "profile": "baseline",
+      "requests": 4,
+      "successful": 4,
+      "totalTokens": 1475,
+      "savedTokens": 0,
+      "avgLatency": 5743,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "请根据以下长文档内容总结核心要点：神经网络（Neural Network）是一种受生物神经系统启发的机器学习模型，由大量",
+          "latency": 2666,
+          "tokens": 251,
+          "promptTokens": 147,
+          "completionTokens": 104,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_XhcwVdYu2Bu0ajnw"
+        },
+        {
+          "prompt": "阅读以下产品需求文档并提取关键验收标准：本系统需要实现一个支持多租户的 LLM API 网关，核心功能包括：1）统一的 ",
+          "latency": 6685,
+          "tokens": 452,
+          "promptTokens": 152,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Wpg4zO0LTPjxerj_"
+        },
+        {
+          "prompt": "Translate the following technical passage into Chinese, keep",
+          "latency": 6773,
+          "tokens": 335,
+          "promptTokens": 129,
+          "completionTokens": 206,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_2Ds2_7jCo9k2FbYw"
+        },
+        {
+          "prompt": "我有一段很长的对话历史需要继续：用户之前询问了关于数据库索引的原理，助手解释了 B+ 树的结构、聚簇索引与非聚簇索引的区",
+          "latency": 6847,
+          "tokens": 437,
+          "promptTokens": 137,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_dczJL1gLsRlhQuaw"
+        }
+      ]
+    },
+    {
+      "name": "Long Context",
+      "profile": "balanced",
+      "requests": 4,
+      "successful": 4,
+      "totalTokens": 1430,
+      "savedTokens": 0,
+      "avgLatency": 2436,
+      "cacheHits": 2,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "请根据以下长文档内容总结核心要点：神经网络（Neural Network）是一种受生物神经系统启发的机器学习模型，由大量",
+          "latency": 239,
+          "tokens": 251,
+          "promptTokens": 147,
+          "completionTokens": 104,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_0Mo44T16szKoQGEH"
+        },
+        {
+          "prompt": "阅读以下产品需求文档并提取关键验收标准：本系统需要实现一个支持多租户的 LLM API 网关，核心功能包括：1）统一的 ",
+          "latency": 4455,
+          "tokens": 407,
+          "promptTokens": 152,
+          "completionTokens": 255,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_FeeQ3O89bfxUiSHi"
+        },
+        {
+          "prompt": "Translate the following technical passage into Chinese, keep",
+          "latency": 233,
+          "tokens": 335,
+          "promptTokens": 129,
+          "completionTokens": 206,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Dl6BgemUeMqWKq3b"
+        },
+        {
+          "prompt": "我有一段很长的对话历史需要继续：用户之前询问了关于数据库索引的原理，助手解释了 B+ 树的结构、聚簇索引与非聚簇索引的区",
+          "latency": 4815,
+          "tokens": 437,
+          "promptTokens": 137,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_PvZeZEer9llCS48K"
+        }
+      ]
+    },
+    {
+      "name": "Long Context",
+      "profile": "cheap",
+      "requests": 4,
+      "successful": 4,
+      "totalTokens": 1430,
+      "savedTokens": 0,
+      "avgLatency": 1437,
+      "cacheHits": 3,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "请根据以下长文档内容总结核心要点：神经网络（Neural Network）是一种受生物神经系统启发的机器学习模型，由大量",
+          "latency": 232,
+          "tokens": 251,
+          "promptTokens": 147,
+          "completionTokens": 104,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_STtrQAr9DkwEnVtB"
+        },
+        {
+          "prompt": "阅读以下产品需求文档并提取关键验收标准：本系统需要实现一个支持多租户的 LLM API 网关，核心功能包括：1）统一的 ",
+          "latency": 231,
+          "tokens": 407,
+          "promptTokens": 152,
+          "completionTokens": 255,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_VRqYNfZfivzpHTG4"
+        },
+        {
+          "prompt": "Translate the following technical passage into Chinese, keep",
+          "latency": 228,
+          "tokens": 335,
+          "promptTokens": 129,
+          "completionTokens": 206,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_OqaHWml_3ShKt_Il"
+        },
+        {
+          "prompt": "我有一段很长的对话历史需要继续：用户之前询问了关于数据库索引的原理，助手解释了 B+ 树的结构、聚簇索引与非聚簇索引的区",
+          "latency": 5055,
+          "tokens": 437,
+          "promptTokens": 137,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_1VINqOS-PAACQGjP"
+        }
+      ]
+    },
+    {
+      "name": "Long Context",
+      "profile": "maximum_saving",
+      "requests": 4,
+      "successful": 4,
+      "totalTokens": 1430,
+      "savedTokens": 0,
+      "avgLatency": 1579,
+      "cacheHits": 3,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "请根据以下长文档内容总结核心要点：神经网络（Neural Network）是一种受生物神经系统启发的机器学习模型，由大量",
+          "latency": 244,
+          "tokens": 251,
+          "promptTokens": 147,
+          "completionTokens": 104,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_20p3jmtM5-jtSWux"
+        },
+        {
+          "prompt": "阅读以下产品需求文档并提取关键验收标准：本系统需要实现一个支持多租户的 LLM API 网关，核心功能包括：1）统一的 ",
+          "latency": 297,
+          "tokens": 407,
+          "promptTokens": 152,
+          "completionTokens": 255,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Ha7S6ag7CP6nnvTq"
+        },
+        {
+          "prompt": "Translate the following technical passage into Chinese, keep",
+          "latency": 785,
+          "tokens": 335,
+          "promptTokens": 129,
+          "completionTokens": 206,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_6GkI6lbJhuEqxv4K"
+        },
+        {
+          "prompt": "我有一段很长的对话历史需要继续：用户之前询问了关于数据库索引的原理，助手解释了 B+ 树的结构、聚簇索引与非聚簇索引的区",
+          "latency": 4989,
+          "tokens": 437,
+          "promptTokens": 137,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_2udTM93cjhqQ0Ue-"
+        }
+      ]
+    },
+    {
+      "name": "Coding",
+      "profile": "baseline",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1574,
+      "savedTokens": 0,
+      "avgLatency": 3052,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "用 Python 写一个快速排序算法，要求包含注释",
+          "latency": 3134,
+          "tokens": 316,
+          "promptTokens": 16,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_9oWh6BH7TScPcikO"
+        },
+        {
+          "prompt": "用 JavaScript 实现一个二分查找函数",
+          "latency": 3112,
+          "tokens": 312,
+          "promptTokens": 12,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_k39n2p4BgG0RkEec"
+        },
+        {
+          "prompt": "写一个 React 组件，实现一个计数器功能",
+          "latency": 2682,
+          "tokens": 314,
+          "promptTokens": 14,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_THNbpzV5yMC0hkYW"
+        },
+        {
+          "prompt": "用 TypeScript 写一个泛型链表",
+          "latency": 3053,
+          "tokens": 313,
+          "promptTokens": 13,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Q9KUL59Zl7Vscmel"
+        },
+        {
+          "prompt": "实现一个 LRU 缓存类，包含 get 和 put 方法",
+          "latency": 3281,
+          "tokens": 319,
+          "promptTokens": 19,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_3gEm7KE6hhf4DgrM"
+        }
+      ]
+    },
+    {
+      "name": "Coding",
+      "profile": "balanced",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1574,
+      "savedTokens": 0,
+      "avgLatency": 3075,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "用 Python 写一个快速排序算法，要求包含注释",
+          "latency": 3279,
+          "tokens": 316,
+          "promptTokens": 16,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_z9sVFYwMHGAZflaD"
+        },
+        {
+          "prompt": "用 JavaScript 实现一个二分查找函数",
+          "latency": 3091,
+          "tokens": 312,
+          "promptTokens": 12,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_pWEgZ9dRmRgTC79e"
+        },
+        {
+          "prompt": "写一个 React 组件，实现一个计数器功能",
+          "latency": 2752,
+          "tokens": 314,
+          "promptTokens": 14,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_GF7ZR-ZsAk_6CVLV"
+        },
+        {
+          "prompt": "用 TypeScript 写一个泛型链表",
+          "latency": 3176,
+          "tokens": 313,
+          "promptTokens": 13,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Na9M4uHg0TLmA7zs"
+        },
+        {
+          "prompt": "实现一个 LRU 缓存类，包含 get 和 put 方法",
+          "latency": 3077,
+          "tokens": 319,
+          "promptTokens": 19,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_RzUuoWtDsYQqz3x1"
+        }
+      ]
+    },
+    {
+      "name": "Coding",
+      "profile": "cheap",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1574,
+      "savedTokens": 0,
+      "avgLatency": 3075,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "用 Python 写一个快速排序算法，要求包含注释",
+          "latency": 3689,
+          "tokens": 316,
+          "promptTokens": 16,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Q1UmE59CDX1pzI0g"
+        },
+        {
+          "prompt": "用 JavaScript 实现一个二分查找函数",
+          "latency": 2486,
+          "tokens": 312,
+          "promptTokens": 12,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_iwFJQGG2UbTU7c6i"
+        },
+        {
+          "prompt": "写一个 React 组件，实现一个计数器功能",
+          "latency": 2770,
+          "tokens": 314,
+          "promptTokens": 14,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_vuOUC9rM85RutQDE"
+        },
+        {
+          "prompt": "用 TypeScript 写一个泛型链表",
+          "latency": 2949,
+          "tokens": 313,
+          "promptTokens": 13,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_L8LO_SZSRiiLZ8C4"
+        },
+        {
+          "prompt": "实现一个 LRU 缓存类，包含 get 和 put 方法",
+          "latency": 3479,
+          "tokens": 319,
+          "promptTokens": 19,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_w_PYukHx0VwMjxCk"
+        }
+      ]
+    },
+    {
+      "name": "Coding",
+      "profile": "maximum_saving",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1574,
+      "savedTokens": 0,
+      "avgLatency": 3500,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "用 Python 写一个快速排序算法，要求包含注释",
+          "latency": 3697,
+          "tokens": 316,
+          "promptTokens": 16,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_JMabUbi0r_o_f-os"
+        },
+        {
+          "prompt": "用 JavaScript 实现一个二分查找函数",
+          "latency": 3150,
+          "tokens": 312,
+          "promptTokens": 12,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_18hH3-g174QGaOmr"
+        },
+        {
+          "prompt": "写一个 React 组件，实现一个计数器功能",
+          "latency": 3358,
+          "tokens": 314,
+          "promptTokens": 14,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_GyNMwDFhUBBV79Ba"
+        },
+        {
+          "prompt": "用 TypeScript 写一个泛型链表",
+          "latency": 3532,
+          "tokens": 313,
+          "promptTokens": 13,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_8i_hkyKBHogCuHOE"
+        },
+        {
+          "prompt": "实现一个 LRU 缓存类，包含 get 和 put 方法",
+          "latency": 3762,
+          "tokens": 319,
+          "promptTokens": 19,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_ngtnB5ws99EMjzTV"
+        }
+      ]
+    },
+    {
+      "name": "Chinese",
+      "profile": "baseline",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 124,
+      "savedTokens": 0,
+      "avgLatency": 1709,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "将以下英文翻译成中文：Artificial intelligence is transforming every ind",
+          "latency": 1497,
+          "tokens": 23,
+          "promptTokens": 17,
+          "completionTokens": 6,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_4TGTjjYNmp_GbUYB"
+        },
+        {
+          "prompt": "翻译成英文：机器学习是人工智能的一个重要分支",
+          "latency": 2123,
+          "tokens": 23,
+          "promptTokens": 13,
+          "completionTokens": 10,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_qJRo-Pjw1eRVjbxV"
+        },
+        {
+          "prompt": "把这段日文翻译成中文：機械学習は人工知能の一分野です",
+          "latency": 1744,
+          "tokens": 28,
+          "promptTokens": 22,
+          "completionTokens": 6,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_JeAPvDQTSU_05O40"
+        },
+        {
+          "prompt": "翻译成中文：Deep learning has revolutionized computer vision",
+          "latency": 1581,
+          "tokens": 20,
+          "promptTokens": 14,
+          "completionTokens": 6,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_X-0obN6NqcSBxDRl"
+        },
+        {
+          "prompt": "用英文表达：今天天气真好，适合出去散步",
+          "latency": 1600,
+          "tokens": 30,
+          "promptTokens": 15,
+          "completionTokens": 15,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_nCKPJch4JLxMiE8w"
+        }
+      ]
+    },
+    {
+      "name": "Chinese",
+      "profile": "balanced",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 124,
+      "savedTokens": 0,
+      "avgLatency": 329,
+      "cacheHits": 5,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "将以下英文翻译成中文：Artificial intelligence is transforming every ind",
+          "latency": 706,
+          "tokens": 23,
+          "promptTokens": 17,
+          "completionTokens": 6,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Qldq-n8dud6m1yBs"
+        },
+        {
+          "prompt": "翻译成英文：机器学习是人工智能的一个重要分支",
+          "latency": 230,
+          "tokens": 23,
+          "promptTokens": 13,
+          "completionTokens": 10,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_GTe8nuN0psz4Rt90"
+        },
+        {
+          "prompt": "把这段日文翻译成中文：機械学習は人工知能の一分野です",
+          "latency": 233,
+          "tokens": 28,
+          "promptTokens": 22,
+          "completionTokens": 6,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_luIQLItMtpsZB7Ik"
+        },
+        {
+          "prompt": "翻译成中文：Deep learning has revolutionized computer vision",
+          "latency": 231,
+          "tokens": 20,
+          "promptTokens": 14,
+          "completionTokens": 6,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_zrsSh32H8uK5e78u"
+        },
+        {
+          "prompt": "用英文表达：今天天气真好，适合出去散步",
+          "latency": 245,
+          "tokens": 30,
+          "promptTokens": 15,
+          "completionTokens": 15,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_fRhF2ng9Ij2W_4db"
+        }
+      ]
+    },
+    {
+      "name": "Chinese",
+      "profile": "cheap",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 124,
+      "savedTokens": 0,
+      "avgLatency": 245,
+      "cacheHits": 5,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "将以下英文翻译成中文：Artificial intelligence is transforming every ind",
+          "latency": 301,
+          "tokens": 23,
+          "promptTokens": 17,
+          "completionTokens": 6,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_1QT1YzO_ivc_lpbT"
+        },
+        {
+          "prompt": "翻译成英文：机器学习是人工智能的一个重要分支",
+          "latency": 230,
+          "tokens": 23,
+          "promptTokens": 13,
+          "completionTokens": 10,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Z7rlex4pasEKLWY5"
+        },
+        {
+          "prompt": "把这段日文翻译成中文：機械学習は人工知能の一分野です",
+          "latency": 231,
+          "tokens": 28,
+          "promptTokens": 22,
+          "completionTokens": 6,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_9oy7l6QR9THnPhzX"
+        },
+        {
+          "prompt": "翻译成中文：Deep learning has revolutionized computer vision",
+          "latency": 232,
+          "tokens": 20,
+          "promptTokens": 14,
+          "completionTokens": 6,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_DcaWFhcRuALVRwRj"
+        },
+        {
+          "prompt": "用英文表达：今天天气真好，适合出去散步",
+          "latency": 233,
+          "tokens": 30,
+          "promptTokens": 15,
+          "completionTokens": 15,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Jgnp9GQSRrvEVjHU"
+        }
+      ]
+    },
+    {
+      "name": "Chinese",
+      "profile": "maximum_saving",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 124,
+      "savedTokens": 0,
+      "avgLatency": 235,
+      "cacheHits": 5,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "将以下英文翻译成中文：Artificial intelligence is transforming every ind",
+          "latency": 232,
+          "tokens": 23,
+          "promptTokens": 17,
+          "completionTokens": 6,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_drv9A9cjWKXW8VSm"
+        },
+        {
+          "prompt": "翻译成英文：机器学习是人工智能的一个重要分支",
+          "latency": 233,
+          "tokens": 23,
+          "promptTokens": 13,
+          "completionTokens": 10,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_KVJ5ER4piDZ2KJh4"
+        },
+        {
+          "prompt": "把这段日文翻译成中文：機械学習は人工知能の一分野です",
+          "latency": 248,
+          "tokens": 28,
+          "promptTokens": 22,
+          "completionTokens": 6,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_zEFlbT0y5_E5Vu4q"
+        },
+        {
+          "prompt": "翻译成中文：Deep learning has revolutionized computer vision",
+          "latency": 231,
+          "tokens": 20,
+          "promptTokens": 14,
+          "completionTokens": 6,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_6lGDEsfCuarCzqWO"
+        },
+        {
+          "prompt": "用英文表达：今天天气真好，适合出去散步",
+          "latency": 231,
+          "tokens": 30,
+          "promptTokens": 15,
+          "completionTokens": 15,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Mxcg6dc9KeZEbym3"
+        }
+      ]
+    },
+    {
+      "name": "English",
+      "profile": "baseline",
+      "requests": 2,
+      "successful": 2,
+      "totalTokens": 373,
+      "savedTokens": 0,
+      "avgLatency": 2788,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "Translate to French: Hello, how are you today?",
+          "latency": 1729,
+          "tokens": 25,
+          "promptTokens": 15,
+          "completionTokens": 10,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_R3wDEZ1XJwOgbnhp"
+        },
+        {
+          "prompt": "Translate the following technical passage into Chinese, keep",
+          "latency": 3846,
+          "tokens": 348,
+          "promptTokens": 129,
+          "completionTokens": 219,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_SFIP6fXt40r-Guil"
+        }
+      ]
+    },
+    {
+      "name": "English",
+      "profile": "balanced",
+      "requests": 2,
+      "successful": 2,
+      "totalTokens": 373,
+      "savedTokens": 0,
+      "avgLatency": 365,
+      "cacheHits": 2,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "Translate to French: Hello, how are you today?",
+          "latency": 234,
+          "tokens": 25,
+          "promptTokens": 15,
+          "completionTokens": 10,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_qfRIsJpssXxCjkRN"
+        },
+        {
+          "prompt": "Translate the following technical passage into Chinese, keep",
+          "latency": 495,
+          "tokens": 348,
+          "promptTokens": 129,
+          "completionTokens": 219,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_EvvA7UapHNM5LRbU"
+        }
+      ]
+    },
+    {
+      "name": "English",
+      "profile": "cheap",
+      "requests": 2,
+      "successful": 2,
+      "totalTokens": 373,
+      "savedTokens": 0,
+      "avgLatency": 273,
+      "cacheHits": 2,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "Translate to French: Hello, how are you today?",
+          "latency": 229,
+          "tokens": 25,
+          "promptTokens": 15,
+          "completionTokens": 10,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_dHSSly7Rq4R1eZZm"
+        },
+        {
+          "prompt": "Translate the following technical passage into Chinese, keep",
+          "latency": 317,
+          "tokens": 348,
+          "promptTokens": 129,
+          "completionTokens": 219,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_pb6VchVdaa1ngILG"
+        }
+      ]
+    },
+    {
+      "name": "English",
+      "profile": "maximum_saving",
+      "requests": 2,
+      "successful": 2,
+      "totalTokens": 373,
+      "savedTokens": 0,
+      "avgLatency": 526,
+      "cacheHits": 2,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "Translate to French: Hello, how are you today?",
+          "latency": 735,
+          "tokens": 25,
+          "promptTokens": 15,
+          "completionTokens": 10,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Y4buKCGXPNzHOgye"
+        },
+        {
+          "prompt": "Translate the following technical passage into Chinese, keep",
+          "latency": 316,
+          "tokens": 348,
+          "promptTokens": 129,
+          "completionTokens": 219,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_u3AonhV5tTekZG9I"
+        }
+      ]
+    },
+    {
+      "name": "Conversation",
+      "profile": "baseline",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1540,
+      "savedTokens": 0,
+      "avgLatency": 5287,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "你好，请介绍一下你自己",
+          "latency": 4437,
+          "tokens": 309,
+          "promptTokens": 9,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_oKSdiWNSY0qN9KyX"
+        },
+        {
+          "prompt": "今天心情不好，给我讲个笑话吧",
+          "latency": 4983,
+          "tokens": 299,
+          "promptTokens": 13,
+          "completionTokens": 286,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_DTbZgW9x0ShNAUQX"
+        },
+        {
+          "prompt": "推荐三本适合程序员的书籍",
+          "latency": 5183,
+          "tokens": 312,
+          "promptTokens": 11,
+          "completionTokens": 301,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Lw6tU7yYM7_Z4r-q"
+        },
+        {
+          "prompt": "给我一些提高工作效率的建议",
+          "latency": 6657,
+          "tokens": 309,
+          "promptTokens": 9,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_DrXDjSjbwzrQ19TR"
+        },
+        {
+          "prompt": "如何保持工作与生活的平衡？",
+          "latency": 5173,
+          "tokens": 311,
+          "promptTokens": 11,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_tFV6kDp-7w8NRBwc"
+        }
+      ]
+    },
+    {
+      "name": "Conversation",
+      "profile": "balanced",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1493,
+      "savedTokens": 0,
+      "avgLatency": 3757,
+      "cacheHits": 1,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "你好，请介绍一下你自己",
+          "latency": 3758,
+          "tokens": 263,
+          "promptTokens": 9,
+          "completionTokens": 254,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_PICsRx52oEHp7NK7"
+        },
+        {
+          "prompt": "今天心情不好，给我讲个笑话吧",
+          "latency": 301,
+          "tokens": 299,
+          "promptTokens": 13,
+          "completionTokens": 286,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_kAzJ0yKYmcv4XxhM"
+        },
+        {
+          "prompt": "推荐三本适合程序员的书籍",
+          "latency": 4901,
+          "tokens": 311,
+          "promptTokens": 11,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_J3u97U2MFkIooPmu"
+        },
+        {
+          "prompt": "给我一些提高工作效率的建议",
+          "latency": 4776,
+          "tokens": 309,
+          "promptTokens": 9,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_q17X8KAp-z3itBjc"
+        },
+        {
+          "prompt": "如何保持工作与生活的平衡？",
+          "latency": 5048,
+          "tokens": 311,
+          "promptTokens": 11,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_g_5PJeouaotsHnGQ"
+        }
+      ]
+    },
+    {
+      "name": "Conversation",
+      "profile": "cheap",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1493,
+      "savedTokens": 0,
+      "avgLatency": 3060,
+      "cacheHits": 2,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "你好，请介绍一下你自己",
+          "latency": 301,
+          "tokens": 263,
+          "promptTokens": 9,
+          "completionTokens": 254,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_vpblCIEbdlVefGaJ"
+        },
+        {
+          "prompt": "今天心情不好，给我讲个笑话吧",
+          "latency": 313,
+          "tokens": 299,
+          "promptTokens": 13,
+          "completionTokens": 286,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_ZK_PktBPV5wxHBVD"
+        },
+        {
+          "prompt": "推荐三本适合程序员的书籍",
+          "latency": 4856,
+          "tokens": 311,
+          "promptTokens": 11,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_27f_QvnSSsLYBtlE"
+        },
+        {
+          "prompt": "给我一些提高工作效率的建议",
+          "latency": 5183,
+          "tokens": 309,
+          "promptTokens": 9,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_voWChWgcApeY_N5D"
+        },
+        {
+          "prompt": "如何保持工作与生活的平衡？",
+          "latency": 4646,
+          "tokens": 311,
+          "promptTokens": 11,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_ASiYgZcyMDkHgS11"
+        }
+      ]
+    },
+    {
+      "name": "Conversation",
+      "profile": "maximum_saving",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1493,
+      "savedTokens": 0,
+      "avgLatency": 3311,
+      "cacheHits": 2,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "你好，请介绍一下你自己",
+          "latency": 301,
+          "tokens": 263,
+          "promptTokens": 9,
+          "completionTokens": 254,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_A-YQ1RnrUV1NV9uR"
+        },
+        {
+          "prompt": "今天心情不好，给我讲个笑话吧",
+          "latency": 480,
+          "tokens": 299,
+          "promptTokens": 13,
+          "completionTokens": 286,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_ZGP3K80tueQ1sapP"
+        },
+        {
+          "prompt": "推荐三本适合程序员的书籍",
+          "latency": 5547,
+          "tokens": 311,
+          "promptTokens": 11,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_TRkts0gcbsqQ2CR1"
+        },
+        {
+          "prompt": "给我一些提高工作效率的建议",
+          "latency": 5001,
+          "tokens": 309,
+          "promptTokens": 9,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_cd3O1vlazmSKu11O"
+        },
+        {
+          "prompt": "如何保持工作与生活的平衡？",
+          "latency": 5226,
+          "tokens": 311,
+          "promptTokens": 11,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_ymRqjFGVynOB5Vlo"
+        }
+      ]
+    },
+    {
+      "name": "Document QA",
+      "profile": "baseline",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1408,
+      "savedTokens": 0,
+      "avgLatency": 4098,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "搜索一下今天北京的天气，然后告诉我适不适合户外运动",
+          "latency": 4482,
+          "tokens": 316,
+          "promptTokens": 16,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_jeZVnG1G9TbiT3aB"
+        },
+        {
+          "prompt": "帮我计算一下 12345 × 67890，然后告诉我结果",
+          "latency": 2487,
+          "tokens": 197,
+          "promptTokens": 18,
+          "completionTokens": 179,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_GecLBHLbmY5a1Bef"
+        },
+        {
+          "prompt": "查询一下比特币的最新价格，然后告诉我是否适合买入",
+          "latency": 4709,
+          "tokens": 315,
+          "promptTokens": 15,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_8jB3BZ_e-oaEyuvR"
+        },
+        {
+          "prompt": "搜索最新的 AI 新闻，并总结三条最重要的",
+          "latency": 4201,
+          "tokens": 266,
+          "promptTokens": 14,
+          "completionTokens": 252,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_aAbvz8xc7AUBujZV"
+        },
+        {
+          "prompt": "帮我分析一下 Python 和 Go 的性能差异",
+          "latency": 4609,
+          "tokens": 314,
+          "promptTokens": 14,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_SHwMwAOS5Q6WMkfB"
+        }
+      ]
+    },
+    {
+      "name": "Document QA",
+      "profile": "balanced",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1408,
+      "savedTokens": 0,
+      "avgLatency": 2729,
+      "cacheHits": 2,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "搜索一下今天北京的天气，然后告诉我适不适合户外运动",
+          "latency": 4548,
+          "tokens": 316,
+          "promptTokens": 16,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_FBfvoRqjJgX3q9q6"
+        },
+        {
+          "prompt": "帮我计算一下 12345 × 67890，然后告诉我结果",
+          "latency": 234,
+          "tokens": 197,
+          "promptTokens": 18,
+          "completionTokens": 179,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_SFm_abNPXGmxzhqj"
+        },
+        {
+          "prompt": "查询一下比特币的最新价格，然后告诉我是否适合买入",
+          "latency": 4859,
+          "tokens": 315,
+          "promptTokens": 15,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_IYVfKqL4wP80pguC"
+        },
+        {
+          "prompt": "搜索最新的 AI 新闻，并总结三条最重要的",
+          "latency": 306,
+          "tokens": 266,
+          "promptTokens": 14,
+          "completionTokens": 252,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_otFGphZWZpiNrIVC"
+        },
+        {
+          "prompt": "帮我分析一下 Python 和 Go 的性能差异",
+          "latency": 3696,
+          "tokens": 314,
+          "promptTokens": 14,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_XEj7BixAqA6jbB-5"
+        }
+      ]
+    },
+    {
+      "name": "Document QA",
+      "profile": "cheap",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1409,
+      "savedTokens": 0,
+      "avgLatency": 3065,
+      "cacheHits": 2,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "搜索一下今天北京的天气，然后告诉我适不适合户外运动",
+          "latency": 4407,
+          "tokens": 316,
+          "promptTokens": 16,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_XTE3FSvXa_Tk5s5P"
+        },
+        {
+          "prompt": "帮我计算一下 12345 × 67890，然后告诉我结果",
+          "latency": 236,
+          "tokens": 197,
+          "promptTokens": 18,
+          "completionTokens": 179,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_7GpXcz5lrd8piYsR"
+        },
+        {
+          "prompt": "查询一下比特币的最新价格，然后告诉我是否适合买入",
+          "latency": 4890,
+          "tokens": 316,
+          "promptTokens": 15,
+          "completionTokens": 301,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Up7twPKdiVs-cGaE"
+        },
+        {
+          "prompt": "搜索最新的 AI 新闻，并总结三条最重要的",
+          "latency": 1131,
+          "tokens": 266,
+          "promptTokens": 14,
+          "completionTokens": 252,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_yU54oJNOqsXg1MXn"
+        },
+        {
+          "prompt": "帮我分析一下 Python 和 Go 的性能差异",
+          "latency": 4659,
+          "tokens": 314,
+          "promptTokens": 14,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_BwoFXy0aNIohk9bi"
+        }
+      ]
+    },
+    {
+      "name": "Document QA",
+      "profile": "maximum_saving",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 1408,
+      "savedTokens": 0,
+      "avgLatency": 2781,
+      "cacheHits": 2,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "搜索一下今天北京的天气，然后告诉我适不适合户外运动",
+          "latency": 4782,
+          "tokens": 316,
+          "promptTokens": 16,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_hAmswlSnhgiadECe"
+        },
+        {
+          "prompt": "帮我计算一下 12345 × 67890，然后告诉我结果",
+          "latency": 234,
+          "tokens": 197,
+          "promptTokens": 18,
+          "completionTokens": 179,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_aHG603G7f8JjRYBH"
+        },
+        {
+          "prompt": "查询一下比特币的最新价格，然后告诉我是否适合买入",
+          "latency": 4689,
+          "tokens": 315,
+          "promptTokens": 15,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_361gyUAmkRiBlr7C"
+        },
+        {
+          "prompt": "搜索最新的 AI 新闻，并总结三条最重要的",
+          "latency": 539,
+          "tokens": 266,
+          "promptTokens": 14,
+          "completionTokens": 252,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_OOOstWZYuUcsGg4J"
+        },
+        {
+          "prompt": "帮我分析一下 Python 和 Go 的性能差异",
+          "latency": 3663,
+          "tokens": 314,
+          "promptTokens": 14,
+          "completionTokens": 300,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_IQIkwzk1j-2E10vP"
+        }
+      ]
+    },
+    {
+      "name": "Repeated Prompt",
+      "profile": "baseline",
+      "requests": 3,
+      "successful": 3,
+      "totalTokens": 39,
+      "savedTokens": 0,
+      "avgLatency": 1651,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "5+7=? 只输出数字",
+          "latency": 1737,
+          "tokens": 13,
+          "promptTokens": 12,
+          "completionTokens": 1,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_mTeYnbSCD1MwKqq6"
+        },
+        {
+          "prompt": "5+7=? 只输出数字",
+          "latency": 1732,
+          "tokens": 13,
+          "promptTokens": 12,
+          "completionTokens": 1,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_OwGjrHCAyD-sbYmb"
+        },
+        {
+          "prompt": "5+7=? 只输出数字",
+          "latency": 1485,
+          "tokens": 13,
+          "promptTokens": 12,
+          "completionTokens": 1,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_5NPSnigIytOg2yLk"
+        }
+      ]
+    },
+    {
+      "name": "Repeated Prompt",
+      "profile": "balanced",
+      "requests": 3,
+      "successful": 3,
+      "totalTokens": 39,
+      "savedTokens": 0,
+      "avgLatency": 238,
+      "cacheHits": 3,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "5+7=? 只输出数字",
+          "latency": 242,
+          "tokens": 13,
+          "promptTokens": 12,
+          "completionTokens": 1,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_KsZTALew_3rYoot3"
+        },
+        {
+          "prompt": "5+7=? 只输出数字",
+          "latency": 236,
+          "tokens": 13,
+          "promptTokens": 12,
+          "completionTokens": 1,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_vTb9lkSvJfSZLn6Z"
+        },
+        {
+          "prompt": "5+7=? 只输出数字",
+          "latency": 235,
+          "tokens": 13,
+          "promptTokens": 12,
+          "completionTokens": 1,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_u9wr7ZlM5QzsH11x"
+        }
+      ]
+    },
+    {
+      "name": "Repeated Prompt",
+      "profile": "cheap",
+      "requests": 3,
+      "successful": 3,
+      "totalTokens": 39,
+      "savedTokens": 0,
+      "avgLatency": 381,
+      "cacheHits": 3,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "5+7=? 只输出数字",
+          "latency": 671,
+          "tokens": 13,
+          "promptTokens": 12,
+          "completionTokens": 1,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Hse0lQ9yclG8xDmH"
+        },
+        {
+          "prompt": "5+7=? 只输出数字",
+          "latency": 237,
+          "tokens": 13,
+          "promptTokens": 12,
+          "completionTokens": 1,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_vfyBIFnNh11ne7_I"
+        },
+        {
+          "prompt": "5+7=? 只输出数字",
+          "latency": 235,
+          "tokens": 13,
+          "promptTokens": 12,
+          "completionTokens": 1,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_o1fjoT6sokcdGpOv"
+        }
+      ]
+    },
+    {
+      "name": "Repeated Prompt",
+      "profile": "maximum_saving",
+      "requests": 3,
+      "successful": 3,
+      "totalTokens": 39,
+      "savedTokens": 0,
+      "avgLatency": 536,
+      "cacheHits": 3,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "5+7=? 只输出数字",
+          "latency": 693,
+          "tokens": 13,
+          "promptTokens": 12,
+          "completionTokens": 1,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_1k97WecupZOkDfIj"
+        },
+        {
+          "prompt": "5+7=? 只输出数字",
+          "latency": 246,
+          "tokens": 13,
+          "promptTokens": 12,
+          "completionTokens": 1,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_fAaA9hjGhKowCePw"
+        },
+        {
+          "prompt": "5+7=? 只输出数字",
+          "latency": 669,
+          "tokens": 13,
+          "promptTokens": 12,
+          "completionTokens": 1,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_Dem0XDAgXR4erge8"
+        }
+      ]
+    },
+    {
+      "name": "Short Prompt",
+      "profile": "baseline",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 98,
+      "savedTokens": 0,
+      "avgLatency": 1806,
+      "cacheHits": 0,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "hi",
+          "latency": 1618,
+          "tokens": 14,
+          "promptTokens": 5,
+          "completionTokens": 9,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_CNkyZnzFBl5ssIQ0"
+        },
+        {
+          "prompt": "hello",
+          "latency": 1881,
+          "tokens": 14,
+          "promptTokens": 5,
+          "completionTokens": 9,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_brljLdJJwilNPLqG"
+        },
+        {
+          "prompt": "ok",
+          "latency": 1641,
+          "tokens": 13,
+          "promptTokens": 5,
+          "completionTokens": 8,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_XXeDYie83MXb7T5x"
+        },
+        {
+          "prompt": "yes",
+          "latency": 2153,
+          "tokens": 15,
+          "promptTokens": 5,
+          "completionTokens": 10,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_7AsQi9reBe4ZSG2Z"
+        },
+        {
+          "prompt": "thanks",
+          "latency": 1735,
+          "tokens": 42,
+          "promptTokens": 5,
+          "completionTokens": 37,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_mue99sLkLHZFv20O"
+        }
+      ]
+    },
+    {
+      "name": "Short Prompt",
+      "profile": "balanced",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 93,
+      "savedTokens": 0,
+      "avgLatency": 1199,
+      "cacheHits": 2,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "hi",
+          "latency": 233,
+          "tokens": 14,
+          "promptTokens": 5,
+          "completionTokens": 9,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_zzQ8CAj6gRbHjNF_"
+        },
+        {
+          "prompt": "hello",
+          "latency": 232,
+          "tokens": 14,
+          "promptTokens": 5,
+          "completionTokens": 9,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_u-sddx8bEVzpeRgb"
+        },
+        {
+          "prompt": "ok",
+          "latency": 1677,
+          "tokens": 14,
+          "promptTokens": 5,
+          "completionTokens": 9,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_G7g45cUnX09vTvdo"
+        },
+        {
+          "prompt": "yes",
+          "latency": 1585,
+          "tokens": 15,
+          "promptTokens": 5,
+          "completionTokens": 10,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_5DXgSn1rlMGyexWl"
+        },
+        {
+          "prompt": "thanks",
+          "latency": 2269,
+          "tokens": 36,
+          "promptTokens": 5,
+          "completionTokens": 31,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_ZbCgYoZkwUlg4atX"
+        }
+      ]
+    },
+    {
+      "name": "Short Prompt",
+      "profile": "cheap",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 159,
+      "savedTokens": 0,
+      "avgLatency": 1304,
+      "cacheHits": 2,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "hi",
+          "latency": 729,
+          "tokens": 14,
+          "promptTokens": 5,
+          "completionTokens": 9,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_ufrXTVBmAkirIFYu"
+        },
+        {
+          "prompt": "hello",
+          "latency": 233,
+          "tokens": 14,
+          "promptTokens": 5,
+          "completionTokens": 9,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_PR9VklhfRlI5i5H0"
+        },
+        {
+          "prompt": "ok",
+          "latency": 2294,
+          "tokens": 81,
+          "promptTokens": 5,
+          "completionTokens": 76,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_yN70fFSDedHvuzWn"
+        },
+        {
+          "prompt": "yes",
+          "latency": 1538,
+          "tokens": 14,
+          "promptTokens": 5,
+          "completionTokens": 9,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_1P0krMft89xdtL18"
+        },
+        {
+          "prompt": "thanks",
+          "latency": 1724,
+          "tokens": 36,
+          "promptTokens": 5,
+          "completionTokens": 31,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_eCSG038eVTOCvpv6"
+        }
+      ]
+    },
+    {
+      "name": "Short Prompt",
+      "profile": "maximum_saving",
+      "requests": 5,
+      "successful": 5,
+      "totalTokens": 112,
+      "savedTokens": 0,
+      "avgLatency": 1307,
+      "cacheHits": 2,
+      "errors": [],
+      "raw": [
+        {
+          "prompt": "hi",
+          "latency": 229,
+          "tokens": 14,
+          "promptTokens": 5,
+          "completionTokens": 9,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_EZS9_V6QW4FFZccL"
+        },
+        {
+          "prompt": "hello",
+          "latency": 231,
+          "tokens": 14,
+          "promptTokens": 5,
+          "completionTokens": 9,
+          "cached": true,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_RIKQxPgg0jgyUm3h"
+        },
+        {
+          "prompt": "ok",
+          "latency": 2028,
+          "tokens": 33,
+          "promptTokens": 5,
+          "completionTokens": 28,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_cMD3uJHuBhc4ZIHK"
+        },
+        {
+          "prompt": "yes",
+          "latency": 1644,
+          "tokens": 15,
+          "promptTokens": 5,
+          "completionTokens": 10,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req_HXCFmNAdulb2S3CQ"
+        },
+        {
+          "prompt": "thanks",
+          "latency": 2405,
+          "tokens": 36,
+          "promptTokens": 5,
+          "completionTokens": 31,
+          "cached": false,
+          "deduped": false,
+          "savedTokens": 0,
+          "requestId": "req__M5Sg2LLa-dESCK6"
+        }
+      ]
+    },
+    {
+      "name": "Concurrent Duplicate",
+      "profile": "balanced",
+      "requests": 3,
+      "successful": 3,
+      "totalTokens": 948,
+      "savedTokens": 0,
+      "avgLatency": 3477,
+      "latencies": [
+        3523,
+        3457,
+        3452
+      ],
+      "cacheHits": 0,
+      "deduped": 3,
+      "errors": [],
+      "note": "3 并发相同请求：若 SingleFlight 生效，后到请求延迟应显著低于首个（共享在途上游调用）"
+    }
+  ]
+}
