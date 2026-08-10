@@ -657,9 +657,9 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 > - **R14** Token Optimization 产品化：Savings Engine（`src/analytics/savings-attribution.ts`——CACHE/COMPRESSION/ROUTING/REWRITE/NONE 互斥归因防 double counting + ACTUAL/ESTIMATED）、请求记录 cursor 分页 + 详情 Explainability、我的 Key(+Last Used)、测速防滥用、Optimization Profile 4 档接线、Privacy Center、真实数据核查（SingleFlight waiter 不重复计费、缓存命中节省落库）
 > - **R15** 注册交互完善：表单清空/退出回登录/中文报错/字段提示；**本地补充**（git `dc57d04`/`ee2b022`/`25447f8`）：测速重构（真实 chat 测速 + 单测/全测 + 中文错误映射）、注册防人机（算术验证码 + 同 IP 24h 上限 + 保留名黑名单 + 强制确认保存 Key + `GET /auth/status`）、**首次使用 4 步引导向导**（`dashboard/src/app/_onboarding-wizard.tsx`：Provider→档位→连接→首次请求）+ 概览来源占比去硬编码
 
-## 🔥 本次远程执行编排（SSOT 入口：范围 / 顺序 / 完成定义，2026-08）
+## 🔥 本次远程执行编排（✅ 已全部完成：R15.1+R16+v2.4，2026-08）
 
-> **这是本次远程任务的唯一入口**。以下三个任务书**全部在本轮执行**，按 R15.1 → R16 → v2.4 顺序，每阶段完整验收后再进下一阶段。**不要跳过、不要只做部分、不要加未列出的任务。**
+> **状态：已全部完成（2026-08，本地补做收尾，git 55b1b13 + cca90c5）。以下为执行记录存档。**。以下三个任务书**全部在本轮执行**，按 R15.1 → R16 → v2.4 顺序，每阶段完整验收后再进下一阶段。**不要跳过、不要只做部分、不要加未列出的任务。**
 
 ### 范围
 | 阶段 | 任务书 | 内容 | 为什么这个顺序 |
@@ -721,7 +721,7 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 > **实施顺序**：审计(1/6 现状) → 表达层(2/3/4/5/9) → 行为验证与修复(1/6) → 体验(7/8) → 埋点(10) → 完整测试 → Completion Report。
 > **最终验收**：新用户不看 README，3~5 分钟完成"注册→配 Provider→发请求→看到节省"；无优化/缓存/去重三种场景都有专业表达；Profile 真实生效；冷启动不白屏；漏斗有数据。
 
-## R16 OSS 申请准备（Codex for Open Source，⬜ 全部 TODO，供远程 agent 执行）
+## R16 OSS 申请准备（✅ 完成：远程交付 8 项 + 本地修 README badges，2026-08）
 
 > **背景**（2026-08 决策）：申请 OpenAI **Codex for OSS**（面向活跃开源项目维护者，审核看 meaningful usage / ecosystem importance / active maintenance，rolling review）。Nexus 强项 = **active maintenance**（401 tests / CI / releases / 安全修复 / 公开部署），弱项 = 外部 adoption 证据。**策略：不吹用户量，证明项目价值 + 活跃维护 + 可复现 benchmark。**
 > **核心定位句**（README 首屏 + 申请文本统一用）：**"Nexus is an open-source BYOK LLM Gateway that makes token efficiency measurable, explainable, and accessible to individual developers."**
