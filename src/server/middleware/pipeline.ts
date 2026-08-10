@@ -247,7 +247,10 @@ export const providerMiddleware: MiddlewareHandler = {
             maxRetries: 2,
             baseDelayMs: 500,
           }),
-          () => { (ctx.meta as Record<string, unknown>).singleFlightWaiter = true; },
+          () => {
+            logger.info({ requestId: ctx.requestId, key: key.slice(0, 60) }, "singleflight WAITER: shared in-flight upstream request");
+            (ctx.meta as Record<string, unknown>).singleFlightWaiter = true;
+          },
         );
 
         breaker.recordSuccess();
