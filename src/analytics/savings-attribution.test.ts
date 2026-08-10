@@ -27,6 +27,23 @@ describe("savings-attribution (节省归因,防 double counting)", () => {
     expect(a.kind).toBe("ESTIMATED");
   });
 
+  it("SingleFlight 去重等待者 → DEDUP(不重复计费,savedTokens=0)", () => {
+    const a = attributeSavings({ cached: false, deduped: true, compressionRatio: 0, savedTokens: 0 });
+    expect(a.source).toBe("DEDUP");
+    expect(a.savedTokens).toBe(0);
+    expect(a.kind).toBe("ACTUAL");
+    const s = summarizeSavings([{ cached: false, deduped: true, savedTokens: 0 }]);
+    expect(s.DEDUP.tokens).toBe(0);
+  });
+
+  it("压缩+路由双决策仍互斥归 COMPRESSION(MULTI 枚举保留不参与)", () => {
+    const a = attributeSavings({ cached: false, compressionRatio: 0.3, savedTokens: 50, routerReason: "cost-optimized" });
+    expect(a.source).toBe("COMPRESSION");
+    const s = summarizeSavings([{ cached: false, compressionRatio: 0.3, savedTokens: 50, routerReason: "cost-optimized" }]);
+    expect(s.MULTI.tokens).toBe(0);
+    expect(s.COMPRESSION.tokens).toBe(50);
+  });
+
   it("多优化不重复累加: summarize 按互斥来源分组", () => {
     const s = summarizeSavings([
       { cached: true, savedTokens: 100, savedCostMicro: 20 },

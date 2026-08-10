@@ -332,7 +332,10 @@ print(resp.choices[0].message.content)`;
                       <Sparkles className="w-4 h-4 text-emerald-400" />
                       <span className="text-sm font-semibold text-zinc-100">Nexus Optimization</span>
                       {reqResult.cached && (
-                        <span className="ml-auto text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">⚡ 缓存命中 · 上游请求已避免</span>
+                        <span className="ml-auto text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">⚡ Cache Hit · Upstream request avoided</span>
+                      )}
+                      {!reqResult.cached && reqResult.deduped && (
+                        <span className="ml-auto text-[10px] bg-sky-500/10 text-sky-400 px-2 py-0.5 rounded-full border border-sky-500/20">🔗 Request Deduplicated · shared an in-flight request</span>
                       )}
                     </div>
                     {(reqResult.originalTokens != null || reqResult.savedTokens > 0) ? (
@@ -359,7 +362,7 @@ print(resp.choices[0].message.content)`;
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-zinc-500">本次请求较短或未触发优化（<code className="bg-zinc-800 px-1 rounded">max_tokens: 60</code>）。多轮/长消息能体现更明显的节省——去「请求记录」可查看每次请求的归因明细。</p>
+                      <p className="text-xs text-zinc-500"><span className="text-zinc-300">No optimization applied</span>：本次请求较短（prompt below threshold），Cache: Miss · Compression: Skipped。多轮/长消息能体现更明显的节省——去「请求记录」查看每次请求的归因明细。</p>
                     )}
                     {reqResult.latencyMs != null && (
                       <div className="mt-3 pt-3 border-t border-zinc-800/60 text-[11px] text-zinc-500 flex gap-4">
@@ -375,6 +378,13 @@ print(resp.choices[0].message.content)`;
                       <div className="text-xs text-zinc-300 leading-relaxed">{reqResult.reply}</div>
                     </div>
                   )}
+                  <div className="flex items-center gap-2 bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-4 py-3">
+                    <span className="text-lg">🎉</span>
+                    <div>
+                      <div className="text-sm font-medium text-emerald-400">You're ready!</div>
+                      <div className="text-xs text-zinc-400">Nexus 正在优化你的请求。进入控制台查看节省详情与请求归因。</div>
+                    </div>
+                  </div>
                 </div>
               )}
 

@@ -80,7 +80,17 @@ export const usageLogs = pgTable(
     latencyMs: integer("latency_ms").notNull().default(0),
     /** 首 token 延迟 (ms) */
     ttftMs: integer("ttft_ms").default(0),
+    /** 优化阶段总耗时 (ms)：非 provider 中间件之和 */
+    optimizationLatencyMs: integer("optimization_latency_ms").default(0),
+    /** Provider 调用耗时 (ms) */
+    providerLatencyMs: integer("provider_latency_ms").default(0),
+    /** 请求总耗时 (ms) */
+    totalLatencyMs: integer("total_latency_ms").default(0),
+    /** 分阶段耗时 (ms)：{cacheLookupMs, routerMs, ...} 仅含实际执行阶段 */
+    stageLatency: jsonb("stage_latency"),
     cached: boolean("cached").notNull().default(false),
+    /** SingleFlight 去重等待者：共享了正在进行的上游请求 */
+    deduped: boolean("deduped").notNull().default(false),
     stream: boolean("stream").notNull().default(false),
     /** 压缩率 (0~1) */
     compressionRatio: integer("compression_ratio").default(0),

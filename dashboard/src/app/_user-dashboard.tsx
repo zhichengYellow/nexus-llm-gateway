@@ -208,7 +208,7 @@ export default function UserDashboard({ client, onLogout }: Props) {
               <div className="flex flex-wrap items-baseline gap-4 mt-1">
                 <span className="text-3xl font-bold text-white">{formatNumber(savedTokens)}</span>
                 <span className="text-sm text-emerald-400/80">Tokens</span>
-                <span className="text-sm text-zinc-500">${today.savedCost || "0.00"}</span>
+                <span className="text-sm text-zinc-500">净节省 ${((today.netSavedCostMicro ?? 0) / 1_000_000).toFixed(4)} · 优化成本 ${((today.optimizationCostMicro ?? 0) / 1_000_000).toFixed(4)}</span>
               </div>
               {/* 来源卡片（百分比按真实 breakdown 计算，禁止硬编码） */}
               <div className="flex gap-4 mt-3 text-xs">
@@ -233,7 +233,7 @@ export default function UserDashboard({ client, onLogout }: Props) {
                 { title: "今日请求", value: (today.requests || 0).toLocaleString(), sub: `${(today.cacheHits || 0)} 缓存命中`, color: "#10B981" },
                 { title: "今日 Token", value: (today.tokens || 0).toLocaleString(), sub: "消耗 tokens", color: "#3B82F6" },
                 { title: "缓存命中率", value: cacheRate, sub: "节省调用成本", color: "#8B5CF6" },
-                { title: "本月 Token", value: (month.tokens || 0).toLocaleString(), sub: "BYOK · 不限配额", color: "#F59E0B" },
+                { title: "本月 Token", value: (month.tokens || 0).toLocaleString(), sub: `PROJECTED ${formatNumber(month.projectedSavedTokens || 0)} 省`, color: "#F59E0B" },
               ].map((s) => (
                 <div key={s.title} className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-4 group">
                   <span className="text-xs text-zinc-500">{s.title}</span>
@@ -292,7 +292,7 @@ export default function UserDashboard({ client, onLogout }: Props) {
                         <td className="py-2 px-2 text-right text-zinc-300">{r.tokens?.toLocaleString()}</td>
                         <td className="py-2 px-2 text-right text-emerald-400">{r.savedTokens > 0 ? formatNumber(r.savedTokens) : "—"}</td>
                         <td className="py-2 px-2 text-right text-zinc-500">{r.latencyMs}ms</td>
-                        <td className="py-2 px-2 text-center">{r.cached ? <span className="text-emerald-400">✓</span> : "—"}</td>
+                        <td className="py-2 px-2 text-center">{r.cached ? <span className="text-emerald-400" title="缓存命中，未打上游">⚡ 缓存</span> : r.deduped ? <span className="text-sky-400" title="共享了在途请求，未打上游">🔗 去重</span> : "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -326,6 +326,9 @@ export default function UserDashboard({ client, onLogout }: Props) {
                     <span className="px-2 py-0.5 rounded bg-zinc-900/60">model: {selectedReq.model}</span>
                     <span className="px-2 py-0.5 rounded bg-zinc-900/60">缓存: {selectedReq.cacheType}</span>
                     <span className="px-2 py-0.5 rounded bg-zinc-900/60">压缩比: {selectedReq.compressionRatio || 0}</span>
+                    {selectedReq.optimizationLatencyMs > 0 && (
+                      <span className="px-2 py-0.5 rounded bg-zinc-900/60">优化开销: {selectedReq.optimizationLatencyMs}ms{(selectedReq.totalLatencyMs > 0 ? ` / 总 ${selectedReq.totalLatencyMs}ms` : "")}</span>
+                    )}
                     <span className="px-2 py-0.5 rounded bg-zinc-900/60">路由: {selectedReq.routerReason || "—"}</span>
                     <span className="px-2 py-0.5 rounded bg-zinc-900/60">状态: {selectedReq.status}</span>
                   </div>

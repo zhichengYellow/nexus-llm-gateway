@@ -91,6 +91,14 @@ userRoute.get("/overview", async (c) => {
     .where(eq(tenants.id, tenant.id))
     .limit(1);
 
+  // V2.4-3 PROJECTED 月度预测：线性外推（本月已用天数 → 全月），独立字段不与 ACTUAL 混淆
+  const elapsedDays = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthSavedTokens = monthStats?.savedTokens ?? 0;
+  const monthSavedCostMicro = monthStats?.savedCostMicro ?? 0;
+  const projectedSavedTokens = elapsedDays > 0 ? Math.round((monthSavedTokens / elapsedDays) * daysInMonth) : 0;
+  const projectedSavedCostMicro = elapsedDays > 0 ? Math.round((monthSavedCostMicro / elapsedDays) * daysInMonth) : 0;
+
   return c.json({
     tenant: { id: tenant.id, name: tenant.name, monthlyTokenQuota: tenant.monthlyTokenQuota, cachePlan: tenantRow?.cachePlan ?? "free" },
     apiKey: apiKey ? { name: apiKey.name, keyPrefix: apiKey.keyPrefix } : null,
@@ -101,14 +109,22 @@ userRoute.get("/overview", async (c) => {
       cacheRate: `${cacheRate}%`,
       savedTokens: daySavedTokens,
       savedCost: daySavedCost,
+      // V2.4-2 Net Saving：优化自身不调用外部模型 → Optimization Cost = 0，Net = Gross（字段显式，未来有成本时直接填）
+      optimizationCostMicro: 0,
+      netSavedCostMicro: dayStats?.savedCostMicro ?? 0,
       savingsBreakdown,
     },
     month: {
       tokens: monthStats?.monthTokens ?? 0,
       requests: monthStats?.monthRequests ?? 0,
-      savedTokens: monthStats?.savedTokens ?? 0,
-      savedCost: ((monthStats?.savedCostMicro ?? 0) / 1_000_000).toFixed(6),
+      savedTokens: monthSavedTokens,
+      savedCost: (monthSavedCostMicro / 1_000_000).toFixed(6),
+      optimizationCostMicro: 0,
+      netSavedCostMicro: monthSavedCostMicro,
       quotaExceeded: tenant.monthlyTokenQuota !== null && (monthStats?.monthTokens ?? 0) >= tenant.monthlyTokenQuota,
+      // PROJECTED（预测，非实际）：按本月已过天数线性外推全月
+      projectedSavedTokens,
+      projectedSavedCost: (projectedSavedCostMicro / 1_000_000).toFixed(6),
     },
     cache: cacheStats,
   });
@@ -190,6 +206,7 @@ userRoute.get("/requests", async (c) => {
       savedTokens: usageLogs.savedTokens,
       latencyMs: usageLogs.latencyMs,
       cached: usageLogs.cached,
+      deduped: usageLogs.deduped,
       status: usageLogs.status,
     })
     .from(usageLogs)
@@ -210,6 +227,7 @@ userRoute.get("/requests", async (c) => {
       savedTokens: r.savedTokens,
       latencyMs: r.latencyMs,
       cached: r.cached,
+      deduped: r.deduped,
       status: r.status,
     })),
     hasMore,
@@ -236,7 +254,11 @@ userRoute.get("/requests/:id", async (c) => {
       costMicro: usageLogs.costMicro,
       latencyMs: usageLogs.latencyMs,
       ttftMs: usageLogs.ttftMs,
+      optimizationLatencyMs: usageLogs.optimizationLatencyMs,
+      providerLatencyMs: usageLogs.providerLatencyMs,
+      stageLatency: usageLogs.stageLatency,
       cached: usageLogs.cached,
+      deduped: usageLogs.deduped,
       stream: usageLogs.stream,
       compressionRatio: usageLogs.compressionRatio,
       cacheType: usageLogs.cacheType,
@@ -263,6 +285,8 @@ userRoute.get("/requests/:id", async (c) => {
       upstreamModel: row.upstreamModel,
       status: row.status,
       stream: row.stream,
+      cached: row.cached,
+      deduped: row.deduped,
       // Tokens
       originalTokens,
       optimizedTokens: row.totalTokens,
@@ -282,6 +306,10 @@ userRoute.get("/requests/:id", async (c) => {
       // Latency
       latencyMs: row.latencyMs,
       ttftMs: row.ttftMs,
+      // 优化开销（V2.4-1）
+      optimizationLatencyMs: row.optimizationLatencyMs ?? 0,
+      providerLatencyMs: row.providerLatencyMs ?? 0,
+      stageLatency: row.stageLatency,
       // 优化元数据
       compressionRatio: row.compressionRatio,
       cacheType: row.cacheType,

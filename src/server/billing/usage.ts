@@ -28,6 +28,14 @@ export interface UsageRecordInput {
   savedTokens?: number;
   /** 节省的成本（微美元） */
   savedCostMicro?: number;
+  /** 优化阶段总耗时 (ms) */
+  optimizationLatencyMs?: number;
+  /** Provider 调用耗时 (ms) */
+  providerLatencyMs?: number;
+  /** 分阶段耗时 (ms) */
+  stageLatency?: Record<string, number>;
+  /** SingleFlight 去重等待者 */
+  deduped?: boolean;
 }
 
 /** 计算成本（微美元，1 美元 = 1_000_000 微美元） */
@@ -63,10 +71,15 @@ export function recordUsage(input: UsageRecordInput): void {
       costMicro,
       latencyMs: input.latencyMs,
       cached: input.cached,
+      deduped: input.deduped ?? false,
       stream: input.stream,
       status: input.status,
       savedTokens: input.savedTokens ?? 0,
       savedCostMicro,
+      optimizationLatencyMs: Math.round(input.optimizationLatencyMs ?? 0),
+      providerLatencyMs: Math.round(input.providerLatencyMs ?? 0),
+      totalLatencyMs: Math.round(input.latencyMs),
+      stageLatency: input.stageLatency ?? null,
     })
     .execute()
     .catch((e) => logger.error({ err: e, requestId: input.requestId }, "record usage failed"));

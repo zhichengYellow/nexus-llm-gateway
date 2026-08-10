@@ -151,6 +151,9 @@ export const cacheMiddleware: MiddlewareHandler = {
         stream: false,
         status: 200,
         savedTokens,
+        optimizationLatencyMs: ctx.meta.optimizationLatencyMs as number | undefined,
+        providerLatencyMs: 0,
+        stageLatency: ctx.meta.stageLatency as Record<string, number> | undefined,
       });
 
       logger.info({ requestId: ctx.requestId, model: ctx.model, latencyMs }, "served from cache");
@@ -268,6 +271,10 @@ export const providerMiddleware: MiddlewareHandler = {
           stream: false,
           status: 200,
           savedTokens: isWaiter ? 0 : compressionSaved,
+          deduped: isWaiter ? true : undefined,
+          optimizationLatencyMs: ctx.meta.optimizationLatencyMs as number | undefined,
+          providerLatencyMs: ctx.meta.providerLatencyMs as number | undefined,
+          stageLatency: ctx.meta.stageLatency as Record<string, number> | undefined,
         });
 
         await cache.store(ctx.request, ctx.model, node.providerType, res, tenantId).catch(() => undefined);
@@ -345,9 +352,11 @@ export class MiddlewarePipeline {
     for (const middleware of this.middlewares) {
       if (!middleware.enabled) continue;
 
+      const t0 = performance.now();
       try {
         const result = await middleware.handler(ctx);
         if (result?.break) {
+          this.#recordStage(ctx, middleware.name, t0);
           return result;
         }
       } catch (e) {
@@ -355,12 +364,27 @@ export class MiddlewarePipeline {
           { middleware: middleware.name, err: (e as Error).message },
           "middleware execution error",
         );
+        this.#recordStage(ctx, middleware.name, t0);
         return {
           break: true,
           status: 500,
           error: { message: `middleware ${middleware.name} error: ${(e as Error).message}`, type: "internal_error" },
         };
       }
+      this.#recordStage(ctx, middleware.name, t0);
+    }
+  }
+
+  /** 记录单中间件耗时到 ctx.meta.stageLatency；非 provider 阶段累加为 optimizationLatencyMs */
+  #recordStage(ctx: PipelineContext, name: string, t0: number): void {
+    const ms = Math.round((performance.now() - t0) * 100) / 100;
+    const stages = (ctx.meta.stageLatency as Record<string, number> | undefined) ?? {};
+    stages[`${name}Ms`] = (stages[`${name}Ms`] ?? 0) + ms;
+    ctx.meta.stageLatency = stages;
+    if (name !== "provider") {
+      ctx.meta.optimizationLatencyMs = ((ctx.meta.optimizationLatencyMs as number) ?? 0) + ms;
+    } else {
+      ctx.meta.providerLatencyMs = (ctx.meta.providerLatencyMs as number ?? 0) + ms;
     }
   }
 }
