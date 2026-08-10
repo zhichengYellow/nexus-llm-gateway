@@ -227,10 +227,20 @@ export const providerConfigs = pgTable("provider_configs", {
 
 /** 优化开关设置（单行，控制台可读写） */
 export const optimizationSettings = pgTable("optimization_settings", {
-  id: integer("id").primaryKey().default(1),
+id: integer("id").primaryKey().default(1),
   settings: jsonb("settings").notNull().$type<OptimizationSettings>(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ===== Onboarding 转化漏斗事件 =====
+export const onboardingEvents = pgTable("onboarding_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+  event: text("event").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  tenantEventIdx: index("onboarding_events_tenant_event_idx").on(t.tenantId, t.event),
+}));
 
 export { vector };
 export const enableVectorExtension = sql`CREATE EXTENSION IF NOT EXISTS vector`;

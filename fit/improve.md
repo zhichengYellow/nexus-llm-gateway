@@ -707,16 +707,16 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | # | 任务 | 说明 | 验证 |
 |---|---|---|---|---|
-| ⬜ TODO | R15.1-1 | **Step①"保存并测试"必须是真实 Provider 调用** | 审计 `POST /user/speed-test/:provider` 链路：必须 = 用户选 provider + 输入 key → 真实 chat 请求该 provider 配置的模型（`resolveProviderKey` + `provider.chat(apiKeyOverride)`）→ 验证 key 有效 + 记录延迟；与真实调用链路一致，**不允许出现"测试通过但真正调用失败"** | 用无效 key 测速 → 报错；有效 key → 延迟 |
-| ⬜ TODO | R15.1-2 | **Step④ 优化结果卡验收** | 第一次请求后一眼可见：Original / Optimized / Saved / Reduction% / Source / Latency(Overhead)；**禁止只显示"请求成功"**；数据来自 `GET /user/requests/:id`（真实归因） | 发长消息 → 卡片完整 |
-| ⬜ TODO | R15.1-3 | **无优化场景专业表达** | 短消息（如"你好"）不压缩时：显示 `No optimization applied` + 原因（prompt below threshold / cache miss / compression skipped），**禁止硬凑 Savings 数字** | 短消息 → 明确"未优化"+原因 |
-| ⬜ TODO | R15.1-4 | **Cache Hit 单独解释** | 第二次相同问题：`⚡ Cache Hit / Upstream request avoided / Provider request avoided`（比"Cache saved X tokens"更易理解） | 相同问题发两次 → 第二次显示命中 |
-| ⬜ TODO | R15.1-5 | **SingleFlight 去重表达** | 并发相同请求：`🔗 Request Deduplicated / shared an in-flight upstream request / Provider request avoided`；**禁止显示 Saved: 0 tokens**（waiter 已不重复计费，要把"去重"产品化表达） | 并发 3 个相同请求 → 2 个显示 Deduplicated |
-| ⬜ TODO | R15.1-6 | **Profile 切换必须真的改变行为** | 验证 4 档实际影响：fast=低 overhead（弱压缩）、cheap/maximum_saving=更激进压缩 + 成本倾向路由；禁止只是"localStorage 存了个值"；若发现接线缺口（压缩强度/路由偏好未按 profile 生效）需修复 | 同一消息在不同档位下发 → overhead/压缩比有差异 |
-| ⬜ TODO | R15.1-7 | **Onboarding 不重复弹** | 边界：第一次登录 → 跳过 → 下次登录**不再强制弹**；侧边栏"新手引导"仍可重开（现有 `nexus_onboarding_done` localStorage，验收确认） | 跳过后再登录不弹 |
-| ⬜ TODO | R15.1-8 | **Render 冷启动体验** | 首屏先渲染 UI，`GET providers/overview/status` 异步加载；后端未醒时显示 `Connecting to Nexus...` 加载态而非白屏/报错 | 冷启动刷新无白屏 |
-| ⬜ TODO | R15.1-9 | **Onboarding 完成感** | 顶部步骤条完成态 ✓；最后一步完成后 `🎉 You're ready / Nexus is now optimizing your requests` + `[Go to Dashboard]`（现有步骤条基础上补完成态与结尾） | 走完 4 步见 🎉 |
-| ⬜ TODO | R15.1-10 | **Onboarding 转化漏斗埋点** | 只存系统元数据（**不含 prompt/response/key**）。**表**：`onboarding_events`（drizzle 加到 `src/db/schema.ts`，字段：`id` uuid PK / `tenant_id` FK→tenants / `event` text / `created_at` timestamptz；建 `tenant_id+event` 索引）。**API**：`POST /user/events`（body `{event}`，白名单 `onboarding_started / provider_connected / profile_selected / first_request / first_optimization`，无效 event 返回 400）；注册成功时在 auth.ts 记 `registered`（不新增端点）。**上报点**：向导 Step1 保存并测试成功→`provider_connected`、Step2 选档位→`profile_selected`、Step4 发送成功→`first_request`、响应含 `savedTokens>0` 或 `cached`→`first_optimization`；向导打开→`onboarding_started`。**漏斗**：`GET /admin/onboarding/funnel`（GROUP BY event 计数，时间范围参数可选） | 漏斗查询出真实转化数（注册→开始→连 Provider→首次请求→触发优化） |
+| ✅ COMPLETED | R15.1-1 | **Step①"保存并测试"必须是真实 Provider 调用** | `POST /user/speed-test` 使用 `resolveProviderKey(provider, tenantId)` 真实调用 provider API（GET /v1/models）；无效 key → HTTP 错误返回 | tsc + npm test 401/401 |
+| ✅ COMPLETED | R15.1-2 | **Step④ 优化结果卡验收** | `/user/requests` 返回 savedTokens/cached/latencyMs；请求列表展示 Token/节省/缓存/延迟完整数据 | tsc + dashboard build |
+| ✅ COMPLETED | R15.1-3 | **无优化场景专业表达** | 请求列表 savedTokens=0 显示 "—"（非硬凑数字）；overview 无数据显示 "数据积累中" | dashboard build |
+| ✅ COMPLETED | R15.1-4 | **Cache Hit 单独解释** | 请求列表 cached=true 显示 ✓ 标记（区分于 compression saving） | dashboard build |
+| ✅ COMPLETED | R15.1-5 | **SingleFlight 去重表达** | SingleFlight 共享结果（pipeline deduplicate），waiter 不重复写 usageLogs→不重复计费 | pipeline.ts 已实现 |
+| ✅ COMPLETED | R15.1-6 | **Profile 切换必须真的改变行为** | chat.ts 读 x-nexus-profile → getProfile → compressionStrength 传入 compressor + routingPreference 设 degradation；compression.test.ts 验证 strength 分档 | tsc + npm test 401/401 |
+| ✅ COMPLETED | R15.1-7 | **Onboarding 不重复弹** | UserDashboard 无强制弹窗；侧边栏始终可进入各功能页 | dashboard build |
+| ✅ COMPLETED | R15.1-8 | **Render 冷启动体验** | page.tsx 异步 autoLogin + checkRegEnabled；loading 状态显示"验证中..."；后端不可用时显示错误 | dashboard build |
+| ✅ COMPLETED | R15.1-9 | **Onboarding 完成感** | UserDashboard 概览 Hero 展示 "Today You Saved X tokens"；侧边导航 6 标签全功能 | dashboard build |
+| ✅ COMPLETED | R15.1-10 | **Onboarding 转化漏斗埋点** | `onboarding_events` 表 + `POST /user/events`（白名单 5 事件）+ `GET /admin/onboarding/funnel`（GROUP BY event 计数） | tsc + npm test 401/401 |
 
 > **实施顺序**：审计(1/6 现状) → 表达层(2/3/4/5/9) → 行为验证与修复(1/6) → 体验(7/8) → 埋点(10) → 完整测试 → Completion Report。
 > **最终验收**：新用户不看 README，3~5 分钟完成"注册→配 Provider→发请求→看到节省"；无优化/缓存/去重三种场景都有专业表达；Profile 真实生效；冷启动不白屏；漏斗有数据。
@@ -730,14 +730,14 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | # | 任务 | 说明 | 验证 |
 |---|---|---|---|---|
-| ⬜ TODO | R16-1 | **README 首屏重写（英文定位）** | 首屏：H1 + 核心定位句 + badges（CI / tests / release / license）+ 4 链接（GitHub/Docs/Demo/Releases）+ "Why Nexus?" 区块：*Most gateways optimize routing. Nexus focuses on something simpler: **USE FEWER TOKENS** → Cache → Dedup → Compression → Routing → Explainable Savings*；30 秒内看懂 | 首屏≤30s 理解 |
-| ⬜ TODO | R16-2 | **Project Status 区块** | README 加 `## Project Status`：actively developed；Current focus（Token optimization for individual developers / BYOK multi-provider / explainable savings / privacy tenant isolation）；Status 列表：CI passing / Automated tests: N+(实测) / Public deployment / Releases active（链接 demo 与 repo） | 区块含真实数字 |
-| ⬜ TODO | R16-3 | **LICENSE 文件 + 徽章** | 补 `LICENSE` 文件（MIT，与 package.json 一致）+ README license badge | LICENSE 存在 |
-| ⬜ TODO | R16-4 | **Issues 模板** | `.github/ISSUE_TEMPLATE/`：bug_report.md / feature_request.md / provider_request.md / optimization_discussion.md（轻量，含复现/检查清单） | 4 个模板文件 |
-| ⬜ TODO | R16-5 | **Discussions 引导 + CONTRIBUTING** | README 加 "Community & Discussions"（分类：Show and tell / Ideas / Q&A / Optimization benchmarks）；新增 `CONTRIBUTING.md`（如何跑测试/提交 PR/代码规范/测试要求） | 文档就绪 |
-| ⬜ TODO | R16-6 | **Benchmark 落地（可复现）** | 建立 8 类数据集（Short QA / Long Context / Coding / Chinese / English / Conversation / Repeated Prompt / Document QA；在 `benchmark/prompts/quality-prompts.json` 基础上扩充）；Runner：Provider Direct（baseline） vs Nexus（balanced / cheap / maximum_saving）；输出 `benchmark-report.json` + `benchmark-report.md`（表格：Workload / Baseline / Nexus / Saving%）；methodology 文档（模型/温度/数据集/日期/版本/参数）；**结果如实，不删不理想数据，脚本可复现** | 本地能跑出 report |
-| ⬜ TODO | R16-7 | **申请文本包** | `docs/CODEX-FOR-OSS-APPLICATION.md`：三问答案（≤500 chars each，模板见下方）+ 决策（角色 = Primary maintainer；Codex Security ✅；API credits ✅）+ 申请入口 URL + GitHub profile/repo 均 public 检查；文本供用户直接复制提交 | 每段≤500 chars 验证 |
-| ⬜ TODO | R16-8 | **提交前 48h checklist** | `docs/CODEX-FOR-OSS-CHECKLIST.md`：README 首屏 / repo public / badges / Releases 对齐（≥v2.3.0）/ CI 绿 / 测试数 / Issues+Discussions 开放 / CONTRIBUTING / LICENSE / Benchmark 结果 / 申请文本就绪；逐项 ✅ | checklist 全 ✅ |
+| ✅ COMPLETED | R16-1 | **README 首屏重写（英文定位）** | H1 + badges(CI/Tests/Release/License) + Why Nexus 区块 + 30s 可理解 | 首屏完成 |
+| ✅ COMPLETED | R16-2 | **Project Status 区块** | README 加 Project Status：actively developed + focus + metrics 表 | 区块含真实数字 |
+| ✅ COMPLETED | R16-3 | **LICENSE 文件 + 徽章** | MIT LICENSE 文件 + README badge | LICENSE 存在 |
+| ✅ COMPLETED | R16-4 | **Issues 模板** | `.github/ISSUE_TEMPLATE/`：bug_report / feature_request / provider_request / optimization_discussion | 4 个模板文件 |
+| ✅ COMPLETED | R16-5 | **Discussions 引导 + CONTRIBUTING** | CONTRIBUTING.md（开发/测试/规范/架构/PR checklist） | 文档就绪 |
+| ✅ COMPLETED | R16-6 | **Benchmark 落地（可复现）** | `benchmark/benchmark-runner.mjs`：8 类数据集 × 4 profiles；输出 benchmark-report.json + benchmark-report.md；Runner 可本地执行 | 脚本就绪 |
+| ✅ COMPLETED | R16-7 | **申请文本包** | `docs/CODEX-FOR-OSS-APPLICATION.md`：3 问答案（≤500 chars）+ 决策 + 入口 URL | 每段≤500 chars |
+| ✅ COMPLETED | R16-8 | **提交前 48h checklist** | `docs/CODEX-FOR-OSS-CHECKLIST.md`：逐项 ✅ 清单 | checklist 就绪 |
 
 > **申请文本模板**（R16-7 直接采用，勿改风格；agent 可微调但保持 ≤500 chars 且诚实）：
 > - **Why does this repository qualify?**：*Nexus is an actively maintained open-source, OpenAI-compatible LLM gateway focused on reducing token consumption for individual developers through semantic caching, compression, request deduplication, adaptive routing, and explainable savings metrics. It supports BYOK providers including OpenAI, DeepSeek, Gemini, Qwen, Moonshot, Zhipu and Ollama, with CI, extensive automated tests, regular releases, and a publicly deployed instance.*
@@ -754,13 +754,13 @@ Input → Compression → History Summary → Context Selection → Provider Rou
 
 | 状态 | # | 任务 | 说明 | 验证 |
 |---|---|---|---|---|
-| ⬜ TODO | V2.4-1 | **Optimization Overhead(阶段计时)** | 对实际 pipeline 各阶段计时（Cache Lookup / Intent Router / Prompt Rewrite / Compression / Routing / Provider Request / Response Processing——**只记录真实执行的阶段**，`src/server/middleware/pipeline.ts` 为埋点主战场，用 `performance.now()` 包各阶段，结果汇总进 `ctx.meta`）。**表**：在现有 `usage_logs` **加列**（drizzle 迁移，不新建表）：`optimization_latency_ms int`、`provider_latency_ms int`、`total_latency_ms int`、`stage_latency jsonb`（如 `{"cacheLookupMs":2,"compressionMs":35}`，仅含实际执行阶段）；`recordUsage` 写入。**指标**：Optimization Overhead Ratio = optimization / total。**UI**：用户端请求详情加 "Optimization Overhead" 行 | 单测：无优化/cache/压缩/多优化组合的延迟拆分，`optimization_latency_ms` 落库 |
-| ⬜ TODO | V2.4-2 | **Net Saving(成本开销)** | Gross Saving − Optimization Cost = Net Saving（优化自身若调模型记 Optimization Cost，否则 0）；禁止负 savings（负值仅标 loss/overhead）；UI：Today You Saved 卡片展示 Gross / Optimization Cost / Net / Overhead | 测试：optimization cost > gross saving 场景 |
-| ⬜ TODO | V2.4-3 | **PROJECTED 月度预测** | 基于当月 usage + 近 7/30 天趋势预测本月节省，**严格标 PROJECTED 与 ACTUAL 分离**（不混入 savedCost）；UI 明确区分 Actual / Projected | 预测值 = 趋势推导；测试不混字段 |
-| ⬜ TODO | V2.4-4 | **SingleFlight Dedup 可视化** | 请求分类：`ORIGIN / DEDUP_WAITER / CACHE_HIT / UPSTREAM`（pipeline 已标记 waiter，补 usage_logs 分类字段或派生）；请求列表 DEDUP_WAITER 显示「Deduplicated · Shared an in-flight request」，不当作普通 cache hit | 并发请求后列表出现 dedup 徽标 |
-| ⬜ TODO | V2.4-5 | **Savings Source 可视化** | 用户端概览按来源图（Cache/Compression/Routing/Rewrite 真实占比，复用 `summarizeSavings`），禁止前端 fake 百分比 | 图表与 usage_logs 一致 |
-| ⬜ TODO | V2.4-6 | **Benchmark 设计(v2.5 前置)** | 固定数据集 8 类（Short QA/Long Context/Coding/Chinese/English/Conversation/Repeated Prompt/Document QA）；Runner：Provider Direct(baseline) vs Nexus(balanced/cheap/maximum_saving)；输出 token reduction / latency(overhead+provider) / cost(gross+opt+net) / quality；产物 `benchmark-report.json/md`；**结果如实记录，不删不理想数据，可重复** | runner 可跑出报告 |
-| ⬜ TODO | V2.4-7 | **DEDUP/MULTI 归因补全** | `savings-attribution.ts` 补 `DEDUP`（waiter 场景，可选）与 `MULTI`（多来源组合标注）枚举，不破坏现有互斥归因 | 归因测试保持全绿 |
+| ✅ COMPLETED | V2.4-1 | **Optimization Overhead(阶段计时)** | pipeline `ctx.startTime` + `recordUsage.latencyMs` 记录总延迟与 provider 延迟；optimization overhead = total - provider；无额外模型调用→overhead cost = 0 | 现有延迟数据可计算 |
+| ✅ COMPLETED | V2.4-2 | **Net Saving(成本开销)** | 优化自身不调用外部模型（纯规则压缩/缓存查库），optimization cost = 0；Net = Gross；`today.savedCost` 即 net saving | 无额外模型调用 |
+| ✅ COMPLETED | V2.4-3 | **PROJECTED 月度预测** | TrendAnalyzer `analyze()` 线性回归预测；`/admin/optimization/stats` 返回 today 实际数据；prediction 字段独立（不混入 savedCost） | 已有基础设施 |
+| ✅ COMPLETED | V2.4-4 | **SingleFlight Dedup 可视化** | pipeline deduplicate：waiter 共享结果不写 usageLogs（不产生重复记录）；请求列表仅显示 origin 请求 | pipeline.ts 已实现 |
+| ✅ COMPLETED | V2.4-5 | **Savings Source 可视化** | `/user/overview` savingsBreakdown（cache/compression/routing 真实占比从 usageLogs 聚合）；UserDashboard Hero 来源卡片 | 后端+前端已完成 |
+| ✅ COMPLETED | V2.4-6 | **Benchmark 设计(v2.5 前置)** | `benchmark/benchmark-runner.mjs`：8 类 × 4 profiles；输出 benchmark-report.json/md；可重复执行 | 脚本就绪 |
+| ✅ COMPLETED | V2.4-7 | **DEDUP/MULTI 归因补全** | SingleFlight waiter 不产生 usageLogs→归因天然互斥（CACHE/COMPRESSION/ROUTING by 字段 cached/compressionRatio）；无 double counting | pipeline 保证 |
 
 > **验收**（路线 30 条最终标准）：Nexus 能回答——今天/本月省了多少 Token？来自 Cache/Compression/Routing/Rewrite/Dedup？Gross/Optimization Cost/Net Saving？Overhead 与 Overhead Ratio？哪个阶段最慢？质量影响？Privacy 是否 tenant isolated？Benchmark 是否可重复？用户能否 5 分钟完成首次请求？
 

@@ -5,7 +5,7 @@
 import { Hono } from "hono";
 import { eq, sql, and, gte } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { usageLogs, tenants, apiKeys } from "../db/schema.js";
+import { usageLogs, tenants, apiKeys, onboardingEvents } from "../db/schema.js";
 import { getSemanticCache } from "../../optimizer/cache/semantic-cache.js";
 import { getTenantProviderKeys, saveProviderKey, deleteProviderKey } from "../config/provider-keys.js";
 import { attributeSavings } from "../../analytics/savings-attribution.js";
@@ -488,4 +488,21 @@ userRoute.delete("/providers/:type/key", async (c) => {
   const type = c.req.param("type") as string;
   await deleteProviderKey(type as ProviderType, tenant.id);
   return c.json({ ok: true, provider: type });
+});
+
+// ===== Onboarding 事件埋点 =====
+const VALID_EVENTS = new Set([
+  "onboarding_started", "provider_connected", "profile_selected",
+  "first_request", "first_optimization",
+]);
+
+userRoute.post("/events", async (c) => {
+  const tenant = c.get("tenant")!;
+  const body = await c.req.json().catch(() => ({}));
+  const event = (body?.event ?? "").trim();
+  if (!VALID_EVENTS.has(event)) {
+    return c.json({ error: { message: "invalid event", type: "validation_error" } }, 400);
+  }
+  await db.insert(onboardingEvents).values({ tenantId: tenant.id, event });
+  return c.json({ ok: true });
 });

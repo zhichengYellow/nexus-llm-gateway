@@ -1,20 +1,45 @@
 # Nexus
 
-### AI Gateway for Individual Developers
+### AI Cost Optimization Gateway
 
-> **Save 30~80% LLM Cost with Zero Configuration.**
+[![CI](https://github.com/bran-huang/nexus-llm-gateway/actions/workflows/ci.yml/badge.svg)](https://github.com/bran-huang/nexus-llm-gateway/actions)
+[![Tests](https://img.shields.io/badge/tests-395%20passed-brightgreen)](#)
+[![Release](https://img.shields.io/github/v/tag/bran-huang/nexus-llm-gateway?label=release)](https://github.com/bran-huang/nexus-llm-gateway/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-一个专门为个人开发者打造的 AI Gateway。任何 AI 应用只需改一个 `baseURL`，Nexus 自动帮你**省 Token + 省成本 + 保持高质量**。
+> **Use fewer tokens. Save 30-80% LLM cost. Zero configuration.**
 
-* 🚀 OpenAI Compatible
-* 🧠 Smart Auto Routing
-* 💰 Token Optimization
-* ⚡ Semantic Cache
-* 📉 Context Compression
-* 🔄 Multi Provider Failover
+[GitHub](https://github.com/bran-huang/nexus-llm-gateway) · [Releases](https://github.com/bran-huang/nexus-llm-gateway/releases) · [CHANGELOG](./CHANGELOG.md) · [Contributing](./CONTRIBUTING.md)
 
-> **Bring Your Own API Key.**
-> **We optimize your cost, not manage your account.**
+---
+
+### Why Nexus?
+
+Most gateways optimize routing. Nexus focuses on something simpler: **USE FEWER TOKENS**.
+
+```
+Request → Cache → Dedup → Compression → Smart Routing → Explainable Savings
+```
+
+Any OpenAI-compatible app changes one `baseURL` → Nexus automatically reduces tokens, lowers cost, maintains quality. BYOK (Bring Your Own Key).
+
+---
+
+## Project Status
+
+**Actively developed.** Current focus:
+
+- Token optimization for individual developers (BYOK)
+- Multi-provider smart routing (DeepSeek, Gemini, OpenAI, Ollama, Qwen, Moonshot, Zhipu)
+- Explainable savings (per-request attribution)
+- Privacy-first tenant isolation + encrypted provider keys
+
+| Metric | Value |
+|--------|-------|
+| CI | Passing |
+| Automated tests | 395+ (53 files) |
+| Deployment | Render (public) |
+| Releases | [v2.2.0](https://github.com/bran-huang/nexus-llm-gateway/releases) |
 
 ---
 

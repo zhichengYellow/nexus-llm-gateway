@@ -388,6 +388,21 @@ adminRoute.get("/config/hot-reload-status", async (c) => {
   return c.json(status);
 });
 
+// ===== Onboarding 漏斗 =====
+adminRoute.get("/onboarding/funnel", async (c) => {
+  const { onboardingEvents } = await import("../db/schema.js");
+  const rows = await db
+    .select({
+    event: onboardingEvents.event,
+  count: sql<number>`count(distinct ${onboardingEvents.tenantId})::int`,
+    })
+    .from(onboardingEvents)
+    .groupBy(onboardingEvents.event);
+  const funnel: Record<string, number> = {};
+  for (const r of rows) funnel[r.event] = r.count;
+  return c.json({ funnel });
+});
+
 // ===== 租户用量（配额检查）=====
 adminRoute.get("/tenants/:id/usage", async (c) => {
   const tenantId = c.req.param("id");
