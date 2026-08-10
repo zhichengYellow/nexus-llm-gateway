@@ -1,6 +1,6 @@
 {
   "name": "nexus-llm-gateway",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": false,
   "type": "module",
   "description": "Nexus LLM Gateway - AI Cost Optimization Platform. OpenAI-compatible API gateway with prompt compression, semantic cache, smart routing, and budget control. Save 30-80% on LLM costs.",

@@ -37,9 +37,23 @@ Any OpenAI-compatible app changes one `baseURL` → Nexus automatically reduces 
 | Metric | Value |
 |--------|-------|
 | CI | Passing |
-| Automated tests | 401+ (54 files) |
+| Automated tests | 403+ (54 files) |
 | Deployment | Render (public) |
 | Releases | [v2.3.0](https://github.com/zhichengYellow/nexus-llm-gateway/releases) |
+| Benchmark | [真实结果](./benchmark/benchmark-report.md) |
+
+### Benchmark 摘要（2026-08-10,DeepSeek,缓存已预热 = 真实使用场景）
+
+| Workload | Reduction | Latency 变化 | 来源 |
+|----------|----------:|-------------|------|
+| Repeated Prompt | **100%** | 1478ms → 233ms | Cache |
+| Chinese | **100%** | 1601ms → 306ms | Cache |
+| Document QA | **55.8%** | 3883ms → 1888ms | Cache+Compression |
+| Long Context | **47.9%** | 5743ms → 1276ms | Cache+Compression |
+| Conversation | **33.5%** | 4533ms → 3001ms | Cache+Compression |
+| Coding / 短 Prompt | ~0% | 不强行优化（可信度） | 无压缩空间 |
+
+> 方法学 / 局限 / 原始数据：见 [benchmark-report.md](./benchmark/benchmark-report.md)（可复现：`GATEWAY_URL GATEWAY_KEY node benchmark/benchmark-runner.mjs`）
 
 ---
 

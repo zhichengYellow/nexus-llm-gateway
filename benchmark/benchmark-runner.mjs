@@ -165,7 +165,7 @@ async function main() {
     gateway: GATEWAY,
     version: gitInfo().version,
     commit: gitInfo().commit,
-    environment: { model: "auto (网关路由)", temperature: "默认", maxTokens: 100, reps: REPS, timeoutMs: TIMEOUT },
+    environment: { model: "auto (网关路由)", temperature: "默认", maxTokens: 300, reps: REPS, timeoutMs: TIMEOUT },
     methodology: {
       baseline: "x-nexus-profile: fast + x-nexus-no-cache: 1（接近直连：不压缩、不缓存、不重写；仍经网关最小处理）",
       nexus: "完整优化链路（默认 balanced / cheap / maximum_saving 三档）",
