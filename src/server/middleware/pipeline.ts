@@ -125,7 +125,7 @@ export const cacheMiddleware: MiddlewareHandler = {
     if (!chain || chain.length === 0) return;
 
     const primary = chain[0]!;
-    const cacheResult = await cache.lookup(ctx.request, ctx.model, primary.providerType);
+    const cacheResult = await cache.lookup(ctx.request, ctx.model, primary.providerType, tenantId);
 
     if (cacheResult.hit && cacheResult.response) {
       const latencyMs = Date.now() - ctx.startTime;

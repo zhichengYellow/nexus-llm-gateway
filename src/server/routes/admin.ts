@@ -16,6 +16,7 @@ import { reloadRegistryFromDB, getHotReloadStatus } from "../config/hot-reload.j
 import { saveProviderKey, deleteProviderKey } from "../config/provider-keys.js";
 import { decryptSecret, maskKey } from "../../shared/crypto.js";
 import { getConfig } from "../../shared/config.js";
+import type { ProviderType } from "../../shared/types.js";
 import { logger } from "../../shared/logger.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import type { LoggingEnv } from "../middleware/logging.js";
@@ -69,8 +70,47 @@ adminRoute.post(
 );
 
 adminRoute.get("/tenants", async (c) => {
+  const { getTenantLastActiveAt } = await import("../cleanup/idle-tenant-cleanup.js");
   const rows = await db.select().from(tenants);
-  return c.json({ tenants: rows });
+  const now = Date.now();
+  const DAY = 24 * 3600 * 1000;
+  const tenantsWithActivity = await Promise.all(
+    rows.map(async (t) => {
+      const lastActiveAt = t.name === "default" ? null : await getTenantLastActiveAt(t.id).catch(() => null);
+      const ref = lastActiveAt ?? t.createdAt;
+      const idleDays = ref ? Math.max(0, Math.floor((now - ref.getTime()) / DAY)) : null;
+      return {
+        ...t,
+        lastActiveAt: lastActiveAt?.toISOString() ?? null,
+        idleDays,
+        // 7 天未活跃(或从未活跃但注册超 7 天)才可手动删除
+        deletable: t.name !== "default" && idleDays !== null && idleDays >= 7,
+      };
+    }),
+  );
+  return c.json({ tenants: tenantsWithActivity });
+});
+
+// 手动删除闲置租户(7 天未活跃才允许;default 保护)
+adminRoute.delete("/tenants/:id", async (c) => {
+  const { getTenantLastActiveAt, deleteTenantData } = await import("../cleanup/idle-tenant-cleanup.js");
+  const id = c.req.param("id");
+  const [row] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+  if (!row) return c.json({ error: { message: "租户不存在", type: "not_found" } }, 404);
+  if (row.name === "default") return c.json({ error: { message: "内置租户不可删除", type: "forbidden" } }, 403);
+
+  const lastActiveAt = await getTenantLastActiveAt(id).catch(() => null);
+  const ref = lastActiveAt ?? row.createdAt;
+  const idleDays = ref ? Math.floor((Date.now() - ref.getTime()) / (24 * 3600 * 1000)) : null;
+  if (idleDays === null || idleDays < 7) {
+    return c.json({
+      error: { message: `该账号 ${idleDays ?? 0} 天内仍活跃,7 天未活跃才可删除`, type: "tenant_active" },
+    }, 409);
+  }
+
+  await deleteTenantData(id);
+  getAuditLogger().log({ ...auditActor(c), action: "delete_tenant", resource: "tenants", resourceId: id, detail: `idle ${idleDays}d` }).catch(() => {});
+  return c.json({ ok: true, id });
 });
 
 // ===== API Key =====
@@ -354,6 +394,34 @@ adminRoute.get("/providers/keys", async (c) => {
     return { provider: type, ...meta, masked };
   });
   return c.json({ providers });
+});
+
+adminRoute.post("/providers/:type/test", async (c) => {
+  const type = c.req.param("type") as string;
+  const { resolveProviderKey } = await import("../config/provider-keys.js");
+  const apiKey = await resolveProviderKey(type as any, null);
+  if (!apiKey) return c.json({ ok: false, error: "未配置全局 Provider Key（先在上方保存）" });
+
+  const provider = getRegistry().getProvider(type as any);
+  if (!provider) return c.json({ ok: false, error: "provider not registered" });
+
+  const { getConfig } = await import("../../shared/config.js");
+  const providerType = type as unknown as ProviderType;
+  const model = Object.values(getConfig().providers[providerType]?.models ?? {})[0] as string | undefined;
+  if (!model) return c.json({ ok: false, error: "未配置测速模型" });
+
+  const start = Date.now();
+  try {
+    const res = await provider.chat(
+      { model, messages: [{ role: "user", content: "ping" }], max_tokens: 1, temperature: 0 },
+      model,
+      apiKey,
+    );
+    return c.json({ ok: true, latencyMs: Date.now() - start, model, usage: res.usage?.total_tokens ?? 0 });
+  } catch (e) {
+    const err = e as any;
+    return c.json({ ok: false, error: err?.message ?? String(e), latencyMs: Date.now() - start });
+  }
 });
 
 adminRoute.post("/providers/:type/key", async (c) => {
