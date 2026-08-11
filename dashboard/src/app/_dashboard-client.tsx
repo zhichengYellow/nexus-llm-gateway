@@ -12,7 +12,7 @@ import SavingsPage from "./_savings-page";
 import {
   LayoutDashboard, KeyRound, Route, Zap, Activity, Search, ChevronLeft, LogOut,
   ArrowUpRight, Gauge, Timer, Server, BarChart3, TrendingDown, DollarSign, Coins, Database,
-  TrendingUp, Layers, PiggyBank, ArrowUp, ToggleLeft,
+  TrendingUp, Layers, PiggyBank, ArrowUp, ToggleLeft, Users,
 } from "lucide-react";
 
 interface Props {
@@ -47,6 +47,7 @@ const NAV_ITEMS = [
   { id: "providers", label: "Provider", icon: Server },
   { id: "routes", label: "模型路由", icon: Route },
   { id: "keys", label: "个人 Key", icon: KeyRound },
+  { id: "tenants", label: "用户管理", icon: Users },
   { id: "switches", label: "优化开关", icon: ToggleLeft },
 ] as const;
 
@@ -73,6 +74,8 @@ export default function Dashboard({ client, onLogout }: Props) {
   const [switchesSaving, setSwitchesSaving] = useState(false);
   const [keyInputs, setKeyInputs] = useState<Record<string, string>>({});
   const [keySaving, setKeySaving] = useState<Record<string, boolean>>({});
+  const [testingKey, setTestingKey] = useState<Record<string, boolean>>({});
+  const [keyTestResult, setKeyTestResult] = useState<Record<string, any>>({});
   const [newRouteAlias, setNewRouteAlias] = useState("");
   const [newRouteProvider, setNewRouteProvider] = useState("");
   const [newRouteUpstream, setNewRouteUpstream] = useState("");
@@ -639,6 +642,28 @@ export default function Dashboard({ client, onLogout }: Props) {
                           className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-500 transition font-medium disabled:opacity-50 shrink-0">
                           {saving ? "保存中..." : "保存"}
                         </button>
+                        <button
+                          onClick={async () => {
+                            setTestingKey((s) => ({ ...s, [p.provider]: true }));
+                            setError("");
+                            try {
+                              const r = await client.testProviderKey(p.provider);
+                              setKeyTestResult((s) => ({ ...s, [p.provider]: r }));
+                            } catch (e) { setKeyTestResult((s) => ({ ...s, [p.provider]: { ok: false, error: (e as Error).message } })); }
+                            finally { setTestingKey((s) => ({ ...s, [p.provider]: false })); }
+                          }}
+                          disabled={testingKey?.[p.provider] || !p.configured}
+                          className="px-3 py-2 text-xs rounded-lg border border-zinc-700/50 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 transition shrink-0 disabled:opacity-40">
+                          <Gauge className={`w-3.5 h-3.5 inline mr-1 ${testingKey?.[p.provider] ? "animate-spin" : ""}`} />
+                          {testingKey?.[p.provider] ? "测试中..." : "测试连接"}
+                        </button>
+                        {keyTestResult?.[p.provider] && (
+                          <span className={`text-[11px] shrink-0 ${keyTestResult[p.provider].ok ? "text-emerald-400" : "text-rose-400"}`}>
+                            {keyTestResult[p.provider].ok
+                              ? `✓ ${keyTestResult[p.provider].latencyMs}ms · ${keyTestResult[p.provider].usage} tok`
+                              : `✗ ${keyTestResult[p.provider].error || "失败"}`}
+                          </span>
+                        )}
                       </div>
                     );
                   })}
@@ -648,6 +673,44 @@ export default function Dashboard({ client, onLogout }: Props) {
           )}
 
           {/* ===== 优化开关 Tab ===== */}
+          {activeTab === "tenants" && (
+            <div className="space-y-4">
+              <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6">
+                <h3 className="font-semibold text-sm text-zinc-200 mb-1">用户管理</h3>
+                <p className="text-xs text-zinc-500 mb-4">仅 <span className="text-zinc-300">7 天未活跃</span> 的账号可手动删除；30 天未活跃账号由系统自动清理。内置 default 租户不可删除。</p>
+                <div className="space-y-2">
+                  {tenants.map((t: any) => (
+                    <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/40 border border-zinc-800/60">
+                      <div className="w-32 shrink-0">
+                        <div className="text-sm text-zinc-200 font-medium">{t.name}</div>
+                        <div className="text-[10px] text-zinc-600">注册 {new Date(t.createdAt).toLocaleDateString()}</div>
+                      </div>
+                      <div className="flex-1 text-xs text-zinc-500">
+                        {t.name === "default" ? (
+                          <span className="text-blue-400">内置租户 · 不可删除</span>
+                        ) : t.lastActiveAt ? (
+                          <>最近活跃 {new Date(t.lastActiveAt).toLocaleDateString()} · 闲置 {t.idleDays} 天</>
+                        ) : (
+                          <>从未活跃 · 注册 {t.idleDays} 天</>
+                        )}
+                      </div>
+                      {t.deletable ? (
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`确定删除账号 "${t.name}"？该操作不可恢复（用量/Key/缓存全部清除）。`)) return;
+                            try { await client.deleteTenant(t.id); loadData(); } catch (e) { setError((e as Error).message); }
+                          }}
+                          className="text-xs px-2.5 py-1.5 rounded-md bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 transition shrink-0"
+                        >删除</button>
+                      ) : (
+                        <span className="text-[10px] text-zinc-600 shrink-0">活跃中 · 不可删</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           {activeTab === "switches" && (
             <div className="space-y-6">
               <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6">

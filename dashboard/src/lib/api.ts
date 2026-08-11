@@ -133,8 +133,22 @@ export class ApiClient {
         name: string;
         monthlyTokenQuota: number | null;
         createdAt: string;
+        lastActiveAt: string | null;
+        idleDays: number | null;
+        deletable: boolean;
       }>;
     }>("/admin/tenants");
+  }
+
+  async deleteTenant(id: string) {
+    return this.del<{ ok: boolean }>(`/admin/tenants/${encodeURIComponent(id)}`);
+  }
+
+  async testProviderKey(provider: string) {
+    return this.post<{ ok: boolean; latencyMs?: number; model?: string; usage?: number; error?: string }>(
+      `/admin/providers/${provider}/test`,
+      {},
+    );
   }
 
   async createTenant(name: string, monthlyTokenQuota?: number) {
