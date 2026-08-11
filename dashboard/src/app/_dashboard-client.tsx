@@ -12,7 +12,7 @@ import SavingsPage from "./_savings-page";
 import {
   LayoutDashboard, KeyRound, Route, Zap, Activity, Search, ChevronLeft, LogOut,
   ArrowUpRight, Gauge, Timer, Server, BarChart3, TrendingDown, DollarSign, Coins, Database,
-  TrendingUp, Layers, PiggyBank, ArrowUp, ToggleLeft, Users,
+  TrendingUp, Layers, PiggyBank, ArrowUp, ToggleLeft, Users, Terminal,
 } from "lucide-react";
 
 interface Props {
@@ -47,6 +47,7 @@ const NAV_ITEMS = [
   { id: "providers", label: "Provider", icon: Server },
   { id: "routes", label: "模型路由", icon: Route },
   { id: "keys", label: "个人 Key", icon: KeyRound },
+  { id: "myapi", label: "我的 API", icon: Terminal },
   { id: "tenants", label: "用户管理", icon: Users },
   { id: "switches", label: "优化开关", icon: ToggleLeft },
 ] as const;
@@ -64,6 +65,8 @@ export default function Dashboard({ client, onLogout }: Props) {
   const [cacheStats, setCacheStats] = useState<any>(null);
   const [apiKeys, setApiKeys] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
+  const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [myOverview, setMyOverview] = useState<any>(null);
   const [modelRoutes, setModelRoutes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<RangeKey>("24h");
@@ -104,6 +107,9 @@ export default function Dashboard({ client, onLogout }: Props) {
       setCacheStats(c);
       setApiKeys(k.apiKeys);
       setTenants(tn.tenants);
+      // Master 自用 API 调用记录（tenantId=null,与租户隔离）
+      client.getMyRequests().then((r) => setMyRequests(r.requests || [])).catch(() => {});
+      client.getMyOverview().then((o) => setMyOverview(o)).catch(() => {});
       setModelRoutes(mr.routes);
       setProvidersKeys(pk.providers);
       setSpeedLoading(false);
@@ -673,6 +679,39 @@ export default function Dashboard({ client, onLogout }: Props) {
           )}
 
           {/* ===== 优化开关 Tab ===== */}
+          {activeTab === "myapi" && (
+            <div className="space-y-4">
+              <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6">
+                <h3 className="font-semibold text-sm text-zinc-200 mb-1">我的 API 调用（Master 自用）</h3>
+                <p className="text-xs text-zinc-500 mb-4">用 <code className="bg-zinc-800 px-1 rounded">GATEWAY_MASTER_KEY</code> 直接调 <code className="bg-zinc-800 px-1 rounded">/v1/chat/completions</code> 的记录（全局 Provider Key 计费，与注册用户隔离）。</p>
+                <div className="grid grid-cols-4 gap-3 mb-4">
+                  <div className="bg-zinc-800/40 rounded-lg p-3"><div className="text-[10px] text-zinc-600 mb-1">今日请求</div><div className="text-lg font-semibold text-zinc-200">{myOverview?.today?.requests ?? 0}</div></div>
+                  <div className="bg-zinc-800/40 rounded-lg p-3"><div className="text-[10px] text-zinc-600 mb-1">今日 Token</div><div className="text-lg font-semibold text-zinc-200">{(myOverview?.today?.tokens ?? 0).toLocaleString()}</div></div>
+                  <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3"><div className="text-[10px] text-emerald-500/70 mb-1">今日节省</div><div className="text-lg font-semibold text-emerald-400">{(myOverview?.today?.savedTokens ?? 0).toLocaleString()}</div></div>
+                  <div className="bg-zinc-800/40 rounded-lg p-3"><div className="text-[10px] text-zinc-600 mb-1">本月 Token</div><div className="text-lg font-semibold text-zinc-200">{(myOverview?.month?.tokens ?? 0).toLocaleString()}</div></div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead><tr className="text-zinc-600 border-b border-zinc-800"><th className="py-2 pr-3">时间</th><th className="py-2 pr-3">模型</th><th className="py-2 pr-3">Provider</th><th className="py-2 pr-3">Tokens</th><th className="py-2 pr-3">节省</th><th className="py-2 pr-3">延迟</th><th className="py-2 pr-3">状态</th></tr></thead>
+                    <tbody>
+                      {myRequests.length === 0 && <tr><td colSpan={7} className="py-4 text-center text-zinc-600">暂无记录——用 Master Key 调一次 /v1 试试</td></tr>}
+                      {myRequests.map((r: any, i: number) => (
+                        <tr key={i} className="border-b border-zinc-800/40">
+                          <td className="py-2 pr-3 text-zinc-400">{new Date(r.time).toLocaleString()}</td>
+                          <td className="py-2 pr-3 text-zinc-300">{r.model}</td>
+                          <td className="py-2 pr-3 text-zinc-400">{r.provider}</td>
+                          <td className="py-2 pr-3 text-zinc-300">{r.tokens}</td>
+                          <td className="py-2 pr-3 text-emerald-400">{r.savedTokens > 0 ? r.savedTokens : "—"}</td>
+                          <td className="py-2 pr-3 text-zinc-400">{r.latencyMs}ms</td>
+                          <td className="py-2 pr-3">{r.cached ? <span className="text-emerald-400">缓存</span> : r.deduped ? <span className="text-sky-400">去重</span> : <span className="text-zinc-500">ok</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
           {activeTab === "tenants" && (
             <div className="space-y-4">
               <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6">

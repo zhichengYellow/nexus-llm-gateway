@@ -113,6 +113,54 @@ adminRoute.delete("/tenants/:id", async (c) => {
   return c.json({ ok: true, id });
 });
 
+// ===== Master 自用 API 调用(tenantId=null 的记录,与租户隔离) =====
+adminRoute.get("/my/overview", async (c) => {
+  const since = new Date(Date.now() - 24 * 3600 * 1000);
+  const monthStart = new Date();
+  monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+  const [day] = await db.select({
+    requests: sql<number>`count(*)::int`,
+    tokens: sql<number>`coalesce(sum(${usageLogs.totalTokens}), 0)::bigint::int`,
+    savedTokens: sql<number>`coalesce(sum(${usageLogs.savedTokens}), 0)::bigint::int`,
+    cacheHits: sql<number>`coalesce(sum(case when ${usageLogs.cached} then 1 else 0 end), 0)::int`,
+  }).from(usageLogs).where(and(isNull(usageLogs.tenantId), gte(usageLogs.createdAt, since)));
+  const [month] = await db.select({
+    tokens: sql<number>`coalesce(sum(${usageLogs.totalTokens}), 0)::bigint::int`,
+    savedTokens: sql<number>`coalesce(sum(${usageLogs.savedTokens}), 0)::bigint::int`,
+  }).from(usageLogs).where(and(isNull(usageLogs.tenantId), gte(usageLogs.createdAt, monthStart)));
+  return c.json({
+    today: { requests: day?.requests ?? 0, tokens: day?.tokens ?? 0, savedTokens: day?.savedTokens ?? 0, cacheHits: day?.cacheHits ?? 0 },
+    month: { tokens: month?.tokens ?? 0, savedTokens: month?.savedTokens ?? 0 },
+  });
+});
+
+adminRoute.get("/my/requests", async (c) => {
+  const rows = await db
+    .select({
+      requestId: usageLogs.requestId,
+      createdAt: usageLogs.createdAt,
+      model: usageLogs.model,
+      provider: usageLogs.provider,
+      totalTokens: usageLogs.totalTokens,
+      savedTokens: usageLogs.savedTokens,
+      latencyMs: usageLogs.latencyMs,
+      cached: usageLogs.cached,
+      deduped: usageLogs.deduped,
+      status: usageLogs.status,
+    })
+    .from(usageLogs)
+    .where(isNull(usageLogs.tenantId))
+    .orderBy(sql`${usageLogs.createdAt} desc`)
+    .limit(50);
+  return c.json({
+    requests: rows.map((r) => ({
+      requestId: r.requestId, time: r.createdAt, model: r.model, provider: r.provider,
+      tokens: r.totalTokens, savedTokens: r.savedTokens, latencyMs: r.latencyMs,
+      cached: r.cached, deduped: r.deduped, status: r.status,
+    })),
+  });
+});
+
 // ===== API Key =====
 const createKeySchema = z.object({
   tenantId: z.string().uuid(),

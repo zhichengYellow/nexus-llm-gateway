@@ -338,20 +338,6 @@ userRoute.get("/keys", async (c) => {
   return c.json({ keys });
 });
 
-userRoute.patch("/keys/:id/toggle", async (c) => {
-  const tenant = c.get("tenant")!;
-  const keyId = c.req.param("id");
-  const [key] = await db
-    .select({ enabled: apiKeys.enabled })
-    .from(apiKeys)
-    .where(and(eq(apiKeys.id, keyId), eq(apiKeys.tenantId, tenant.id)))
-    .limit(1);
-  if (!key) return c.json({ error: { message: "Key 不存在" } }, 404);
-
-  await db.update(apiKeys).set({ enabled: !key.enabled }).where(eq(apiKeys.id, keyId));
-  return c.json({ ok: true, enabled: !key.enabled });
-});
-
 // ===== 用户端测速 =====
 const SPEED_COOLDOWN_MS = 10_000;
 const speedCooldowns = new Map<string, number>(); // key: `${tenantId}:${provider}`

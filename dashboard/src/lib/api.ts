@@ -434,8 +434,12 @@ export class ApiClient {
     }>("/user/keys");
   }
 
-  async toggleUserKey(id: string) {
-    return this.patch<{ ok: boolean; enabled: boolean }>(`/user/keys/${id}/toggle`);
+  async getMyRequests() {
+    return this.get<{ requests: Array<{ requestId: string; time: string; model: string; provider: string; tokens: number; savedTokens: number; latencyMs: number; cached: boolean; deduped: boolean; status: number }> }>("/admin/my/requests");
+  }
+
+  async getMyOverview() {
+    return this.get<{ today: { requests: number; tokens: number; savedTokens: number; cacheHits: number }; month: { tokens: number; savedTokens: number } }>("/admin/my/overview");
   }
 
   async exportUserUsage() {

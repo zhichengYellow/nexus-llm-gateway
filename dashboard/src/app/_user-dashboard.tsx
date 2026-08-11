@@ -433,13 +433,7 @@ export default function UserDashboard({ client, onLogout }: Props) {
                     <div className="text-xs text-zinc-500">{k.keyPrefix}... · 创建于 {new Date(k.createdAt).toLocaleDateString()}</div>
                   </div>
                   <span className="text-xs text-zinc-500">{timeAgo(k.lastUsedAt)}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs border ${k.enabled ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"}`}>
-                    {k.enabled ? "启用" : "禁用"}
-                  </span>
-                  <button onClick={async () => { await client.toggleUserKey(k.id); loadData(); }}
-                    className={`text-xs px-2 py-1 rounded border ${k.enabled ? "text-amber-400 border-amber-500/20 hover:bg-amber-500/10" : "text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10"}`}>
-                    {k.enabled ? "禁用" : "启用"}
-                  </button>
+                  <span className="px-2 py-0.5 rounded-full text-xs border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">使用中</span>
                 </div>
               ))}
               {userKeys.length === 0 && <div className="py-8 text-center text-zinc-600 text-sm">暂无 API Key</div>}
