@@ -47,7 +47,7 @@ export class CacheGate {
     const judge = getSemanticJudge();
 
     // Level 1 / R1.1: Embedding 相似度初筛
-    const screening = await screener.screen(req, model, provider);
+    const screening = await screener.screen(req, model, provider, tenantId);
     if (screening.candidates.length === 0) {
       return { hit: false, asyncRefresh: false, confidence: 0, reason: "embedding screening: no similar cache found" };
     }

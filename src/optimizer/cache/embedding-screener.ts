@@ -153,6 +153,7 @@ export class EmbeddingScreener {
     req: ChatCompletionRequest,
     model: string,
     provider: string,
+    tenantId?: string | null,
   ): Promise<ScreeningResult> {
     const start = Date.now();
     const cache = getSemanticCache();
@@ -167,8 +168,8 @@ export class EmbeddingScreener {
       return { candidates: [], topScore: 0, screeningTime: Date.now() - start };
     }
 
-    // 获取最近缓存条目
-    const entries = await cache.listRecent(100, model, provider);
+    // 获取最近缓存条目(按租户隔离: 租户只看自己的, master 只看 global)
+    const entries = await cache.listRecent(100, model, provider, tenantId);
     if (entries.length === 0) {
       return { candidates: [], topScore: 0, screeningTime: Date.now() - start };
     }
@@ -219,8 +220,9 @@ export class EmbeddingScreener {
     req: ChatCompletionRequest,
     model: string,
     provider: string,
+    tenantId?: string | null,
   ): Promise<ScreenedCandidate | null> {
-    const result = await this.screen(req, model, provider);
+    const result = await this.screen(req, model, provider, tenantId);
     return result.candidates[0] ?? null;
   }
 

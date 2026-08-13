@@ -9,7 +9,7 @@
  * 5. Cache Stampede（SingleFlight）：并发缓存缺失只放行一个请求打 LLM，其余等待共享结果
  * 6. 参数分桶 + hit_count/last_accessed + 分类 TTL + Cache Metadata + 防毒化
  */
-import { eq, and, gt, sql } from "drizzle-orm";
+import { eq, and, gt, sql, isNull } from "drizzle-orm";
 import { db } from "../../server/db/client.js";
 import { semanticCache } from "../../server/db/schema.js";
 import { getConfig } from "../../shared/config.js";
@@ -317,6 +317,7 @@ export class SemanticCache {
     limit = 100,
     model?: string,
     _provider?: string,
+    tenantId?: string | null,
   ): Promise<Array<{
     hash: string;
     prompt: string;
@@ -332,6 +333,9 @@ export class SemanticCache {
       const now = new Date();
       const clauses: any[] = [gt(semanticCache.expiresAt, now)];
       if (model) clauses.push(eq(semanticCache.model, model));
+      // 租户隔离: 租户只看自己的缓存, master(null) 只看 global 缓存
+      if (tenantId != null) clauses.push(eq(semanticCache.tenantId, tenantId));
+      else if (tenantId === null) clauses.push(isNull(semanticCache.tenantId));
 
       const rows = await db
         .select({

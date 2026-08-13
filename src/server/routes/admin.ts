@@ -91,7 +91,7 @@ adminRoute.get("/tenants", async (c) => {
   return c.json({ tenants: tenantsWithActivity });
 });
 
-// 手动删除闲置租户(7 天未活跃才允许;default 保护)
+// 手动删除闲置租户(保护用户: 最近 7 天活跃的账号不可删;default 保护)
 adminRoute.delete("/tenants/:id", async (c) => {
   const { getTenantLastActiveAt, deleteTenantData } = await import("../cleanup/idle-tenant-cleanup.js");
   const id = c.req.param("id");
@@ -104,7 +104,7 @@ adminRoute.delete("/tenants/:id", async (c) => {
   const idleDays = ref ? Math.floor((Date.now() - ref.getTime()) / (24 * 3600 * 1000)) : null;
   if (idleDays === null || idleDays < 7) {
     return c.json({
-      error: { message: `该账号 ${idleDays ?? 0} 天内仍活跃,7 天未活跃才可删除`, type: "tenant_active" },
+      error: { message: `该账号 ${idleDays ?? 0} 天内仍活跃,为保护用户,7 天未活跃才可删除`, type: "tenant_active" },
     }, 409);
   }
 

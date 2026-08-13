@@ -46,7 +46,7 @@ const NAV_ITEMS = [
   { id: "savings", label: "节省汇总", icon: PiggyBank },
   { id: "providers", label: "Provider", icon: Server },
   { id: "routes", label: "模型路由", icon: Route },
-  { id: "keys", label: "个人 Key", icon: KeyRound },
+  { id: "keys", label: "用户 Key", icon: KeyRound },
   { id: "myapi", label: "我的 API", icon: Terminal },
   { id: "tenants", label: "用户管理", icon: Users },
   { id: "switches", label: "优化开关", icon: ToggleLeft },
@@ -71,6 +71,7 @@ export default function Dashboard({ client, onLogout }: Props) {
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<RangeKey>("24h");
   const [newKeyName, setNewKeyName] = useState("");
+  const [newKeyTenantId, setNewKeyTenantId] = useState("");
   const [newKeyResult, setNewKeyResult] = useState<any>(null);
   const [providersKeys, setProvidersKeys] = useState<Array<{ provider: string; configured: boolean; source: string }>>([]);
   const [switches, setSwitches] = useState<any>(null);
@@ -557,15 +558,26 @@ export default function Dashboard({ client, onLogout }: Props) {
           {activeTab === "keys" && (
             <div className="space-y-6">
               <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md rounded-xl p-6 hover:border-zinc-700 transition-all duration-200">
-                <h3 className="font-semibold text-sm text-zinc-200 mb-4">创建 API Key</h3>
+                <h3 className="font-semibold text-sm text-zinc-200 mb-1">给注册用户创建 API Key</h3>
+                <p className="text-xs text-zinc-500 mb-4">这是发给注册用户的 Key（绑定指定租户），<span className="text-zinc-300">不是 master 自己的 Key</span>。master 自用请用 <code className="bg-zinc-800 px-1 rounded">GATEWAY_MASTER_KEY</code>（见「我的 API」页）。</p>
                 <div className="flex gap-3 items-end flex-wrap">
+                  <div className="w-40 min-w-[140px]">
+                    <label className="block text-xs text-zinc-500 mb-1">目标租户</label>
+                    <select value={newKeyTenantId} onChange={(e) => setNewKeyTenantId(e.target.value)}
+                      className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50">
+                      <option value="">选择租户…</option>
+                      {tenants.map((t: any) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="flex-1 min-w-[160px]">
                     <label className="block text-xs text-zinc-500 mb-1">名称</label>
                     <input type="text" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)}
                       className="w-full px-3 py-2 bg-zinc-800/40 border border-zinc-700/50 rounded-lg text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition"
                       placeholder="例如: dev-key" />
                   </div>
-                  <button onClick={async () => { const tenantId = tenants[0]?.id ?? ""; if (!newKeyName || !tenantId) return; try { const res = await client.createApiKey(tenantId, newKeyName); setNewKeyResult(res.apiKey); setNewKeyName(""); loadData(); } catch (e) { setError((e as Error).message); } }}
+                  <button onClick={async () => { const tenantId = newKeyTenantId; if (!newKeyName || !tenantId) return; try { const res = await client.createApiKey(tenantId, newKeyName); setNewKeyResult(res.apiKey); setNewKeyName(""); loadData(); } catch (e) { setError((e as Error).message); } }}
                     className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-500 transition font-medium">
                     创建
                   </button>
@@ -736,7 +748,7 @@ export default function Dashboard({ client, onLogout }: Props) {
                       {t.deletable ? (
                         <button
                           onClick={async () => {
-                            if (!confirm(`确定删除账号 "${t.name}"？该操作不可恢复（用量/Key/缓存全部清除）。`)) return;
+                            if (!confirm(`确定删除账号 "${t.name}"（闲置 ${t.idleDays} 天）？该操作不可恢复（用量/Key/缓存全部清除）。`)) return;
                             try { await client.deleteTenant(t.id); loadData(); } catch (e) { setError((e as Error).message); }
                           }}
                           className="text-xs px-2.5 py-1.5 rounded-md bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 transition shrink-0"
