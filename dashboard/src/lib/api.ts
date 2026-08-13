@@ -190,42 +190,6 @@ export class ApiClient {
   }
 
   // ===== API Keys =====
-  async getApiKeys() {
-    return this.get<{
-      apiKeys: Array<{
-        id: string;
-        tenantId: string;
-        name: string;
-        keyPrefix: string;
-        enabled: boolean;
-        createdAt: string;
-        lastUsedAt: string | null;
-      }>;
-    }>("/admin/api-keys");
-  }
-
-  async createApiKey(tenantId: string, name: string) {
-    return this.post<{
-      apiKey: {
-        id: string;
-        tenantId: string;
-        name: string;
-        keyPrefix: string;
-        key: string;
-        enabled: boolean;
-        createdAt: string;
-      };
-    }>("/admin/api-keys", { tenantId, name });
-  }
-
-  async deleteApiKey(id: string) {
-    return this.del<{ ok: boolean }>(`/admin/api-keys/${id}`);
-  }
-
-  async toggleApiKey(id: string) {
-    return this.patch<{ apiKey: { id: string; enabled: boolean } }>(`/admin/api-keys/${id}/toggle`);
-  }
-
   // ===== 模型路由 =====
   async getModelRoutes() {
     return this.get<{

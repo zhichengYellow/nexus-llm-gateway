@@ -6,10 +6,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { eq, sql, and, gte, isNull } from "drizzle-orm";
-import { nanoid } from "nanoid";
 import { db } from "../db/client.js";
 import { apiKeys, tenants, usageLogs, modelRoutes, providerConfigs } from "../db/schema.js";
-import { hashKey } from "../middleware/auth.js";
 import { getSemanticCache } from "../../optimizer/cache/semantic-cache.js";
 import { getRegistry } from "../../providers/registry.js";
 import { reloadRegistryFromDB, getHotReloadStatus } from "../config/hot-reload.js";
@@ -162,84 +160,6 @@ adminRoute.get("/my/requests", async (c) => {
 });
 
 // ===== API Key =====
-const createKeySchema = z.object({
-  tenantId: z.string().uuid(),
-  name: z.string().min(1),
-  role: z.enum(["owner", "admin", "developer", "viewer", "auditor"]).optional().default("developer"),
-});
-
-adminRoute.post("/api-keys", zValidator("json", createKeySchema), async (c) => {
-  const { tenantId, name, role } = c.req.valid("json");
-  // 校验租户存在
-  const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-  if (!tenant) {
-    return c.json({ error: { message: "tenant not found", type: "not_found" } }, 404);
-  }
-
-  const rawKey = `sk-nexus-${nanoid(32)}`;
-  const keyHash = hashKey(rawKey);
-  const keyPrefix = rawKey.slice(0, 12);
-
-  const [row] = await db.insert(apiKeys).values({ tenantId, name, keyHash, keyPrefix, role }).returning();
-  if (!row) return c.json({ error: { message: "insert failed" } }, 500);
-
-  // audit
-  const aa = auditActor(c);
-  getAuditLogger().log({ ...aa, action: "create_api_key", resource: "api_keys", resourceId: row.id, detail: `${name} (${role})` }).catch(() => {});
-
-  return c.json(
-    {
-      apiKey: {
-        id: row.id,
-        tenantId: row.tenantId,
-        name: row.name,
-        keyPrefix: row.keyPrefix,
-        role: row.role,
-        key: rawKey,
-        enabled: row.enabled,
-        createdAt: row.createdAt,
-      },
-    },
-    201,
-  );
-});
-
-adminRoute.get("/api-keys", async (c) => {
-  const rows = await db
-    .select({
-      id: apiKeys.id,
-      tenantId: apiKeys.tenantId,
-      name: apiKeys.name,
-      keyPrefix: apiKeys.keyPrefix,
-      role: apiKeys.role,
-      enabled: apiKeys.enabled,
-      createdAt: apiKeys.createdAt,
-      lastUsedAt: apiKeys.lastUsedAt,
-    })
-    .from(apiKeys);
-  return c.json({ apiKeys: rows });
-});
-
-adminRoute.delete("/api-keys/:id", async (c) => {
-  const id = c.req.param("id");
-  const [row] = await db.select({ id: apiKeys.id }).from(apiKeys).where(eq(apiKeys.id, id)).limit(1);
-  if (!row) return c.json({ error: { message: "not found" } }, 404);
-  await db.delete(apiKeys).where(eq(apiKeys.id, id));
-  // audit
-  const aa = auditActor(c);
-  getAuditLogger().log({ ...aa, action: "delete_api_key", resource: "api_keys", resourceId: id }).catch(() => {});
-  return c.json({ ok: true });
-});
-
-adminRoute.patch("/api-keys/:id/toggle", async (c) => {
-  const id = c.req.param("id");
-  const [current] = await db.select({ enabled: apiKeys.enabled }).from(apiKeys).where(eq(apiKeys.id, id)).limit(1);
-  if (!current) return c.json({ error: { message: "not found" } }, 404);
-  const [row] = await db.update(apiKeys).set({ enabled: !current.enabled }).where(eq(apiKeys.id, id)).returning();
-  if (!row) return c.json({ error: { message: "update failed" } }, 500);
-  return c.json({ apiKey: { id: row.id, enabled: row.enabled } });
-});
-
 // ===== 用量统计 =====
 adminRoute.get("/usage/summary", async (c) => {
   // 最近 24h 聚合
